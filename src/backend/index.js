@@ -4,6 +4,7 @@ const { buildTemplate } = require('./template');
 const validProfile = (value) => typeof value === 'string' && /^[A-Za-z0-9][A-Za-z0-9_.@-]{0,127}$/.test(value);
 const validRegion = (value) => typeof value === 'string' && /^[a-z]{2}(?:-[a-z]+)+-\d$/.test(value);
 const invalid = () => ({ ok: false, error: 'INVALID_INPUT' });
+const supportsPkce = output => { const match = /aws-cli\/(\d+)\.(\d+)\.(\d+)/.exec(output); return !!match && Number(match[1]) === 2 && Number(match[2]) >= 22; };
 function createBackend({ run = createRunner() } = {}) {
   async function aws(args, options) { return run('aws', args, options); }
   async function profiles(options) {
@@ -31,6 +32,9 @@ function createBackend({ run = createRunner() } = {}) {
   }
   async function login(selection, options = {}) {
     if (!validProfile(selection?.profile) || !validRegion(selection?.region)) return invalid();
+    const version = await aws(['--version'], options);
+    if (!version.ok) return version;
+    if (!supportsPkce(version.stdout + version.stderr)) return { ok: false, error: 'AWS_CLI_UPDATE_REQUIRED' };
     const result = await aws(['sso', 'login', '--profile', selection.profile], { ...options, timeoutMs: 300000 });
     return result.ok ? identity(selection, options) : result;
   }
@@ -45,8 +49,9 @@ function createBackend({ run = createRunner() } = {}) {
     const [awsVersion, dockerVersion, dockerEngine] = await Promise.all([
       aws(['--version'], options), run('docker', ['--version'], options), run('docker', ['info', '--format', '{{json .ServerVersion}}'], options),
     ]);
-    return { ok: true, aws: { available: awsVersion.ok && /aws-cli\/2\./.test(awsVersion.stdout + awsVersion.stderr), error: awsVersion.ok ? null : awsVersion.error }, docker: { available: dockerVersion.ok, running: dockerEngine.ok, error: dockerEngine.ok ? null : dockerEngine.error } };
+    const supported = awsVersion.ok && supportsPkce(awsVersion.stdout + awsVersion.stderr);
+    return { ok: true, aws: { available: supported, error: !awsVersion.ok ? awsVersion.error : supported ? null : 'AWS_CLI_UPDATE_REQUIRED' }, docker: { available: dockerVersion.ok, running: dockerEngine.ok, error: dockerEngine.ok ? null : dockerEngine.error } };
   }
   return { profiles, profileRegion, identity, login, verifyDeployment, prerequisites };
 }
-module.exports = { createBackend, createRunner, buildTemplate, validProfile, validRegion };
+module.exports = { createBackend, createRunner, buildTemplate, validProfile, validRegion, createDeployer: require('./deploy').createDeployer, translateCompose: require('./compose').translateCompose };
