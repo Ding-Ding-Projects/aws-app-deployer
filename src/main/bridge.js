@@ -50,8 +50,8 @@ function createBridge({ backend, deployer, installer, store, emit, fetchUrl = gl
 
   return {
     async prerequisites() {
-      const r = await backend.prerequisites({});
-      return { ...r, winget: process.platform === 'win32' ? await installer.hasWinget({}) : false, platform: process.platform };
+      const [r, winget] = await Promise.all([backend.prerequisites({}), process.platform === 'win32' ? installer.hasWinget({}) : false]);
+      return { ...r, winget, platform: process.platform };
     },
     async profiles() {
       const r = await backend.profiles({});

@@ -32,7 +32,7 @@ function createWindow() {
 async function captureScreenshots(dir) {
   fs.mkdirSync(dir, { recursive: true });
   const routes = ['setup', 'deploys', 'accounts', 'wizard', 'settings', 'palette'];
-  await new Promise(res => setTimeout(res, 6000)); // let the first real checks finish
+  for (let i = 0; i < 90 && !(await win.webContents.executeJavaScript('!!(window.__ready && window.__ready())')); i++) await new Promise(res => setTimeout(res, 1000));
   for (const [w, tag] of [[1320, 'desktop'], [420, 'narrow']]) {
     win.setSize(w, 860);
     for (const r of routes) {

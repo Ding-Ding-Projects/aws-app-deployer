@@ -341,6 +341,7 @@
     if (focusId) { const el = document.getElementById(focusId); if (el) { el.focus(); if (caret != null && el.setSelectionRange) try { el.setSelectionRange(caret, caret); } catch { } } }
   }
   function go(view) { S.view = view; S.palette = null; render(); document.getElementById('main')?.focus?.(); }
+  window.__ready = () => !!S.prereq && S.profiles !== null;
   window.__go = v => { if (v === 'palette') { S.palette = { q: 'dep', regex: false, sel: 0 }; render(); } else go(v); };
 
   // ---------- events ----------
