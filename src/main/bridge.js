@@ -62,6 +62,7 @@ function createBridge({ backend, deployer, installer, store, emit, fetchUrl = gl
   const sel = s => (s && validProfile(s.profile) && validRegion(s.region) ? { profile: s.profile, region: s.region } : null);
 
   return {
+    start,
     async prerequisites() {
       const [r, winget] = await Promise.all([backend.prerequisites({}), process.platform === 'win32' ? installer.hasWinget({}) : false]);
       return { ...r, winget, platform: process.platform };
@@ -78,7 +79,7 @@ function createBridge({ backend, deployer, installer, store, emit, fetchUrl = gl
       return start('login', v, ({ signal, progress }) => { progress({ stage: 'browser' }); return backend.login(v, { signal }); });
     },
     install(tools) {
-      if (!Array.isArray(tools) || !tools.length || tools.some(t => !['aws', 'docker'].includes(t))) return { ok: false, error: 'INVALID_INPUT' };
+      if (!Array.isArray(tools) || !tools.length || tools.some(t => !['aws', 'docker', 'ffmpeg', 'sevenzip', 'java', 'ollama'].includes(t))) return { ok: false, error: 'INVALID_INPUT' };
       return start('install', null, ({ signal, progress }) => installer.installMissing([...new Set(tools)], { signal, onProgress: progress }));
     },
     async inspectSource(file) {

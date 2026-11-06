@@ -100,7 +100,20 @@
   async function loadHistory() { const r = await api.history(); if (r.ok) S.history = r; }
 
   // ---------- operations ----------
+  // Background jobs started from tool screens (installs of optional tools, conversions, archives).
+  S.jobs = {};
+  const JOB_TEXT = { FFMPEG_MISSING: 'FFmpeg is not installed', SEVEN_ZIP_FULL_REQUIRED: 'RAR needs the full 7-Zip', WINGET_REQUIRED: 'This needs the Windows Package Manager (winget), which is not available here', ELEVATION_DECLINED: 'The Windows permission prompt was declined, so nothing was installed', POLICY_BLOCKED: 'A Windows or company policy blocked the installer', COMMAND_FAILED: 'The tool reported an error', CANCELLED: 'Cancelled', INVALID_INPUT: 'That file cannot be used', UNSUPPORTED_PLATFORM: 'Installing tools works on Windows only' };
+  const jobError = r => (JOB_TEXT[r?.error] || String(r?.error || 'Failed').toLowerCase().replace(/_/g, ' ')) + (r?.detail ? `: ${r.detail}` : '');
+  async function startJob(slot, promise, label) { const r = await promise; if (!r.ok) { toast(`${label} could not start: ${jobError(r)}`, 'err'); return; } S.jobs[r.op] = { slot, label, kind: null, progress: null, result: null }; render(); }
+  const jobFor = slot => Object.entries(S.jobs).reverse().find(([, j]) => j.slot === slot);
+  function jobHtml(slot) {
+    const e = jobFor(slot); if (!e) return '';
+    const [op, j] = e, pct = j.progress?.total ? Math.round(100 * j.progress.done / j.progress.total) : null;
+    if (!j.result) return `<div class="row" style="gap: 8px"><span class="spin" style="width: 14px; height: 14px; border-width: 2px"></span><span class="small grow" style="flex: 1">${esc(j.label)}${pct !== null ? ` · ${pct}%` : j.progress?.step ? ` · ${esc(j.progress.step)}` : ''}</span><button class="btn text" data-act="cancel-op" data-op="${op}">Cancel</button></div>${pct !== null ? `<span class="bar"><i style="width: ${pct}%"></i></span>` : ''}`;
+    return j.result.ok ? `<span class="row small" style="gap: 8px; flex-wrap: wrap"><span class="badge ok">Done</span>${j.result.path ? `<span class="mono" style="overflow-wrap: anywhere">${esc(j.result.path)}</span><button class="btn text" data-act="show-file" data-p="${esc(j.result.path)}">Show in folder</button>` : esc(j.label)}</span>` : `<span class="badge err" role="alert">${esc(jobError(j.result))}</span>`;
+  }
   api.onOperation(ev => {
+    if (S.jobs[ev.op]) { const j = S.jobs[ev.op]; if (ev.type === 'progress') j.progress = ev; else if (ev.type !== 'started') { j.result = ev.result || { ok: false, error: ev.type.toUpperCase() }; cue(j.result.ok ? 'ok' : 'err'); if (j.slot.startsWith('install-')) { S.mediaStatus = null; loadMedia(); } toast(j.result.ok ? `${j.label}: done` : `${j.label}: ${jobError(j.result)}`, j.result.ok ? 'ok' : 'err'); } render(); return; }
     if (ev.kind === 'login' && S.login?.op === ev.op) {
       if (browser && ev.type === 'progress' && (ev.authorizationUrl || ev.url)) { S.login.authorizationUrl = safeAwsUrl(ev.authorizationUrl || ev.url); }
       if (ev.type === 'succeeded') { S.identity = ev.result.identity; S.login = null; S.loginExpired = false; api.window('focus'); toast('Connected to ' + ev.result.identity.accountId + ' as ' + roleOf(ev.result.identity.arn)); cue('ok'); }
@@ -916,7 +929,23 @@
     if (file.size > 10 * 1024 * 1024) { toast('Files up to 10 MB only. Nothing was read.', 'err'); return; }
     S.tools.b64out = { ok: true, text: Lib.b64encode(new Uint8Array(await file.arrayBuffer()), { urlSafe: S.tools.urlSafe }), name: file.name.replace(/[^\w.-]+/g, '-') + '.b64.txt' }; render();
   }
+  async function loadMedia() { if (S.mediaStatus || !api.mediaStatus) return; S.mediaStatus = await api.mediaStatus(); render(); }
+  const installBtn = (tool, label) => `<button class="btn tonal" data-act="install-tool" data-tool="${tool}">${ic('download')}Install ${label} (one click)</button>`;
+  function mediaCard() {
+    const M = S.mediaStatus; if (!M) { loadMedia(); return '<div class="card"><span class="h2">Video and audio</span><span class="small">Checking for FFmpeg…</span></div>'; }
+    return `<div class="card"><span class="h2">Video and audio</span>${M.ffmpeg ? `<span class="small">FFmpeg found. The result is saved next to the original with a new name; nothing is overwritten.</span>
+      <div class="row" style="gap: 6px; flex-wrap: wrap"><label class="sr" for="mp">Conversion</label><select id="mp" data-input="mediaPreset" style="height: 38px; border-radius: 10px; border: 1px solid var(--line2); background: var(--s1); color: var(--tx); padding: 0 8px">${Object.entries(MEDIA_PRESETS).map(([k, l]) => `<option value="${k}" ${S.mediaPreset === k ? 'selected' : ''}>${l}</option>`).join('')}</select><button class="btn fillb" data-act="media-go">${ic('movie')}Choose a file and convert</button></div>${jobHtml('media')}`
+      : `<span class="small">Converting video and audio uses FFmpeg, which is not installed. One click installs it with the Windows Package Manager; Windows may ask for permission.</span>${installBtn('ffmpeg', 'FFmpeg')}${jobHtml('install-ffmpeg')}`}</div>`;
+  }
+  const MEDIA_PRESETS = { mp4: 'Video to MP4 (H.264)', webm: 'Video to WebM (VP9)', gif: 'Video to GIF', mp3: 'Audio to MP3', wav: 'Audio to WAV', ogg: 'Audio to Ogg (Opus)', m4a: 'Extract audio to M4A' };
+  function archiveCard() {
+    const M = S.mediaStatus; if (!M) return '';
+    return `<div class="card"><span class="h2">Archives</span><span class="small">Make .7z archives and extract 7z, ZIP, TAR, GZ, XZ and BZ2 with the 7-Zip engine included in this app. Extracted files go to a new folder; nothing is overwritten.</span>
+      <div class="row" style="gap: 6px; flex-wrap: wrap"><button class="btn tonal" data-act="archive-make">${ic('folder_zip')}Make a .7z from files</button><button class="btn tonal" data-act="archive-open">${ic('unarchive')}Extract an archive</button></div>${jobHtml('archive')}
+      ${M.sevenZipFull ? '<span class="small">Full 7-Zip found: RAR archives can be extracted too.</span>' : `<span class="small">RAR archives need the full 7-Zip.</span>${installBtn('sevenzip', '7-Zip')}${jobHtml('install-sevenzip')}`}</div>`;
+  }
   async function convertFile(kind, file) {
+    if (kind === 'yaml>json') { if (file.size > 25 * 1024 * 1024) { toast('Files up to 25 MB only. Nothing was read.', 'err'); return; } const r = await api.yamlToJson(await file.text()); if (!r.ok) { toast(`YAML to JSON failed: ${r.error === 'MALFORMED_YAML' ? 'the YAML is not valid' : r.error.toLowerCase()}${r.detail ? ` (${r.detail})` : ''}. Nothing was saved.`, 'err'); return; } S.tools.conv = { name: file.name.replace(/\.[^.]+$/, '').replace(/[^\w.-]+/g, '-') + '.json', text: r.text, note: '' }; toast(`Converted to ${S.tools.conv.name}`); render(); return; }
     if (file.size > 25 * 1024 * 1024) { toast('Files up to 25 MB only. Nothing was read.', 'err'); return; }
     const base = file.name.replace(/\.[^.]+$/, '').replace(/[^\w.-]+/g, '-').slice(0, 60) || 'converted';
     if (kind.startsWith('img>')) {
@@ -950,9 +979,9 @@
       <div class="side"><div class="card"><span class="h2">File converter</span><span class="small">Up to 25 MB, converted on this computer. Nothing is uploaded.</span>
         ${row('JSON to YAML', 'json>yaml', '.json,application/json')}${row('JSON to CSV', 'json>csv', '.json,application/json')}${row('CSV to JSON', 'csv>json', '.csv,text/csv')}${row('CSV to YAML', 'csv>yaml', '.csv,text/csv')}${row('Markdown to HTML', 'md>html', '.md,.markdown,text/markdown')}
         ${row('Image to PNG', 'img>png', 'image/png,image/jpeg,image/webp')}${row('Image to JPEG', 'img>jpeg', 'image/png,image/jpeg,image/webp')}${row('Image to WebP', 'img>webp', 'image/png,image/jpeg,image/webp')}
-        ${row('YAML to JSON', '', '', false, 'Needs a YAML reader, not included')}${row('Video and audio', '', '', false, 'Needs FFmpeg, not included')}${row('7z and RAR archives', '', '', false, 'Needs 7-Zip, not included')}
+        ${row('YAML to JSON', 'yaml>json', '.yaml,.yml,application/yaml')}
         ${T2.conv ? `<div class="card outline" style="gap: 8px"><span class="t" style="font-weight: 650">${esc(T2.conv.name)}</span>${T2.conv.note ? `<span class="small">${esc(T2.conv.note)}</span>` : ''}<div class="row" style="gap: 6px; flex-wrap: wrap"><button class="btn tonal" data-act="conv-save">${ic('download')}Save</button>${T2.conv.text !== undefined ? `<button class="btn text" data-act="conv-edit" data-e="vscode" ${ed.vscode ? '' : 'disabled'}>${ic('code')}Open in VS Code${ed.vscode ? '' : ' (not found)'}</button><button class="btn text" data-act="conv-edit" data-e="default">Open with the default app</button>` : ''}</div></div>` : ''}
-      </div></div></div>`);
+      </div>${mediaCard()}${archiveCard()}</div></div>`);
   }
   async function handoff(name, text, editor) {
     const r = await api.openInEditor(name, text, editor);
@@ -1183,6 +1212,11 @@
       case 'ext-now': await pollExternal(); render(); break;
       case 'pick-accent': openColour(); break;
       case 'cp-apply': { const hex = Lib.parseColor(S.colour.text) || pickerHex(); S.panel = null; await set('rainbow', false); await set('accent', hex); break; }
+      case 'install-tool': { const tool = t.dataset.tool; startJob('install-' + tool, api.install([tool]), `Installing ${{ ffmpeg: 'FFmpeg', sevenzip: '7-Zip', java: 'Java 21', ollama: 'Ollama' }[tool]}`); break; }
+      case 'media-go': { const p = await api.mediaPick('media'); if (!p.ok) break; startJob('media', api.mediaConvert(p.paths[0], S.mediaPreset || 'mp4'), MEDIA_PRESETS[S.mediaPreset || 'mp4']); break; }
+      case 'archive-make': { const p = await api.mediaPick('any'); if (!p.ok) break; startJob('archive', api.archiveCreate(p.paths), `Making a .7z of ${p.paths.length} file${p.paths.length === 1 ? '' : 's'}`); break; }
+      case 'archive-open': { const p = await api.mediaPick('archive'); if (!p.ok) break; startJob('archive', api.archiveExtract(p.paths[0]), 'Extracting the archive'); break; }
+      case 'show-file': api.showFile(t.dataset.p); break;
       case 'vocab-clear': await set('vocabulary', null); toast('Original words restored'); break;
     }
   });
@@ -1209,6 +1243,7 @@
     if (el.dataset.ul) { S.unlock[el.dataset.ul] = el.value; if (el.dataset.ul === 'pin') render(); return; }
     if (el.dataset.sf) { const m = { 'sf-value': 'value', 'sf-value2': 'value2', 'sf-name': 'name' }[el.dataset.sf]; S.schoolForm[m] = el.value; return; }
     if (el.dataset.cp) { const C = S.colour; if (el.dataset.cp === 'text') { C.text = el.value; const hx = Lib.parseColor(el.value); if (hx) { Object.assign(C, Lib.hexToHsv(hx), { a: Lib.rgba(hx).a }); } } else { if (el.dataset.cp === 'h') C.h = +el.value; else C.a = +el.value / 100; C.text = pickerHex(); } render(); return; }
+    if (el.dataset.input === 'mediaPreset') { S.mediaPreset = el.value; return; }
     if (el.dataset.input === 'nextDraft') { S.nextDraft = el.value; return; }
     if (el.dataset.funny) { set('funnyLevels', { ...S.settings.funnyLevels, [el.dataset.funny]: +el.value }); return; }
     if (el.dataset.input === 'apPreset') { S.ap.preset = el.value; return; }

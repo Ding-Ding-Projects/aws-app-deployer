@@ -239,3 +239,30 @@ test('shared School mode record: rename, credential, wait and reset by deleting 
   assert.equal(sc.enable(null).enabled, true, 'existing credential is reused');
   fs.unlinkSync(sc.file); assert.equal(sc.state().enabled, false);
 });
+
+test('media: real 7-Zip round trip, YAML reading and never overwriting', async () => {
+  const { createMedia } = require('../../src/main/media');
+  const os = require('node:os');
+  const seven = require('7zip-bin').path7za; try { fs.chmodSync(seven, 0o755); } catch { }
+  const m = createMedia({ sevenZipBundled: seven, env: {} });
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'media-'));
+  const a = path.join(dir, 'menu.txt'); fs.writeFileSync(a, 'har gow\nsiu mai\n');
+  const made = await m.archive([a]); assert.ok(made.ok, JSON.stringify(made)); assert.match(made.path, /menu\.txt\.7z$/);
+  const again = await m.archive([a]); assert.notEqual(again.path, made.path, 'second archive gets a new name');
+  const out = await m.extract(made.path); assert.ok(out.ok, JSON.stringify(out));
+  assert.equal(fs.readFileSync(path.join(out.path, 'menu.txt'), 'utf8'), 'har gow\nsiu mai\n');
+  const rar = path.join(dir, 'x.rar'); fs.writeFileSync(rar, 'Rar!');
+  assert.equal((await m.extract(rar)).error, 'SEVEN_ZIP_FULL_REQUIRED');
+  assert.equal((await m.convertMedia('relative.mp4', 'mp4')).error, 'INVALID_INPUT');
+  assert.equal((await m.convertMedia(a, 'nope')).error, 'INVALID_INPUT');
+  assert.deepEqual(JSON.parse(m.yamlToJson('a: 1\nb: [x, y]\n').text), { a: 1, b: ['x', 'y'] });
+  assert.equal(m.yamlToJson('a: [1,').error, 'MALFORMED_YAML');
+  const bomb = 'a: &a [x,x,x,x,x,x,x,x,x]\n' + Array.from({ length: 8 }, (_, i) => `${'b' + i}: &${'b' + i} [${Array(9).fill(i ? '*b' + (i - 1) : '*a').join(',')}]`).join('\n');
+  assert.equal(m.yamlToJson(bomb).ok, false, 'alias explosion is refused');
+});
+
+test('optional tools without a publisher download need winget and say so', async () => {
+  const { createInstaller } = require('../../src/main/installer');
+  const inst = createInstaller({ platform: 'win32', run: async cmd => (cmd === 'winget' ? { ok: false, error: 'UNAVAILABLE' } : { ok: true, stdout: '' }) });
+  assert.equal((await inst.installOne('ffmpeg')).error, 'WINGET_REQUIRED');
+});

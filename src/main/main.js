@@ -9,6 +9,7 @@ const { createBridge } = require('./bridge');
 const { createUpdater, handleSquirrelEvent } = require('./updater');
 const { createLocks } = require('./locks');
 const { createSchool } = require('./school');
+const { createMedia } = require('./media');
 
 const squirrelEvent = handleSquirrelEvent(app);
 function provenance() {
@@ -148,6 +149,21 @@ if (!squirrelEvent) app.whenReady().then(() => {
     }
     const err = await shell.openPath(file); return err ? { ok: false, error: 'NO_DEFAULT_EDITOR', detail: err, path: file } : { ok: true, path: file };
   });
+  // Video, audio and archive conversions. Inputs are chosen in a system dialog here, never typed.
+  let bundled7za = null; try { bundled7za = require('7zip-bin').path7za.replace('app.asar' + path.sep, 'app.asar.unpacked' + path.sep); } catch { }
+  const media = createMedia({ sevenZipBundled: bundled7za });
+  handle('media-status', () => media.status());
+  handle('media-pick', async kind => {
+    const filters = { media: [{ name: 'Video and audio', extensions: ['mp4', 'mov', 'mkv', 'avi', 'webm', 'm4v', 'wmv', 'flv', 'mp3', 'wav', 'ogg', 'flac', 'm4a', 'aac', 'opus', 'wma'] }], archive: [{ name: 'Archives', extensions: ['7z', 'zip', 'rar', 'tar', 'gz', 'tgz', 'xz', 'bz2'] }], any: [] }[kind];
+    if (!filters) return { ok: false, error: 'INVALID_INPUT' };
+    const r = await dialog.showOpenDialog(win, { properties: kind === 'any' ? ['openFile', 'multiSelections'] : ['openFile'], filters });
+    return r.canceled || !r.filePaths.length ? { ok: false, error: 'CANCELLED' } : { ok: true, paths: r.filePaths };
+  });
+  handle('media-convert', (input, preset) => bridge.start('convert', null, ({ signal, progress }) => media.convertMedia(input, preset, { signal, onProgress: progress })));
+  handle('archive-create', files => bridge.start('archive', null, ({ signal, progress }) => media.archive(files, { signal, onProgress: progress })));
+  handle('archive-extract', file => bridge.start('extract', null, ({ signal, progress }) => media.extract(file, { signal, onProgress: progress })));
+  handle('yaml-to-json', text => media.yamlToJson(text));
+  handle('show-file', p => { if (typeof p === 'string' && path.isAbsolute(p) && fs.existsSync(p)) { shell.showItemInFolder(p); return { ok: true }; } return { ok: false, error: 'INVALID_INPUT' }; });
   handle('dim-sum', () => bridge.dimSum());
   handle('version', () => app.getVersion());
   handle('provenance', () => provenance());

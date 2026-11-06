@@ -26,8 +26,26 @@ const TOOLS = {
     signer: /Docker Inc/i,
     install: file => [file, ['install', '--quiet', '--accept-license', '--backend=wsl-2']],
   },
+  ffmpeg: { name: 'FFmpeg', winget: 'Gyan.FFmpeg' },
+  sevenzip: { name: '7-Zip', winget: '7zip.7zip' },
+  java: {
+    name: 'Java 21 (Microsoft Build of OpenJDK)',
+    winget: 'Microsoft.OpenJDK.21',
+    url: 'https://aka.ms/download-jdk/microsoft-jdk-21-windows-x64.msi',
+    file: 'microsoft-jdk-21-windows-x64.msi',
+    signer: /Microsoft Corporation/i,
+    install: file => ['msiexec', ['/i', file, '/qn', '/norestart', 'ADDLOCAL=FeatureMain,FeatureEnvironment,FeatureJarFileRunWith,FeatureJavaHome']],
+  },
+  ollama: {
+    name: 'Ollama',
+    winget: 'Ollama.Ollama',
+    url: 'https://ollama.com/download/OllamaSetup.exe',
+    file: 'OllamaSetup.exe',
+    signer: /Ollama/i,
+    install: file => [file, ['/VERYSILENT', '/NORESTART', '/SUPPRESSMSGBOXES']],
+  },
 };
-const DOWNLOAD_HOSTS = new Set(['awscli.amazonaws.com', 'desktop.docker.com']);
+const DOWNLOAD_HOSTS = new Set(['awscli.amazonaws.com', 'desktop.docker.com', 'aka.ms', 'ollama.com']);
 // Windows Installer and UAC exit codes that mean the user or a policy stopped the install.
 const DECLINED = new Set([1223, 1602]);
 const POLICY = new Set([1625, 1260, 1643]);
@@ -144,6 +162,7 @@ function createInstaller({ run, fetchUrl = globalThis.fetch, platform = process.
       }
       if (!installed) onProgress?.({ step: 'repair', repair: 'publisher-installer' });
     } else onProgress?.({ step: 'repair', repair: 'publisher-installer' });
+    if (!installed && !tool.url) return { ok: false, error: 'WINGET_REQUIRED', tool: key };
     if (!installed) {
       const file = await download(tool, { signal, onProgress });
       if (!file.ok) return { ...file, tool: key };

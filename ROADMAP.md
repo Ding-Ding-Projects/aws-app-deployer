@@ -60,7 +60,7 @@ Honest inventory of the desktop app and its landing page. **Shipped** means impl
 - [x] Shipped: Tools tab with a Base64 toolkit and a bounded local file converter (JSON, CSV, YAML output, Markdown, PNG, JPEG, WebP); missing tools are named on disabled rows
 - [x] Shipped: open results in VS Code (when installed) or the default app
 - [x] Shipped: per-language voices with pitch and speed, and a wording-drop celebration with a quiet path
-- [ ] Not started: YAML input, video and audio conversion, 7z
+- [x] Shipped: YAML to JSON, video and audio conversion through FFmpeg with a one-click install, .7z creation and archive extraction with the bundled 7-Zip engine, and RAR through a one-click full 7-Zip install
 
 ## Release and site
 

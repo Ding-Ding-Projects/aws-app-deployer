@@ -27,7 +27,9 @@
     "files": [
       "src/**/*",
       "docs/**/*",
-      "package.json"
+      "package.json",
+      "!node_modules/7zip-bin/{mac,linux}/**",
+      "!node_modules/7zip-bin/win/{ia32,arm64}/**"
     ],
     "directories": {
       "output": "dist"
@@ -48,9 +50,14 @@
       "iconUrl": "https://raw.githubusercontent.com/Ding-Ding-Projects/aws-app-deployer/main/build/icon.ico",
       "artifactName": "AWS-App-Deployer-Setup-${version}.${ext}",
       "name": "AWSAppDeployer"
-    }
+    },
+    "asarUnpack": [
+      "node_modules/7zip-bin/**"
+    ]
   },
   "dependencies": {
-    "qrcode": "^1.5.4"
+    "7zip-bin": "^5.2.0",
+    "qrcode": "^1.5.4",
+    "yaml": "^2.9.1"
   }
 }
