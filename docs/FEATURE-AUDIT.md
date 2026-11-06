@@ -1,12 +1,12 @@
 # Feature audit
 
-Baseline: `7b9e68e9d39aa012ed2958b2515f70b4c9fbf6d8` (2026-11-06). This reconciles all 115 stable catalogue identifiers. Identifiers are retained verbatim for traceability; descriptions use public product terminology. No private source links, private requirements text, personal mappings or credentials are included.
+Audit updated 2026-11-06. Original baseline: `7b9e68e9d39aa012ed2958b2515f70b4c9fbf6d8`; desktop release delta: `9161b65a85c061f06d66c53542fbb038d0417ff5` (`origin/main` inspected locally). Browser companion evidence refers to the current integration worktree, whose merge/rebase and final source binding remain pending. This reconciles all 115 stable catalogue identifiers. Identifiers are retained verbatim for traceability; descriptions use public product terminology. No private source links, private requirements text, personal mappings or credentials are included.
 
 **The application is not feature complete.** This document is an evidence-based gap audit, not a release acceptance certificate or a substitute for a per-surface proof inventory. A source implementation alone does not establish shipped compliance.
 
 Status meanings: **Partial** means some implementation exists with named gaps; **Missing** means no required implementation/proof was found in the inspected baseline; **Unverified** means external state or acceptance evidence was not checked; **Not applicable** states a concrete scope reason; **Suspended** identifies an explicitly dormant requirement. No row is labeled fully implemented because the complete documentation, localization, persistence, focused tests, negative regression, packaged interaction and genuine capture proof was not established.
 
-Evidence paths below refer to the baseline commit, not concurrent working-tree edits. Main sources inspected: `src/renderer/app.js`, `src/renderer/lib.js`, `src/main/{main,bridge,store,installer}.js`, `package.json`, `tests/main/main.test.js`, `tests/renderer/lib.test.js`, `ROADMAP.md`, `README.md`, `.github/workflows/release.yml`, `site/index.html` and the recursive repository tree. Tests were inspected, not executed for this audit. Runtime AWS acceptance, clean Windows installation and external project services were not verified.
+Evidence namespaces: **Baseline** means the original commit; **Desktop delta** means `9161b65`; **Browser delta** means the unfinalized browser integration. Rows without a delta label retain baseline findings. Concurrent changes are not credited as accepted delivery. Main sources inspected: `src/renderer/app.js`, `src/renderer/lib.js`, `src/main/{main,bridge,store,installer}.js`, `package.json`, `tests/main/main.test.js`, `tests/renderer/lib.test.js`, `ROADMAP.md`, `README.md`, `.github/workflows/release.yml`, `site/index.html` and the recursive repository tree. Tests were inspected, not executed for this audit. Runtime AWS acceptance, clean Windows installation and external project services were not verified.
 
 ## Identifier reconciliation
 
@@ -23,8 +23,8 @@ Evidence paths below refer to the baseline commit, not concurrent working-tree e
 | `scheduled-settings` | Partial | App/site | store.js/lib.js schedule light/dark theme only; other settings, external API and Home Assistant sources are missing. |
 | `display-name` | Partial | App | app.js/store.js support rename/reset and history entries. Full identity-path, About/notification coverage and protected mutation-history proof remain missing. |
 | `adhd-modes` | Partial | App/site | store.js exposes focus/calm only; five independent required modes and site equivalents are missing. |
-| `dim-sum` | Partial | App/site | bridge.js implements launch probability and setup/School suppression; image availability and every excluded-state proof are incomplete; site equivalent missing. |
-| `dim-sum-photo-source` | Partial | App/site/repository | bridge.js reads the public catalogue, but accepts broad image hosts rather than proving published release-asset provenance and unavailable-image reporting. |
+| `dim-sum` | Partial | App/site | Desktop delta: bridge.js resolves public published photos and metadata. Launch gating exists; all excluded-state/runtime acceptance and site equivalent remain unproven. |
+| `dim-sum-photo-source` | Partial | App/site/repository | Desktop delta: bridge.js enumerates public catalog-v1 release assets and caches metadata. Full cache provenance, unavailable-image reporting and built/runtime acceptance remain unverified. |
 | `material-design` | Partial | App/site | tokens.css and app.css implement a Material-inspired interface; no complete primitive conformance audit or built evidence. |
 | `workflow-navigation` | Partial | App | app.js provides real workflow navigation and window controls; complete per-control interaction acceptance is unverified. |
 | `motion` | Partial | App/site | app.css and applyAppearance provide animation/reduced motion; complete per-interaction motion and interruption evidence missing. |
@@ -35,8 +35,8 @@ Evidence paths below refer to the baseline commit, not concurrent working-tree e
 | `overlay-panels` | Partial | App/site | app.js has palette/drawer overlays; persistent resize, drag, keyboard geometry controls and full overflow matrix missing. |
 | `collapse-filters` | Missing | App/site | Settings search is continuously displayed; no persisted collapsible search/filter/statistics system found. |
 | `accessibility-sizing` | Partial | App/site | Accessible labels/live regions and narrow CSS exist; full tools menu, screen-reader acceptance and 100–200% scale matrix missing. |
-| `functional-ui` | Partial | App/site | Real desktop operations and honest empty states exist; site uses illustrative HTML product cards and complete affordance acceptance is absent. |
-| `onboarding-wizard` | Partial | App | app.js performs prerequisite/profile setup and skip; clean-machine acceptance and complete localization remain unverified. |
+| `functional-ui` | Partial | App/site/browser | Real desktop operations and empty states exist; Browser delta adds key/sign-out, upload/sample, AWS authorization and scoped transport. Site illustration labeling and full interaction acceptance remain incomplete. |
+| `onboarding-wizard` | Partial | App/browser | Baseline real desktop setup; Browser delta adds protected key intake and AWS-console remote-code flow. Clean-machine desktop and real-account browser acceptance remain unverified. |
 | `tabs` | Missing | App/site | ROADMAP.md explicitly lists tabs as not started; rail navigation is not browser-style tab support. |
 | `regex-search` | Partial | App/site | lib.js explains tokens around synchronous RegExp; full workbench, safe execution bounds and every-search builder missing. |
 | `command-palette` | Partial | App/site | app.js binds Ctrl+Shift+F to ten commands; complete settings/articles/rich controls and exact-element teleport missing. |
@@ -69,14 +69,14 @@ Evidence paths below refer to the baseline commit, not concurrent working-tree e
 | `external-editor` | Missing | App | No editor detection, preference or export-to-editor route. |
 | `download-handoff` | Not applicable | Extension integration | No browser-extension download capture is provided. Reassess if that integration is added. |
 | `forge-publishing` | Not applicable | App | The app deploys containers to AWS and does not publish repositories to a forge. |
-| `progress-recovery` | Partial | App/site | bridge.js scopes real progress/cancellation events; ROADMAP.md admits incomplete surviving-resource recovery. Complete re-entry/re-authentication proof missing. |
+| `progress-recovery` | Partial | App/site/browser | Baseline bridge scopes progress/cancellation; Browser delta adds remote-login codes, denied/expired/cancel states and session cleanup guards. Surviving-resource recovery and real-account end-to-end acceptance remain incomplete. |
 | `drawesome-drawing` | Missing | App | No drawing/annotation surface, tools, history or SVG/PNG exports. |
 | `completeness-parity` | Missing | App/site/repository | This audit is discovery, not a proof inventory. Baseline lacks per-surface implementation/docs/localization/test/interaction/capture bindings and omission guard. |
-| `front-provenance` | Partial | App/site | app.js titlebar shows package version only; artifact-bound updated date/time/seconds/timezone and site provenance missing. |
-| `product-evidence` | Partial | App/site/repository | design/frames contains design renders, not installed-product acceptance. README lacks real surface captures and workflow diagrams. |
+| `front-provenance` | Partial | App/site/browser | Desktop delta: scripts/stamp-build.mjs writes build-info.json; main.js/preload/app.js expose version, built time, timezone and unavailable state. Packaged provenance binding/negative regression and site/browser equivalents not fully verified. |
+| `product-evidence` | Partial | App/site/repository | Browser delta adds docs/evidence/browser-check.json and desktop/mobile captures. These establish only recorded browser checks, not live AWS/installed Windows acceptance. Desktop delta workflow still screenshots source through npx electron. |
 | `screen-recording` | Missing | App/repository | No committed product recording or source-bound capture manifest in baseline tree. |
 | `design-reference-parity` | Missing | App/site | design/artboards exists, but complete matched capture tuples, comparisons, diffs and omission regression are missing. |
-| `design-folder` | Partial | Repository | design/ contains artboards, canvas and handoffs at the audited commit; design-tool process/skill validation not established by tree inspection. |
+| `design-folder` | Partial | Repository | Desktop delta retains design/ artboards/canvas/handoffs and adds Updates references; complete process validation and reference/product comparison proof remain unestablished. |
 | `cheap-jor-matrix` | Missing | App/site | No complete per-surface language/theme/scale/viewport interaction and clipping matrix in baseline tree. |
 | `public-huishot-gallery` | Unverified | External evidence | No verified public gallery link/provenance inventory found; external gallery state not queried. |
 | `landing-site` | Partial | Site | site/index.html and Pages workflow exist; full independent required features and documentation missing. |
@@ -96,15 +96,15 @@ Evidence paths below refer to the baseline commit, not concurrent working-tree e
 | `fresh-build-run-command` | Missing | Repository | README requires npm ci/npm start; no verified fresh-machine build-and-run command or source-bound receipt. |
 | `dependency-fetcher` | Missing | Repository | No root download-dependencies.bat, pinned digest manifest or shared bootstrap entrypoint. |
 | `bundled-dependencies` | Partial | App | Electron packaging exists; AWS/Docker use external installation and no installed-artifact bundled-first resolution proof. |
-| `squirrel-installer` | Missing | App/repository | package.json selects NSIS; required Squirrel Setup.exe/RELEASES/nupkg/delta pipeline absent. |
-| `self-signing` | Unverified | Repository | No required-format signing need established for this Windows package. Do not infer a public-CA signing requirement; verify unsigned disclosures and no signing-service use. |
-| `auto-updates` | Missing | App | ROADMAP.md lists in-app automatic updates as not started; no feed/staging/restart implementation. |
-| `app-icon` | Missing | App/repository | ROADMAP.md lists original icon as not started; no master/icon generation or packaged icon configuration. |
-| `release-workflow` | Partial | Repository | release.yml publishes on main push/manual dispatch, but test job gates build/release contrary to the required ungated release policy; live release result not verified here. |
-| `release-timing` | Partial | Repository | release.yml computes elapsed minutes/seconds before publication; exact started/completed UTC lines and final-publication duration missing. |
+| `squirrel-installer` | Partial | App/repository | Desktop delta: package.json now selects Squirrel.Windows; release.yml collects dist/squirrel-windows/* and discloses unsigned builds. Successful release assets, Setup/RELEASES/nupkg integrity, clean install/update/uninstall and runtime acceptance are unverified. |
+| `self-signing` | Unverified | Repository | Desktop delta release notes explicitly disclose unsigned Windows builds. No required-format signing need established; actual assets and absence of signing-service/key leakage remain unverified. |
+| `auto-updates` | Partial | App | Desktop delta: src/main/updater.js supplies startup/four-hour checks, Squirrel feed and download/ready/error events; renderer adds banner, Later, notes and restart. Real installed update/hash-failure/rollback/unsaved-work acceptance and localization remain incomplete. |
+| `app-icon` | Partial | App/repository | Desktop delta: assets/icon.svg, scripts/build-icons.mjs, build/icon.ico/png and renderer icon are wired to package/window. Packaged executable/installer/update small-size inspection remains unverified. |
+| `release-workflow` | Partial | Repository | Desktop delta workflow builds Squirrel and stamps provenance/code names on main push/manual dispatch, but test job still gates release contrary to required ungated policy. Final run, packaged assets and download acceptance not verified here. |
+| `release-timing` | Partial | Repository | Desktop delta release.yml adds start/finished UTC values, but measures before publication and lacks required separate completed/duration HH:mm:ss lines through final publication. |
 | `release-line-counts` | Partial | Repository | release.yml concatenates files through wc; no dedicated categorized/nonblank/attribution counter or published-release README binding. |
-| `release-dim-sum-photo` | Missing | Repository | release.yml does not resolve/publicly reference a release dish/photo or document version-only fallback. |
-| `dim-sum-code-names` | Missing | App/site/repository | ROADMAP.md lists release code names as not started; no non-reuse mapping. |
+| `release-dim-sum-photo` | Partial | Repository | Desktop delta scripts/code-name.mjs resolves published catalog-v1 assets; workflow emits bilingual photo link or version-only reason. Actual published notes, source binding and complete non-reuse acceptance unverified. |
+| `dim-sum-code-names` | Partial | App/site/repository | Desktop delta selects unused public-photo-backed names from release history and stamps About/front provenance. Real release mapping, pagination completeness, changelog and site release coverage remain unverified/incomplete. |
 | `ci-bootstrap` | Partial | Repository | Workflows use setup-node/npm ci; complete job dependency inventories, cold-cache proof and always-upload safe outputs missing. |
 | `runner-selection` | Unverified | Repository | Workflows use ubuntu-latest/windows-latest; no recorded live runner-capacity inspection or pinned fallback image. |
 | `encrypted-public-builder` | Not applicable | Repository | Private-repository encrypted publishing does not apply to this public repository. |
@@ -114,14 +114,14 @@ Evidence paths below refer to the baseline commit, not concurrent working-tree e
 | `agents-md-vocabulary-block` | Missing | Repository | AGENTS.md absent at baseline; required sanitized discipline block not present. |
 | `vocabulary-hash-lock` | Missing | Repository | No check-vocabulary script/build integration/pre-push hook present at baseline. |
 | `roadmap-checklist` | Partial | Repository | ROADMAP.md uses real checkboxes and candid gaps, but shipped definition accepts test OR screenshot rather than complete proof. |
-| `feature-docs` | Missing | Repository | No categorized feature articles and category indexes in baseline tree. |
-| `postman-collections` | Missing | Repository | No master/category HTTP collection or documented nonapplicability. Browser-preview HTTP API is pending and must be inventoried separately. |
+| `feature-docs` | Partial | Repository | Browser delta adds docs/BROWSER-PREVIEW.md and this audit. Categorized per-feature articles, category indexes and complete coverage remain missing. |
+| `postman-collections` | Missing | Repository/browser | Browser delta adds session/events/upload/RPC HTTP routes, but no master/category Postman collection or complete API documentation inventory. |
 | `wiki-day-teet-hui-sync` | Unverified | Repository/site | Site source exists; wiki contents and same-task synchronization evidence not checked. |
 | `handoff-record` | Partial | Repository/external records | HANDOFF.md exists; matching hosted handoff record, exact current evidence and owner transition verification pending. |
 | `closeout-prompt` | Missing | Repository | CLOSEOUT_PROMPT.md absent at baseline; publication/ref proof not part of this audit. |
 | `discussion-records` | Unverified | External records | Discussion coverage, deduplication, rolling progress and release announcement/pin state not queried. |
 | `project-board` | Unverified | External records | Repository-linked project and task state not queried. |
-| `operational-skill` | Unverified | Operational evidence | No verified current reproducible project operational-skill evidence; private installation state not published here. |
+| `operational-skill` | Unverified | Operational evidence | Browser delta documents container/tunnel/login/recovery routes in docs/BROWSER-PREVIEW.md; installed operational-skill validation and complete acceptance evidence not established. |
 | `readme-prompt-banner` | Not applicable | Catalogue infrastructure | Applies only to the instruction catalogue repository, not this application. |
 | `uh-single-file-editions` | Not applicable | Catalogue infrastructure | Applies only to portable instruction-catalogue editions, not this application. |
 | `project-profile` | Not applicable | Catalogue infrastructure | Applies to catalogue-owned project memory records, not a public app feature. |
@@ -132,9 +132,11 @@ Evidence paths below refer to the baseline commit, not concurrent working-tree e
 
 1. Build a hand-written inventory for the desktop application, public site and any browser preview separately. Bind every applicable identifier to implementation, article, localized resources, persistence, focused test, omission regression, packaged interaction and genuine capture evidence. This audit supplies identifiers and gaps, not those acceptance bindings.
 2. Verify the core AWS flow without deploying resources first: fresh prerequisites, real browser SSO, identity verification, expired session, account switching, cancellation and rejected input. A live deployment needs a separate real-account acceptance record and resource/cost recovery verification.
-3. Browser preview/backend work is **pending verification** and is outside this pinned baseline. Reconcile its HTTP routes, credentials/session isolation, browser callback behavior, documentation and tunnel access after integration. An exposed preview or a working tunnel alone does not prove AWS sign-in or feature completeness.
+3. Browser preview/backend implementation is included as the **Browser delta**, with final integration and full acceptance pending. Reconcile its HTTP routes, credentials/session isolation, browser callback behavior, documentation and tunnel access after integration. An exposed preview or a working tunnel alone does not prove AWS sign-in or feature completeness. The dedicated Docker engine could not start in this managed environment because nested cgroup permissions were denied; no host-socket fallback is accepted. A no-engine companion can verify interface, source intake and AWS authorization-link generation only.
 4. Preserve designer-owned `design/` work. Add matched reference/product routes and genuine comparisons rather than treating artboards as shipped behavior.
 5. Correct release evidence: the baseline workflow calls `npx electron . --screenshots=screenshots`, which launches source, not the packaged executable. Capture the installed artifact, bind evidence to its source/build digest, and reconcile README/site/release statements.
 6. Implement missing foundations and broad required tool families before claiming full compliance. Record genuine scope exclusions explicitly; do not silently omit features because the core AWS flow works. Validate external records separately and report exact blockers.
+
+The browser test suite and focused checks have separate owner-run results; this audit does not invent or freeze a test count while integration is changing. No real AWS-account login, deployed workload, clean Windows Squirrel installation or automatic update is claimed.
 
 No completion percentage is published: applicability and acceptance remain separate dimensions, and the browser integration is still changing.
