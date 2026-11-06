@@ -45,7 +45,10 @@ Honest inventory of the desktop app and its landing page. **Shipped** means impl
 - [x] Shipped: offline docs: one article per feature bundled into the app, rendered by one safe Markdown renderer, searchable with regex; a test fails if an article is missing or links to a missing one
 - [x] Shipped: export of records, history and settings as JSON, YAML, CSV or Markdown, or everything as a ZIP, each stating schema, UTF-8 and LF, and any loss before saving
 - [ ] Partial: 7z archives and encrypted archives are not offered yet (ZIP only)
-- [ ] Not started: per-element appearance editor, element locks, live charts, logo customization
+- [x] Shipped: toy element locks from the context menu (Lock this element…), six policies (PIN, password, PIN plus password, password plus TOTP, PIN plus TOTP, all three), on-screen keypad, QR code for authenticator apps, scrypt hashes and an encrypted vault in the operating system's protected storage, 5 free tries then a doubling wait capped at one hour. Just for fun, never security: deleting the app data folder removes every lock
+- [x] Shipped: unlock ladder while waiting (dim sum quiz, ten sums, whack-a-mole, the clock), up to three ladders an hour; each rung clears a quarter of the wait and never reveals or resets the credential
+- [x] Shipped: Support Tickets, a local joke help desk that always resolves to the app data folder and states that nothing is sent anywhere
+- [ ] Not started: per-element appearance editor, live charts, logo customization
 
 ## Release and site
 

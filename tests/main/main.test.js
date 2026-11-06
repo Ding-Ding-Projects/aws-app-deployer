@@ -170,3 +170,47 @@ test('every feature article is bundled and titled', async () => {
   for (const d of r.docs) assert.ok(d.title && !d.title.endsWith('.md'), d.id);
   for (const d of r.docs) for (const [, link] of d.body.matchAll(/\]\(([a-z0-9-]+)\)/g)) assert.ok(files.includes(link + '.md'), `${d.id} links to missing ${link}`);
 });
+
+const fakeVault = () => ({ isEncryptionAvailable: () => true, encryptString: s => Buffer.from('E' + s), decryptString: b => b.toString().slice(1) });
+test('each toy lock keeps its own policy, rate limits wrong answers and never stores a secret in clear', () => {
+  const { createLocks, totp } = require('../../src/main/locks');
+  const dir = tmp(); let t = 1_800_000_000_000;
+  const L = createLocks({ dir, safeStorage: fakeVault(), now: () => t });
+  assert.equal(L.create('go:settings', { label: 'Settings', policy: 'pin', pin: '12' }).error, 'PIN_INVALID');
+  assert.equal(L.create('go:settings', { label: 'Settings', policy: 'pin', pin: '2468' }).ok, true);
+  const { secret } = L.newTotp('Deploy');
+  assert.equal(L.create('act:deploy', { label: 'Deploy', policy: 'pin+totp', pin: '1111', totpSecret: secret, totpCode: '000000' }).error, 'TOTP_CODE_WRONG');
+  assert.equal(L.create('act:deploy', { label: 'Deploy', policy: 'pin+totp', pin: '1111', totpSecret: secret, totpCode: totp(secret, t) }).ok, true);
+  assert.equal(L.verify('act:deploy', { pin: '2468', totp: totp(secret, t) }).ok, false, 'one lock never opens another');
+  assert.equal(L.verify('act:deploy', { pin: '1111', totp: totp(secret, t - 30000) }).ok, true, 'one step of clock skew is accepted');
+  assert.equal(L.verify('act:deploy', { pin: '1111', totp: totp(secret, t - 120000) }).ok, false);
+  for (let i = 0; i < 5; i++) L.verify('go:settings', { pin: '0000' });
+  const w = L.verify('go:settings', { pin: '2468' });
+  assert.deepEqual([w.ok, w.error], [false, 'WAIT']);
+  const raw = fs.readFileSync(path.join(dir, 'locks.vault'), 'utf8');
+  assert.ok(!raw.includes('2468') && !raw.includes(secret), 'no clear secret on disk');
+  assert.ok(!fs.readdirSync(dir).some(f => f === 'settings.json' && fs.readFileSync(path.join(dir, f), 'utf8').includes('2468')));
+  t += 3_600_001;
+  assert.equal(L.verify('go:settings', { pin: '2468' }).ok, true);
+  assert.equal(createLocks({ dir, safeStorage: { isEncryptionAvailable: () => false } }).create('x', { label: 'x', policy: 'pin', pin: '1234' }).error, 'VAULT_UNAVAILABLE');
+});
+
+test('the unlock ladder grades in the main process with single-use nonces and cannot be won early', async () => {
+  const { createLocks } = require('../../src/main/locks');
+  let t = 1_800_000_000_000;
+  const L = createLocks({ dir: tmp(), safeStorage: fakeVault(), now: () => t, catalog: async () => [1, 2, 3, 4, 5].map(i => ({ name: { en: 'Dish ' + i, zhHant: '點' + i }, description: { en: 'desc ' + i } })) });
+  L.create('x', { label: 'X', policy: 'pin', pin: '1234' });
+  for (let i = 0; i < 5; i++) L.verify('x', { pin: '0000' });
+  const before = L.status().locks[0].waitMs;
+  const s = await L.ladderStart('x', 'sums');
+  const answers = s.challenge.sums.map(q => q.split(' + ').reduce((a, b) => +a + +b));
+  assert.equal(L.ladderAnswer(s.nonce, answers).passed, true);
+  assert.equal(L.ladderAnswer(s.nonce, answers).error, 'NONCE_USED_OR_UNKNOWN');
+  assert.ok(L.status().locks[0].waitMs < before, 'wait shrinks');
+  assert.equal(L.verify('x', { pin: '1234' }).error, 'WAIT', 'the credential is never cleared');
+  const m = await L.ladderStart('x', 'mole');
+  assert.equal(L.ladderAnswer(m.nonce, m.challenge.moles.map(x => x.id)).error, 'ROUND_NOT_FINISHED');
+  const m2 = await L.ladderStart('x', 'mole'); t += 20001;
+  assert.equal(L.ladderAnswer(m2.nonce, [m2.challenge.moles[0].id, m2.challenge.moles[0].id]).passed, false, 'each mole counts once');
+  assert.equal((await L.ladderStart('x', 'dimsum', { school: true })).error, 'INVALID_INPUT', 'school mode has no dim sum rung');
+});

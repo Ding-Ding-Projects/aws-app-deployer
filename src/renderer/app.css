@@ -110,3 +110,16 @@ select { height: 40px; border-radius: var(--r2); border: 1px solid var(--line2);
 #app.app { position: fixed; inset: 0; height: auto; }
 .body { overflow: hidden; }
 .main { min-height: 0; max-height: 100%; }
+.pad { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.pk { height: 52px; border-radius: 14px; background: var(--s1); border: 1px solid var(--line2); color: var(--tx); font: inherit; font-size: 18px; font-weight: 650; cursor: pointer; display: grid; place-items: center; }
+.pk:active { transform: scale(.96); }
+.dots { display: flex; gap: 10px; justify-content: center; padding: 4px 0; }
+.dots i { width: 12px; height: 12px; border-radius: 6px; background: var(--ac); }
+.dots i.e { background: var(--s4); }
+.mole { aspect-ratio: 1; border-radius: 50%; background: var(--s1); border: 1px solid var(--line2); display: grid; place-items: center; cursor: pointer; color: var(--warn); transition: transform var(--d1) var(--ease); }
+.mole.up { background: var(--warn-c); border-color: var(--warn); transform: scale(1.04); }
+.qr { background: #fff; border-radius: 12px; padding: 8px; width: 200px; align-self: center; }
+.qr svg { width: 100%; height: auto; display: block; }
+.is-locked { position: relative; opacity: .55; cursor: not-allowed !important; }
+.is-locked::after { content: "lock"; font-family: "Material Symbols Rounded"; font-size: 14px; position: absolute; top: 2px; right: 2px; color: var(--warn); line-height: 1; }
+.field textarea, .field select { min-height: 44px; }

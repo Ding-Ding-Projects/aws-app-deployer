@@ -12,6 +12,7 @@
     wizard: { step: 1, file: null, inspect: null, name: '', port: '', health: '/', env: [] },
     run: null, result: null, history: { history: [], deployments: [] },
     prov: null, update: null, updateLater: false,
+    lockState: null, unlocked: {}, unlock: null, lockWiz: null, appdata: '', ticketQ: '', ticketRegex: false, ticketDraft: '',
     tabs: [{ id: 'ws' }], active: 'ws', tabQ: '', tabRegex: false, hist: { q: '', regex: false, cat: 'All', from: '', to: '', sel: null }, clog: { q: '', regex: false, from: '', to: '' }, docF: { q: '', regex: false, id: null }, changelog: null, docs: null, exportFmt: 'json',
     palette: null, panel: null, practice: {}, infoStep: 0, noteQ: '', noteRegex: false, noteSel: new Set(), depQ: '', depRegex: false, depStatus: 'all', depSel: new Set(), sources: {}, defaults: {},
     drawer: false, notes: [], toasts: [], dimsum: null, troll: false, maximized: false,
@@ -316,6 +317,7 @@
           ${tog('focus', T('focus'), 'Hides side panels so one action leads')}${tog('calm', T('calm'), 'No pulsing or looping motion')}${tog('school', T('school'), 'Hides playful extras everywhere')}
           ${s.school ? '' : `<div class="set" style="flex-wrap: wrap" data-search="dim sum surprise"><span class="stack grow"><span class="t" style="font-weight: 600">${T('dim_sum')}</span><span class="small">A rare treat at launch</span></span><button class="toggle on" role="switch" aria-checked="true" aria-label="${T('dim_sum')}" data-act="troll"></button>${S.troll ? `<span class="card pop" style="flex: 1 1 100%; flex-direction: row; gap: 10px; align-items: center; padding: 10px 14px; margin-top: 10px; background: var(--warn-c)" role="status">${ic('lock', 'fill')}<span class="small" style="color: var(--tx)">${T('dim_sum_troll')}${emojiOn() ? ' 🥟' : ''}</span></span>` : ''}</div>`}
         </div>
+        <div class="card" data-search="toy locks lock pin password totp support tickets"><span class="h2">Toy locks</span><span class="small">Right-click anything and choose Lock this element… Just for fun, never security.</span>${(S.lockState?.locks || []).map(l => `<div class="li static" style="padding: 6px 0">${ic('lock', 'sm')}<span class="stack grow"><span class="t">${esc(l.label)}</span><span class="m">${esc(POLICY_LABEL[l.policy])}${l.waitMs ? ' · waiting' : ''}</span></span></div>`).join('') || '<span class="small">No locks yet.</span>'}<span class="small" style="color: var(--tx)">${esc(recoveryLine())}</span><button class="btn text" data-go="support" style="align-self: flex-start">${ic('support_agent')}Support Tickets</button></div>
         <div class="card" style="gap: 0" data-menu="setting" data-key="a11y" data-search="accessibility text size contrast focus targets read aloud button hidden"><div class="set">${info('a11y', 'Accessibility tools')}<span class="stack grow"><span class="t" style="font-weight: 600">Accessibility tools</span><span class="small">${s.a11y.hidden ? 'Title bar button hidden' : 'Button in the title bar'} · text ${s.a11y.textSize}%</span></span><button class="btn tonal" data-panel-open="a11y">Open</button>${s.a11y.hidden ? '<button class="btn text" data-act="a11y-show">Show button</button>' : ''}</div></div>
         <div class="row" style="gap: 6px; flex-wrap: wrap"><button class="btn text" data-panel-open="export:settings">${ic('download')}Export settings</button><button class="btn text" data-go="history">${ic('history')}Local history</button></div>
       </div></div>`);
@@ -336,7 +338,7 @@
     return page(T('nav_help'), '', `<div class="cols"><div class="wide"><div class="card"><span class="h2">Keyboard</span><dl class="kv" style="margin: 0"><dt><span class="kbd">Ctrl+Shift+F</span></dt><dd>Command palette with regex search</dd><dt><span class="kbd">Ctrl+N</span></dt><dd>New deployment</dd><dt><span class="kbd">Ctrl+,</span></dt><dd>Settings</dd><dt><span class="kbd">Esc</span></dt><dd>Close palette or panel</dd></dl></div>
       <div class="card"><span class="h2">What a deployment creates</span><span class="sub">A VPC across two availability zones, a public Application Load Balancer, one NAT gateway, two Fargate tasks in private subnets, an ECR repository with an immutable image, and CloudWatch logs. These cost money until you delete them in AWS.</span></div>
       <div class="card"><span class="h2">Not supported yet</span><span class="sub">Multi-service Compose, volumes, Compose secrets, adjustable task size, custom-domain HTTPS from the app, automatic updates from a repository, and deleting a deployment from the app.</span></div></div>
-      <div class="side">${updatesCard()}<div class="card"><span class="h2">About</span>${aboutBody()}<span class="small">Free, source on GitHub. Not affiliated with Amazon Web Services.</span><button class="btn out" data-act="open-url" data-url="https://github.com/Ding-Ding-Projects/aws-app-deployer" style="align-self: flex-start">${ic('code')}Source</button><button class="btn text" data-go="changelog" style="align-self: flex-start">${ic('new_releases')}Changelog</button><button class="btn text" data-go="docs" style="align-self: flex-start">${ic('menu_book')}Docs</button><button class="btn text" data-go="setup" style="align-self: flex-start">Run setup again</button></div></div></div>`);
+      <div class="side">${updatesCard()}<div class="card"><span class="h2">About</span>${aboutBody()}<span class="small">Free, source on GitHub. Not affiliated with Amazon Web Services.</span><button class="btn out" data-act="open-url" data-url="https://github.com/Ding-Ding-Projects/aws-app-deployer" style="align-self: flex-start">${ic('code')}Source</button><button class="btn text" data-go="support" style="align-self: flex-start">${ic('support_agent')}Support Tickets</button><button class="btn text" data-go="changelog" style="align-self: flex-start">${ic('new_releases')}Changelog</button><button class="btn text" data-go="docs" style="align-self: flex-start">${ic('menu_book')}Docs</button><button class="btn text" data-go="setup" style="align-self: flex-start">Run setup again</button></div></div></div>`);
   }
 
   // ---------- overlays ----------
@@ -350,6 +352,7 @@
     { id: 'changelog', label: 'Changelog', keywords: 'versions releases', run: () => go('changelog') },
     { id: 'docs', label: 'Docs', keywords: 'help articles offline', run: () => go('docs') },
     { id: 'export', label: 'Export settings, history or records', keywords: 'export json csv yaml markdown zip', run: () => openPanel('export:settings') },
+    { id: 'support', label: 'Support Tickets', keywords: 'locked out forgot pin password', run: () => go('support') },
     { id: 'updates', label: 'Check for updates', keywords: 'update upgrade version', run: async () => { S.update = await api.checkUpdates(); go('help'); } },
     { id: 'notes', label: 'Notifications', run: () => openPanel('notes') },
     { id: 'a11y', label: 'Accessibility tools', keywords: 'text size contrast focus targets read aloud', run: () => openPanel('a11y') },
@@ -364,7 +367,7 @@
     return `<div class="overlay"><div class="scrim" data-act="close-palette" style="align-items: start; padding-top: 72px"><div class="dialog" role="dialog" aria-label="${T('palette')}" style="width: min(680px, 100%); padding: 10px; gap: 0" data-stop="1">
       <div class="row" style="padding: 8px 10px; gap: 10px; flex-wrap: wrap">${ic('search')}<label for="pq" class="sr">Command</label><input id="pq" class="mono" data-input="paletteQ" value="${esc(P.q)}" autocomplete="off" style="flex: 1 1 200px; min-width: 0; height: 40px; border: 0; background: transparent; color: var(--tx); font-size: 16px; outline: none"><button class="badge ${P.regex ? 'ac' : 'mute'} mono" style="border: 0; cursor: pointer" aria-pressed="${P.regex}" data-act="regex">.* Regex</button></div>
       ${P.regex && P.q ? `<div class="row small" style="padding: 4px 12px 10px; gap: 8px; flex-wrap: wrap">${r.ok ? (r.parts || []).map(p => `<span class="row" style="gap: 6px; white-space: nowrap"><span class="badge mute mono">${esc(p.token)}</span>${esc(p.meaning)}</span>`).join('') + `<span class="badge ok">${ic('check', 'sm')}valid · ${items.length} matches</span>` : `<span class="badge err">${esc(r.error)}</span>`}</div>` : ''}
-      <div class="divider"></div><div class="list" style="background: transparent" role="listbox">${items.map((c, i) => `<button class="li ${i === P.sel ? 'sel' : ''}" role="option" aria-selected="${i === P.sel}" data-cmd="${c.id}">${esc(c.label)}</button>`).join('') || '<span class="small" style="padding: 12px">No matches</span>'}</div>
+      <div class="divider"></div><div class="list" style="background: transparent" role="listbox">${items.map((c, i) => `<button class="li ${i === P.sel ? 'sel' : ''}" role="option" aria-selected="${i === P.sel}" data-cmd="${c.id}">${esc(c.label)}${isLocked('go:' + c.id) || isLocked('panel:' + c.id) ? ` <span class="badge warn">${ic('lock', 'sm')}Locked</span>` : ''}</button>`).join('') || '<span class="small" style="padding: 12px">No matches</span>'}</div>
       <div class="row small" style="padding: 8px 12px; gap: 14px"><span><span class="kbd">↑↓</span> move</span><span><span class="kbd">Enter</span> run</span><span><span class="kbd">Esc</span> close</span></div></div></div></div>`;
   }
   function drawerHtml() {
@@ -385,7 +388,7 @@
 
 
   // ---------- anchored panels: accessibility, notifications, info, keyboard help ----------
-  function openPanel(id, anchor) { S.panel = { id, anchor: anchor || null }; S.infoStep = 0; render(); setTimeout(() => document.querySelector(`[data-panel="${id.split(':')[0]}"] [data-autofocus]`)?.focus(), 30); }
+  function openPanel(id, anchor) { if (!['unlock', 'lockwiz'].includes(id) && guard('panel:' + id.split(':')[0])) return; S.panel = { id, anchor: anchor || null }; S.infoStep = 0; render(); setTimeout(() => document.querySelector(`[data-panel="${id.split(':')[0]}"] [data-autofocus]`)?.focus(), 30); }
   function closePanel() { const a = S.panel?.anchor; S.panel = null; render(); if (a) document.querySelector(a)?.focus(); }
   async function setA11y(patch) { await set('a11y', { ...S.settings.a11y, ...patch }); }
   function panelFrame(id, title, body, anchorStyle) {
@@ -415,6 +418,8 @@
         ${list.map(n => `<label class="li static" style="padding: 8px 0"><input type="checkbox" class="check" data-note="${n.id}" ${S.noteSel.has(n.id) ? 'checked' : ''}><span class="tile ${n.kind === 'err' ? 'err' : 'ok'}">${ic(n.kind === 'err' ? 'error' : 'check_circle', 'fill')}</span><span class="stack grow"><span class="t">${esc(n.text)}</span><span class="m">${esc(n.at)}</span></span></label>`).join('') || '<span class="small">Nothing here</span>'}`, right + ' height: 520px;');
     }
     if (P.id === 'newtab') return newTabPanel();
+    if (P.id === 'lockwiz') return lockWizPanel();
+    if (P.id === 'unlock') return unlockPanel();
     if (P.id.startsWith('export:')) return exportPanel(P.id.slice(7));
     if (P.id.startsWith('info:')) {
       const key = P.id.slice(5), ex = Lib.EXPLAIN[key];
@@ -447,6 +452,12 @@
     if (field) items.push({ label: 'Cut', icon: 'content_cut', run: () => document.execCommand('cut') }, { label: 'Copy', icon: 'content_copy', run: () => document.execCommand('copy') }, { label: 'Paste', icon: 'content_paste', run: async () => { field.focus(); document.execCommand('insertText', false, await navigator.clipboard.readText()); } }, { label: 'Select all', icon: 'select_all', run: () => field.select() });
     const sel = String(getSelection() || '').trim(), txt = (el.closest('[data-menu],.card,.li,.btn,.chip,h1,.h2,dd,dt,span,div') || el).innerText?.trim();
     items.push({ label: sel ? 'Copy selected text' : 'Copy this text', icon: 'content_copy', disabled: !(sel || txt), run: () => copy(sel || txt) });
+    const k = elKey(el);
+    if (k) {
+      const has = lockSet().has(k.key);
+      if (!has) items.push({ label: 'Lock this element…', icon: 'lock', run: () => openLockWizard(k) });
+      else { items.push({ label: isLocked(k.key) ? 'Unlock…' : 'Lock again', icon: isLocked(k.key) ? 'lock_open' : 'lock', run: () => { if (isLocked(k.key)) openUnlock(k); else { delete S.unlocked[k.key]; render(); } } }); items.push({ label: 'Remove this lock…', icon: 'no_encryption', run: () => { S.unlock = { key: k.key, label: k.label, pin: '', password: '', totp: '', duration: 'once', remove: true }; openPanel('unlock'); } }); }
+    }
     items.push({ label: 'Command palette', icon: 'search', shortcut: 'palette', run: () => togglePalette() }, { label: 'Keyboard help', icon: 'keyboard', shortcut: 'keys', run: () => openPanel('keys') });
     return items;
   }
@@ -479,6 +490,7 @@
     { view: 'docs', label: 'Docs', icon: 'menu_book', keywords: 'help articles offline' },
     { view: 'changelog', label: 'Changelog', icon: 'new_releases', keywords: 'versions releases' },
     { view: 'settings', label: 'Settings', icon: 'tune' }, { view: 'help', label: 'Help and about', icon: 'help' },
+    { view: 'support', label: 'Support Tickets', icon: 'support_agent', keywords: 'locked out forgot pin password' },
     { view: 'accounts', label: 'Accounts', icon: 'key' }, { view: 'deploys', label: 'Deployments', icon: 'rocket_launch' },
   ];
   function tabStrip() {
@@ -568,6 +580,120 @@
     if (r.ok) toast(`Saved ${Lib.FORMATS[fmt].label} export`);
   }
 
+
+  // ---------- element keys (shared by locks and the appearance editor) ----------
+  const KEYED = '[data-go],[data-act],[data-toggle],[data-set],[data-info],[data-tab-go],[data-panel-open],[data-cmd],[data-menu],[data-win],button,a,input,select,textarea,h1,.h2,.card,.li';
+  function elKey(node) {
+    const t = node?.closest?.(KEYED); if (!t || t.closest('.panel[data-panel="unlock"], .panel[data-panel="lockwiz"]')) return null;
+    const d = t.dataset;
+    const k = d.go ? 'go:' + d.go : d.tabGo ? 'tab:' + (S.tabs.find(x => x.id === d.tabGo)?.view || 'workspace') : d.toggle ? 'toggle:' + d.toggle : d.set ? `set:${d.set}=${d.val}` : d.act ? 'act:' + d.act + (d.key ? ':' + d.key : '') + (d.view ? ':' + d.view : '') : d.panelOpen ? 'panel:' + d.panelOpen : d.info ? 'info:' + d.info : d.cmd ? 'cmd:' + d.cmd : d.win ? 'win:' + d.win : d.menu ? `menu:${d.menu}:${d.key || d.at || d.tab || ''}` : t.id ? 'id:' + t.id : 'text:' + (t.tagName.toLowerCase()) + ':' + (t.innerText || '').trim().slice(0, 40).replace(/[^\w.\-]+/g, '-');
+    return { key: k.slice(0, 160), el: t, label: (t.getAttribute('aria-label') || t.innerText || k).trim().split('\n')[0].slice(0, 60) };
+  }
+
+  // ---------- toy locks ----------
+  const lockSet = () => new Set((S.lockState?.locks || []).map(l => l.id));
+  function isLocked(key) { if (!lockSet().has(key)) return false; const u = S.unlocked[key]; return !(u === 'session' || (typeof u === 'number' && u > Date.now())); }
+  async function refreshLocks() { S.lockState = await api.lockStatus(); }
+  function guard(key) { if (isLocked(key)) { openUnlock({ key, label: (S.lockState.locks.find(l => l.id === key) || {}).label || key }); return true; } return false; }
+  function openUnlock(k) { S.unlock = { key: k.key, label: k.label, pin: '', password: '', totp: '', duration: 'once', error: null, ladder: null }; openPanel('unlock'); }
+  function openLockWizard(k) { S.lockWiz = { key: k.key, label: k.label, policy: 'pin', pin: '', pin2: '', password: '', password2: '', totp: null, code: '', error: null }; openPanel('lockwiz'); }
+  document.addEventListener('click', e => {
+    if (e.target.closest('.panel[data-panel="unlock"], .panel[data-panel="lockwiz"], .ctx, .sc, .toasts')) return;
+    const k = elKey(e.target); if (k && isLocked(k.key)) { e.preventDefault(); e.stopImmediatePropagation(); openUnlock(k); }
+  }, true);
+  document.addEventListener('keydown', e => {
+    if (!['Enter', ' '].includes(e.key) || e.target.closest?.('.panel[data-panel="unlock"], .panel[data-panel="lockwiz"], .ctx, .sc')) return;
+    const k = elKey(e.target); if (k && isLocked(k.key)) { e.preventDefault(); e.stopImmediatePropagation(); openUnlock(k); }
+  }, true);
+  document.addEventListener('focusin', e => { if (!e.target.matches?.('input, select, textarea')) return; const k = elKey(e.target); if (k && isLocked(k.key)) { e.target.blur(); openUnlock(k); } });
+  function decorateLocks() {
+    const set = lockSet(); if (!set.size) return;
+    root.querySelectorAll(KEYED).forEach(el => { const k = elKey(el); if (k && k.el === el && set.has(k.key)) { const locked = isLocked(k.key); el.classList.toggle('is-locked', locked); el.classList.toggle('was-locked', !locked); if (locked) { el.setAttribute('aria-disabled', 'true'); el.setAttribute('title', 'Locked for fun. Activate to unlock.'); } } });
+  }
+  const POLICY_LABEL = { pin: 'PIN', password: 'Password', 'pin+password': 'PIN plus password', 'password+totp': 'Password plus TOTP', 'pin+totp': 'PIN plus TOTP', 'password+pin+totp': 'Password plus PIN plus TOTP' };
+  const recoveryLine = () => `Just for fun, never security. Locked out? Delete the app data folder: ${S.appdata || 'unavailable'}.`;
+  function keypad(field) {
+    return `<div class="pad" role="group" aria-label="PIN keypad">${['1', '2', '3', '4', '5', '6', '7', '8', '9'].map(n => `<button class="pk" data-act="pk" data-f="${field}" data-n="${n}" aria-label="Digit ${n}">${n}</button>`).join('')}<button class="pk" data-act="pk-back" data-f="${field}" aria-label="Backspace">${ic('backspace')}</button><button class="pk" data-act="pk" data-f="${field}" data-n="0" aria-label="Digit 0">0</button><button class="pk" data-act="pk-clear" data-f="${field}" aria-label="Clear">${ic('clear_all')}</button></div>`;
+  }
+  const masked = v => `<span class="dots" aria-live="polite" aria-label="${v.length} digits entered">${Array.from({ length: Math.max(4, v.length) }, (_, i) => `<i class="${i < v.length ? '' : 'e'}"></i>`).join('')}</span>`;
+  function lockWizPanel() {
+    const W = S.lockWiz, need = W.policy.split('+');
+    if (S.lockState && !S.lockState.available) return panelFrame('lockwiz', 'Lock this element', `<span>Locks need the operating system's protected storage, which is not available here. Nothing was locked.</span>`, 'top: 90px; left: calc(50% - 220px); width: 440px;');
+    const fld = (id, label, val, type = 'password', extra = '') => `<div class="field"><label for="${id}">${label}</label><input id="${id}" type="${type}" data-lw="${id}" value="${esc(val)}" autocomplete="off" ${extra}></div>`;
+    return panelFrame('lockwiz', `Lock "${W.label}"`, `<span class="small">Target: <span class="mono">${esc(W.key)}</span></span>
+      <span class="label">CHOOSE ONE POLICY</span><div class="seg" role="radiogroup" style="flex-wrap: wrap">${Object.keys(POLICY_LABEL).map(p => `<button role="radio" aria-checked="${W.policy === p}" class="${W.policy === p ? 'on' : ''}" data-act="lw-policy" data-p="${p}">${POLICY_LABEL[p]}</button>`).join('')}</div>
+      ${need.includes('pin') ? `${fld('lw-pin', 'PIN (4 to 12 digits)', W.pin, 'password', 'inputmode="numeric"')}${masked(W.pin)}${keypad('pin')}${fld('lw-pin2', 'Repeat PIN', W.pin2, 'password', 'inputmode="numeric"')}` : ''}
+      ${need.includes('password') ? `${fld('lw-password', 'Password (6 or more characters)', W.password)}${fld('lw-password2', 'Repeat password', W.password2)}` : ''}
+      ${need.includes('totp') ? (W.totp ? `<span class="label">SCAN WITH YOUR AUTHENTICATOR</span><div class="qr" aria-label="QR code for the authenticator">${W.totp.qr}</div><span class="small">Or enter this key: <span class="mono" style="overflow-wrap: anywhere">${esc(W.totp.secret.replace(/(.{4})/g, '$1 '))}</span></span>${fld('lw-code', 'Code from your authenticator', W.code, 'text', 'inputmode="numeric" maxlength="6"')}` : `<button class="btn tonal" data-act="lw-totp">${ic('qr_code_2')}Set up an authenticator</button>`) : ''}
+      ${W.error ? `<span class="badge err">${esc(W.error)}</span>` : ''}
+      <span class="small" style="color: var(--tx)">${esc(recoveryLine())}</span>
+      <div class="row" style="justify-content: flex-end"><button class="btn text" data-act="panel-close">${T('cancel')}</button><button class="btn fillb" data-act="lw-create">${ic('lock')}Lock it</button></div>`, 'top: 70px; left: calc(50% - 230px); width: 460px; height: 640px;');
+  }
+  function unlockPanel() {
+    const U = S.unlock, l = (S.lockState?.locks || []).find(x => x.id === U.key);
+    if (!l) return panelFrame('unlock', 'Unlock', '<span>This element is not locked any more.</span>', 'top: 90px; left: calc(50% - 200px); width: 400px;');
+    const need = l.policy.split('+');
+    const body = U.ladder ? ladderHtml(l) : `<span class="small">${esc(POLICY_LABEL[l.policy])} · ${need.length} step${need.length > 1 ? 's' : ''}</span>
+      ${need.map((f, i) => f === 'pin' ? `<div class="field"><label for="ul-pin">Step ${i + 1}: PIN</label><input id="ul-pin" type="password" inputmode="numeric" data-ul="pin" value="${esc(U.pin)}" autocomplete="off"></div>${masked(U.pin)}${keypad('upin')}` : f === 'password' ? `<div class="field"><label for="ul-password">Step ${i + 1}: Password</label><input id="ul-password" type="password" data-ul="password" value="${esc(U.password)}" autocomplete="off"></div>` : `<div class="field"><label for="ul-totp">Step ${i + 1}: Authenticator code</label><input id="ul-totp" inputmode="numeric" maxlength="6" data-ul="totp" value="${esc(U.totp)}" autocomplete="one-time-code"></div>`).join('')}
+      <div class="field"><label for="ul-dur">Unlock for</label><select id="ul-dur" data-ul="duration"><option value="once" ${U.duration === 'once' ? 'selected' : ''}>This time only</option><option value="15" ${U.duration === '15' ? 'selected' : ''}>15 minutes</option><option value="session" ${U.duration === 'session' ? 'selected' : ''}>Until the app closes</option></select></div>
+      ${U.error ? `<span class="badge err" role="alert">${esc(U.error)}</span>` : ''}
+      ${l.waitMs ? `<button class="btn tonal" data-act="ladder-open">${ic('stairs')}Play the unlock ladder (${l.ladderLeft} left this hour)</button>` : ''}
+      <span class="small" style="color: var(--tx)">${esc(recoveryLine())}</span>
+      <div class="row" style="justify-content: space-between; flex-wrap: wrap"><button class="btn text" data-act="go-support">Forgotten your password?</button><span class="row" style="gap: 6px"><button class="btn text" data-act="panel-close">${T('cancel')}</button><button class="btn fillb" data-act="ul-go" ${l.waitMs ? 'disabled' : ''}>${ic('lock_open')}Unlock</button></span></div>`;
+    return panelFrame('unlock', `Unlock "${U.label}"`, body, 'top: 70px; left: calc(50% - 210px); width: 420px; height: 620px;');
+  }
+  function ladderHtml(l) {
+    const L = S.unlock.ladder, mins = Math.ceil(l.waitMs / 60000);
+    const rungs = S.settings.school ? ['sums', 'mole', 'clock'] : ['dimsum', 'sums', 'mole', 'clock'];
+    const names = { dimsum: 'Dim sum', sums: 'Ten sums', mole: 'Whack-a-mole', clock: 'The clock' };
+    let game = '';
+    if (L.challenge?.rung === 'dimsum') game = `<span class="h2">Which dish is this?</span><span>${esc(L.challenge.prompt)}</span><span class="small">${esc(L.challenge.zh)}</span>${L.challenge.choices.map((c, i) => `<button class="btn out" data-act="ld-dim" data-i="${i}">${esc(c)}</button>`).join('')}`;
+    if (L.challenge?.rung === 'sums') game = `<span class="h2">Ten easy sums</span>${L.challenge.sums.map((q, i) => `<div class="row"><label for="sum${i}" style="flex: 1">${esc(q)} =</label><input id="sum${i}" inputmode="numeric" data-sum="${i}" value="${esc(L.sums?.[i] || '')}" style="width: 90px; height: 36px; border-radius: 10px; border: 1px solid var(--line2); background: var(--s1); color: var(--tx); padding: 0 8px"></div>`).join('')}<button class="btn fillb" data-act="ld-sums">Check</button>`;
+    if (L.challenge?.rung === 'mole') game = `<span class="h2">Whack ten moles</span><span class="small" aria-live="polite">Hits ${L.hits?.size || 0} · ${L.left ?? Math.round(L.challenge.duration / 1000)} s left</span><div class="pad">${Array.from({ length: 9 }, (_, h) => { const m = L.up?.[h]; return `<button class="mole ${m ? 'up' : ''}" data-act="ld-mole" data-h="${h}" aria-label="Hole ${h + 1}${m ? ', mole up' : ''}">${m ? ic('pets', 'fill') : ''}</button>`; }).join('')}</div>`;
+    if (L.challenge?.rung === 'clock') game = `<span class="h2">The clock</span><span>Waiting works too. About ${mins} minute${mins === 1 ? '' : 's'} left.</span>`;
+    return `<span class="label">UNLOCK LADDER · ABOUT ${mins} MIN LEFT OR PLAY</span><div class="row" style="gap: 6px; flex-wrap: wrap">${rungs.map(r => `<button class="badge ${L.challenge?.rung === r ? 'ac' : 'mute'}" style="border: 0; cursor: pointer" data-act="ld-start" data-r="${r}">${names[r]}</button>`).join('')}</div>
+      ${game || '<span class="small">Pick a rung. Each one you finish clears a share of the waiting time. It never clears the credential, and you can play up to 3 ladders an hour.</span>'}
+      ${L.msg ? `<span class="badge ${L.ok ? 'ok' : 'err'}">${esc(L.msg)}</span>` : ''}
+      <button class="btn text" data-act="ladder-close">Back to unlock</button>`;
+  }
+  async function ladderStart(rung) {
+    const r = await api.ladderStart(S.unlock.key, rung);
+    if (!r.ok) { S.unlock.ladder = { msg: { LADDER_LIMIT: 'That is 3 ladders this hour. The clock still works.', CATALOG_UNAVAILABLE: 'The dim sum catalog is unreachable; try the next rung.', NO_WAIT: 'There is no wait to clear.' }[r.error] || r.error }; render(); return; }
+    S.unlock.ladder = { nonce: r.nonce, challenge: r.challenge, sums: [], hits: new Set(), up: {} };
+    if (rung === 'mole') {
+      const L = S.unlock.ladder, start = Date.now();
+      r.challenge.moles.forEach(m => { setTimeout(() => { if (S.unlock?.ladder !== L) return; L.up[m.hole] = m.id; render(); setTimeout(() => { if (L.up[m.hole] === m.id) { delete L.up[m.hole]; render(); } }, 900); }, m.at); });
+      const tick = setInterval(() => { if (S.unlock?.ladder !== L) return clearInterval(tick); L.left = Math.max(0, Math.round((r.challenge.duration - (Date.now() - start)) / 1000)); render(); if (Date.now() - start >= r.challenge.duration + 200) { clearInterval(tick); ladderAnswer([...L.hits]); } }, 500);
+    }
+    render();
+  }
+  async function ladderAnswer(answer) {
+    const r = await api.ladderAnswer(S.unlock.ladder.nonce, answer);
+    await refreshLocks();
+    S.unlock.ladder = { msg: r.ok ? (r.passed ? 'Rung cleared. The wait just got shorter.' : 'Not this time. The wait is unchanged.') : r.error, ok: r.ok && r.passed };
+    cue(r.passed ? 'ok' : 'err'); render();
+  }
+
+  // ---------- Support Tickets ----------
+  const SEVERITY = ['Mild inconvenience', 'Moderately dramatic', 'Catastrophic (ignored)', 'Existential'];
+  const STATUSES = ['Received', 'Triaged by the Desk', 'Escalated to a drawer', 'Resolved: delete the app data folder'];
+  function ticketStatus(t) { const mins = (Date.now() - new Date(t.createdAt)) / 60000; return STATUSES[Math.min(3, Math.floor(mins / 0.5))]; }
+  const cannedReply = () => ['Your request has been received and filed.', 'Thank you for contacting the Desk. Your case is in a queue of exactly one.', 'Thank you for contacting the Desk. We have reviewed your case with all the care our manual describes.', 'The Desk has convened. The Desk has deliberated. The Desk has a folder for you.', 'Our most senior drawer has escalated your ticket to an even deeper drawer. Resolution below.'][(S.settings.school ? 1 : S.settings.funnyLevel) - 1];
+  function viewSupport() {
+    const tickets = S.settings.tickets || [], q = S.ticketQ || '';
+    const r = Lib.search(tickets.map(t => ({ ...t, label: `${t.id} ${t.category} ${t.description}` })), q, { regex: !!S.ticketRegex });
+    const list = r.ok ? r.items : [];
+    return page('Support Tickets', '', `<div class="cols"><div class="wide"><div class="card"><span class="h2">Open a ticket</span>
+      <div class="row" style="gap: 12px; flex-wrap: wrap"><div class="field" style="flex: 1 1 200px"><label for="tk-cat">Category</label><select id="tk-cat" data-tk="category"><option>Forgot my PIN</option><option>Forgot my password</option><option>Lost my authenticator</option><option>Locked myself out of Settings</option><option>Other existential matters</option></select></div></div>
+      <div class="field"><label for="tk-desc">Describe what happened</label><textarea id="tk-desc" data-tk="description" rows="3" maxlength="2000" style="border-radius: 12px; border: 1px solid var(--line2); background: var(--s1); color: var(--tx); padding: 10px 12px; font: inherit">${esc(S.ticketDraft || '')}</textarea></div>
+      <button class="btn fillb" data-act="tk-submit" style="align-self: flex-start">${ic('send')}Submit ticket</button>
+      <span class="small" style="border-top: 1px solid var(--line); padding-top: 10px; color: var(--tx)">Nothing is sent anywhere. No ticket exists outside this computer, no network request is made, no data is collected, and nobody is reading this.</span></div>
+      <div class="card"><span class="h2">The only fix that works</span><span>Delete this app's data folder yourself. That removes every lock, along with your settings, history and these tickets.</span><span class="mono small" style="overflow-wrap: anywhere">${esc(S.appdata || '')}</span><div class="row" style="gap: 6px; flex-wrap: wrap"><button class="btn tonal" data-act="open-appdata">${ic('folder_open')}Open the app data folder</button><button class="btn text" data-act="copy-appdata">${ic('content_copy')}Copy path</button></div></div></div>
+      <div class="side"><div class="row" style="gap: 6px"><label class="sr" for="tkq">Search tickets</label><input id="tkq" class="mono" data-input="ticketQ" value="${esc(q)}" placeholder="Search tickets" style="flex: 1; height: 36px; border-radius: 10px; border: 1px solid var(--line2); background: var(--s1); color: var(--tx); padding: 0 10px"><button class="badge ${S.ticketRegex ? 'ac' : 'mute'} mono" style="border: 0; cursor: pointer" data-act="tk-regex" aria-pressed="${!!S.ticketRegex}">.*</button></div>
+        <div class="row" style="gap: 6px"><button class="btn text" data-act="tk-export" ${tickets.length ? '' : 'disabled'}>${ic('download')}Export</button><button class="btn text" style="color: var(--err)" data-act="tk-clear" ${tickets.length ? '' : 'disabled'}>Remove all…</button></div>
+        ${list.map(t => `<div class="card" style="gap: 6px"><div class="row"><span class="mono t" style="font-weight: 650">${esc(t.id)}</span><span class="badge ${ticketStatus(t).startsWith('Resolved') ? 'ok' : 'warn'}">${esc(ticketStatus(t))}</span></div><span class="small">${esc(t.category)} · Severity: ${esc(t.severity)}</span><span>${esc(t.description)}</span><span class="small" style="color: var(--tx)">“${esc(t.reply)}”</span></div>`).join('') || '<span class="small">No tickets yet.</span>'}</div></div>`);
+  }
+
   // ---------- render ----------
   function vocabularize(node) {
     const v = S.settings?.vocabulary; if (!v) return;
@@ -577,16 +703,17 @@
   function render() {
     if (!S.settings || (browser && !api.authenticated)) return;
     const focusId = document.activeElement?.id, caret = document.activeElement?.selectionStart;
-    const views = { setup: viewSetup, accounts: viewAccounts, deploys: viewDeploys, wizard: viewWizard, run: viewRun, result: viewResult, settings: viewSettings, help: viewHelp, history: viewHistory, changelog: viewChangelog, docs: viewDocs };
+    const views = { setup: viewSetup, accounts: viewAccounts, deploys: viewDeploys, wizard: viewWizard, run: viewRun, result: viewResult, settings: viewSettings, help: viewHelp, history: viewHistory, changelog: viewChangelog, docs: viewDocs, support: viewSupport };
     const tab = S.tabs.find(t => t.id === S.active) || S.tabs[0];
     const v = tab.id === 'ws' ? S.view : tab.view;
     root.innerHTML = shell((views[v] || viewDeploys)(), { rail: v !== 'setup' }) + paletteHtml() + panelHtml() + dimsumHtml();
     Kit.watchPanels(root, (id, box) => { const ui = S.settings.ui || { filtersOpen: {}, panels: {} }; api.setSetting('ui', { ...ui, panels: { ...ui.panels, [id]: box } }).then(r => r.ok && (S.settings.ui = r.value)); });
     if (S.view === 'settings' && S.settingsQuery) { const q = S.settingsQuery.toLowerCase(); root.querySelectorAll('[data-search]').forEach(el => { el.hidden = !el.dataset.search.toLowerCase().includes(q); }); }
     vocabularize(root);
+    decorateLocks();
     if (focusId) { const el = document.getElementById(focusId); if (el) { el.focus(); if (caret != null && el.setSelectionRange) try { el.setSelectionRange(caret, caret); } catch { } } }
   }
-  function go(view) { S.view = view; S.active = 'ws'; S.palette = null; if (['history', 'changelog', 'docs'].includes(view)) ensureData(view); render(); document.getElementById('main')?.focus?.(); }
+  function go(view) { if (guard('go:' + view)) return; S.view = view; S.active = 'ws'; S.palette = null; if (['history', 'changelog', 'docs'].includes(view)) ensureData(view); render(); document.getElementById('main')?.focus?.(); }
   window.__ready = () => !!S.prereq && S.profiles !== null;
   window.__go = v => {
     if (v === 'palette') { S.palette = { q: 'dep', regex: false, sel: 0 }; render(); return; }
@@ -594,6 +721,9 @@
     if (v === 'info') { go('settings'); openPanel('info:funnyLevel'); return; }
     if (v === 'tabs') { go('deploys'); ['history', 'docs', 'changelog'].forEach(x => { ensureData(x); openTab(x); }); S.active = S.tabs[1].id; render(); return; }
     if (v === 'export') { go('history'); openPanel('export:history'); return; }
+    if (v === 'lockwiz') { go('deploys'); openLockWizard({ key: 'go:settings', label: 'Settings' }); S.lockWiz.policy = 'pin+totp'; api.lockTotp('Settings').then(x => { S.lockWiz.totp = x; S.lockWiz.pin = '2468'; render(); }); return; }
+    if (v === 'unlock') { go('deploys'); api.lockCreate('go:settings', { label: 'Settings', policy: 'pin', pin: '2468' }).then(async () => { await refreshLocks(); render(); openUnlock({ key: 'go:settings', label: 'Settings' }); S.unlock.pin = '24'; render(); }); return; }
+    if (v === 'support') { go('support'); S.ticketDraft = 'I locked Settings with a PIN and forgot it.'; render(); return; }
     const row = () => document.querySelector('[data-menu="deploy"]');
     if (v === 'menu') { go('deploys'); const r = row(); if (r) { const b = r.getBoundingClientRect(); Kit.openMenu(menuFor(r), { x: b.left + 240, y: b.top + 20, opener: r }); } return; }
     if (v === 'confirm') { go('deploys'); const r = row(); if (r) removeRecords([r.dataset.at], r); return; }
@@ -658,6 +788,34 @@
       case 'update-later': S.updateLater = true; render(); break;
       case 'update-install': if (S.run) { toast('A deployment is running. Restart after it finishes.', 'err'); break; } saveDraft(); await api.installUpdate(); break;
       case 'panel-close': closePanel(); break;
+      case 'pk': { const fld = t.dataset.f === 'upin' ? 'unlock' : 'lockWiz'; const key = t.dataset.f === 'upin' ? 'pin' : 'pin'; const obj = S[fld]; if (obj[key].length < 12) obj[key] += t.dataset.n; render(); break; }
+      case 'pk-back': { const obj = t.dataset.f === 'upin' ? S.unlock : S.lockWiz; obj.pin = obj.pin.slice(0, -1); render(); break; }
+      case 'pk-clear': { const obj = t.dataset.f === 'upin' ? S.unlock : S.lockWiz; obj.pin = ''; render(); break; }
+      case 'lw-policy': S.lockWiz.policy = t.dataset.p; S.lockWiz.error = null; render(); break;
+      case 'lw-totp': S.lockWiz.totp = await api.lockTotp(S.lockWiz.label); render(); break;
+      case 'lw-create': { const W = S.lockWiz, need = W.policy.split('+');
+        if (need.includes('pin') && W.pin !== W.pin2) { W.error = 'The two PINs differ.'; render(); break; }
+        if (need.includes('password') && W.password !== W.password2) { W.error = 'The two passwords differ.'; render(); break; }
+        if (need.includes('totp') && !W.totp) { W.error = 'Set up the authenticator first.'; render(); break; }
+        const r = await api.lockCreate(W.key, { label: W.label, policy: W.policy, pin: W.pin, password: W.password, totpSecret: W.totp?.secret, totpCode: W.code });
+        if (!r.ok) { W.error = { PIN_INVALID: 'A PIN is 4 to 12 digits.', PASSWORD_INVALID: 'A password is 6 to 200 characters.', TOTP_CODE_WRONG: 'That code did not match. Check the authenticator and try the current code.', VAULT_UNAVAILABLE: 'Protected storage is unavailable, so nothing was locked.', ALREADY_LOCKED: 'This element is already locked.' }[r.error] || r.error; render(); break; }
+        await refreshLocks(); S.lockWiz = null; closePanel(); toast(`Locked "${W.label}" with ${POLICY_LABEL[W.policy]}. Just for fun.`); break; }
+      case 'ul-go': { const U = S.unlock, fn = U.remove ? api.lockRemove : api.lockVerify; const r = await fn(U.key, { pin: U.pin, password: U.password, totp: U.totp }); await refreshLocks();
+        if (r.ok) { if (!U.remove) S.unlocked[U.key] = U.duration === 'session' ? 'session' : Date.now() + (U.duration === '15' ? 900000 : 60000); S.unlock = null; closePanel(); toast(U.remove ? 'Lock removed' : 'Unlocked'); cue('ok'); }
+        else { U.error = r.error === 'WAIT' ? `Too many tries. Wait about ${Math.ceil(r.waitMs / 60000)} min, or play the unlock ladder.` : r.error === 'NO_MATCH' ? `That did not match.${r.attemptsBeforeWait ? ` ${r.attemptsBeforeWait} more tries before a wait.` : ''} Locked out for good? Delete the app data folder.` : r.error; U.pin = ''; cue('err'); render(); } break; }
+      case 'ladder-open': S.unlock.ladder = {}; render(); break;
+      case 'ladder-close': S.unlock.ladder = null; render(); break;
+      case 'ld-start': ladderStart(t.dataset.r); break;
+      case 'ld-dim': ladderAnswer(+t.dataset.i); break;
+      case 'ld-sums': ladderAnswer(S.unlock.ladder.challenge.sums.map((_, i) => S.unlock.ladder.sums[i])); break;
+      case 'ld-mole': { const L = S.unlock.ladder, id = L.up?.[+t.dataset.h]; if (id) { L.hits.add(id); delete L.up[+t.dataset.h]; cue('tap'); render(); } break; }
+      case 'go-support': S.unlock = null; S.panel = null; S.view = 'support'; S.active = 'ws'; render(); break;
+      case 'open-appdata': { const r = await api.openAppdata(); if (!r.ok) toast(`The file manager could not open. The folder is ${r.path}`, 'err'); break; }
+      case 'copy-appdata': copy(S.appdata); break;
+      case 'tk-regex': S.ticketRegex = !S.ticketRegex; render(); break;
+      case 'tk-submit': { const desc = (S.ticketDraft || '').trim(); if (!desc) { toast('Describe what happened first', 'err'); break; } const cat = document.getElementById('tk-cat').value; const id = 'AAD-' + String(1000 + Math.floor(Math.random() * 9000)); await set('tickets', [{ id, category: cat, description: desc.slice(0, 2000), severity: SEVERITY[Math.floor(Math.random() * SEVERITY.length)], createdAt: new Date().toISOString(), reply: cannedReply() }, ...(S.settings.tickets || [])].slice(0, 200)); S.ticketDraft = ''; toast(`Ticket ${id} filed with the Desk`); setTimeout(render, 31000); setTimeout(render, 61000); setTimeout(render, 91000); break; }
+      case 'tk-export': { const r = await api.saveFile('support-tickets.json', Lib.exportAs('json', 'aws-app-deployer.tickets/1', S.settings.tickets)); if (r.ok) toast('Saved tickets'); break; }
+      case 'tk-clear': Kit.superConfirm({ title: `Remove ${S.settings.tickets.length} tickets`, detail: 'Only from this computer. The Desk will not notice.', opener: t, onConfirm: async () => { await set('tickets', []); toast('Tickets removed'); } }); break;
       case 'open-tab': ensureData(t.dataset.view); openTab(t.dataset.view); break;
       case 'tab-regex': S.tabRegex = !S.tabRegex; render(); break;
       case 'hist-regex': S.hist.regex = !S.hist.regex; render(); break;
@@ -711,6 +869,11 @@
     if (el.dataset.input === 'settingsQuery') { S.settingsQuery = el.value; render(); return; }
     if (el.dataset.input === 'noteQ') { S.noteQ = el.value; render(); return; }
     if (el.dataset.input === 'depQ') { S.depQ = el.value; render(); return; }
+    if (el.dataset.input === 'ticketQ') { S.ticketQ = el.value; render(); return; }
+    if (el.dataset.tk === 'description') { S.ticketDraft = el.value; return; }
+    if (el.dataset.lw) { const m = { 'lw-pin': 'pin', 'lw-pin2': 'pin2', 'lw-password': 'password', 'lw-password2': 'password2', 'lw-code': 'code' }[el.dataset.lw]; S.lockWiz[m] = el.value; if (m === 'pin') render(); return; }
+    if (el.dataset.ul) { S.unlock[el.dataset.ul] = el.value; if (el.dataset.ul === 'pin') render(); return; }
+    if (el.dataset.sum !== undefined) { S.unlock.ladder.sums[+el.dataset.sum] = el.value; return; }
     const F = { tabQ: v => (S.tabQ = v), histQ: v => (S.hist.q = v), histFrom: v => (S.hist.from = v), histTo: v => (S.hist.to = v), clogQ: v => (S.clog.q = v), clogFrom: v => (S.clog.from = v), clogTo: v => (S.clog.to = v), docQ: v => (S.docF.q = v) }[el.dataset.input];
     if (F) { F(el.value); render(); return; }
     if (el.dataset.a11ySize) { setA11y({ textSize: +el.value }); return; }
@@ -758,6 +921,7 @@
       if (e.key === 'Enter') { const c = P.items?.[P.sel]; S.palette = null; render(); c?.run(); return; }
       P.sel = Math.max(0, Math.min((P.items?.length || 1) - 1, P.sel + (e.key === 'ArrowDown' ? 1 : -1))); render(); document.getElementById('pq')?.focus(); return;
     }
+    { const map = { palette: 'act:palette', new: 'go:wizard', settings: 'go:settings', keys: 'panel:keys' }; const combo = [e.ctrlKey && 'Ctrl', e.altKey && 'Alt', e.shiftKey && 'Shift', e.key.length === 1 ? e.key.toUpperCase() : e.key].filter(Boolean).join('+'); const hit = Object.entries(map).find(([id]) => Kit.keysFor(id) === combo); if (hit && isLocked(hit[1])) { e.preventDefault(); guard(hit[1]); return; } }
     Kit.dispatch(e);
   });
   api.onWindow(w => { S.maximized = w.maximized; render(); });
@@ -769,6 +933,7 @@
   (async () => {
     if (browser && !(await api.ready()).ok) return;
     VERSION = await api.version();
+    await refreshLocks(); S.appdata = (await api.appdata()).path;
     S.prov = await api.provenance(); S.update = await api.updateState();
     api.onUpdate(u => { if (u.status !== S.update?.status) S.updateLater = false; S.update = u; render(); });
     const settingsResult = await api.settings();

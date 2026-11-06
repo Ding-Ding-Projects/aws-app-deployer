@@ -1,5 +1,5 @@
 'use strict';
-const { app, BrowserWindow, ipcMain, dialog, shell, nativeTheme, autoUpdater } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, shell, nativeTheme, autoUpdater, safeStorage } = require('electron');
 const path = require('node:path');
 const fs = require('node:fs');
 const { createBackend, createRunner, createDeployer } = require('../backend');
@@ -7,6 +7,7 @@ const { createInstaller } = require('./installer');
 const { createStore } = require('./store');
 const { createBridge } = require('./bridge');
 const { createUpdater, handleSquirrelEvent } = require('./updater');
+const { createLocks } = require('./locks');
 
 const squirrelEvent = handleSquirrelEvent(app);
 function provenance() {
@@ -40,7 +41,7 @@ function createWindow() {
 
 async function captureScreenshots(dir) {
   fs.mkdirSync(dir, { recursive: true });
-  const routes = ['setup', 'deploys', 'accounts', 'wizard', 'settings', 'help', 'palette', 'a11y', 'info', 'menu', 'confirm', 'history', 'docs', 'changelog', 'tabs', 'export'];
+  const routes = ['setup', 'deploys', 'accounts', 'wizard', 'settings', 'help', 'palette', 'a11y', 'info', 'menu', 'confirm', 'history', 'docs', 'changelog', 'tabs', 'export', 'lockwiz', 'unlock', 'support'];
   for (let i = 0; i < 90 && !(await win.webContents.executeJavaScript('!!(window.__ready && window.__ready())')); i++) await new Promise(res => setTimeout(res, 1000));
   for (const [w, tag] of [[1320, 'desktop'], [420, 'narrow']]) {
     win.setSize(w, 860);
@@ -84,6 +85,18 @@ if (!squirrelEvent) app.whenReady().then(() => {
   handle('history', () => bridge.history());
   handle('remove-deployments', ats => bridge.removeDeployments(ats));
   handle('restore', i => bridge.restore(i));
+  // Screenshot runs on Linux CI have no keyring; allow the test-only plain store there and nowhere else.
+  if (screenshotDir && process.platform === 'linux') safeStorage.setUsePlainTextEncryption?.(true);
+  const locks = createLocks({ dir: app.getPath('userData'), safeStorage, catalog: async () => { try { return (await (await fetch('https://raw.githubusercontent.com/Ding-Ding-Projects/dim-sum-photos/main/catalog/index.json', { signal: AbortSignal.timeout(6000) })).json()).dishes || []; } catch { return []; } } });
+  handle('lock-status', () => locks.status());
+  handle('lock-totp', async label => { const t = locks.newTotp(label); return { ...t, qr: await require('qrcode').toString(t.uri, { type: 'svg', margin: 1, errorCorrectionLevel: 'M' }) }; });
+  handle('lock-create', (id, opts) => locks.create(id, opts));
+  handle('lock-verify', (id, creds) => locks.verify(id, creds));
+  handle('lock-remove', (id, creds) => locks.remove(id, creds));
+  handle('ladder-start', (id, rung) => locks.ladderStart(id, rung, { school: store.get().school }));
+  handle('ladder-answer', (nonce, answer) => locks.ladderAnswer(nonce, answer));
+  handle('appdata', () => ({ ok: true, path: app.getPath('userData') }));
+  handle('open-appdata', async () => { const err = await shell.openPath(app.getPath('userData')); return err ? { ok: false, error: 'FILE_MANAGER_FAILED', detail: err, path: app.getPath('userData') } : { ok: true, path: app.getPath('userData') }; });
   handle('label', (i, t) => bridge.label(i, t));
   handle('docs', () => bridge.docs());
   handle('changelog', () => bridge.changelog());

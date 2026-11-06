@@ -49,5 +49,8 @@
       "artifactName": "AWS-App-Deployer-Setup-${version}.${ext}",
       "name": "AWSAppDeployer"
     }
+  },
+  "dependencies": {
+    "qrcode": "^1.5.4"
   }
 }

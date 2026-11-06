@@ -17,7 +17,7 @@
       "h": 900,
       "expand": "fill",
       "is_interactive": true,
-      "title": "1 \u00b7 First launch and prerequisite checks"
+      "title": "1 · First launch and prerequisite checks"
     },
     "Connect.dc.html": {
       "x": 1520,
@@ -26,7 +26,7 @@
       "h": 900,
       "expand": "fill",
       "is_interactive": true,
-      "title": "2 \u00b7 AWS browser sign-in and return"
+      "title": "2 · AWS browser sign-in and return"
     },
     "Connections.dc.html": {
       "x": 3040,
@@ -35,7 +35,7 @@
       "h": 900,
       "expand": "fill",
       "is_interactive": true,
-      "title": "3 \u00b7 Connections and profiles"
+      "title": "3 · Connections and profiles"
     },
     "Expired.dc.html": {
       "x": 4560,
@@ -44,7 +44,7 @@
       "h": 900,
       "expand": "fill",
       "is_interactive": true,
-      "title": "4 \u00b7 Expired sign-in"
+      "title": "4 · Expired sign-in"
     },
     "Installer.dc.html": {
       "x": 6080,
@@ -53,7 +53,7 @@
       "h": 900,
       "expand": "fill",
       "is_interactive": true,
-      "title": "4b \u00b7 One-click dependency installer"
+      "title": "4b · One-click dependency installer"
     },
     "Main.dc.html": {
       "x": 0,
@@ -62,7 +62,7 @@
       "h": 900,
       "expand": "fill",
       "is_interactive": true,
-      "title": "5 \u00b7 Deployments overview"
+      "title": "5 · Deployments overview"
     },
     "WizardSource.dc.html": {
       "x": 1520,
@@ -71,7 +71,7 @@
       "h": 900,
       "expand": "fill",
       "is_interactive": true,
-      "title": "6 \u00b7 Wizard: Dockerfile or Compose source"
+      "title": "6 · Wizard: Dockerfile or Compose source"
     },
     "WizardReview.dc.html": {
       "x": 3040,
@@ -80,7 +80,7 @@
       "h": 900,
       "expand": "fill",
       "is_interactive": true,
-      "title": "7 \u00b7 Wizard: configure and review"
+      "title": "7 · Wizard: configure and review"
     },
     "Running.dc.html": {
       "x": 4560,
@@ -89,7 +89,7 @@
       "h": 900,
       "expand": "fill",
       "is_interactive": true,
-      "title": "8 \u00b7 Deployment running"
+      "title": "8 · Deployment running"
     },
     "Healthy.dc.html": {
       "x": 0,
@@ -98,7 +98,7 @@
       "h": 900,
       "expand": "fill",
       "is_interactive": true,
-      "title": "9 \u00b7 Healthy deployment"
+      "title": "9 · Healthy deployment"
     },
     "Failure.dc.html": {
       "x": 1520,
@@ -107,7 +107,7 @@
       "h": 900,
       "expand": "fill",
       "is_interactive": true,
-      "title": "10 \u00b7 Failure, repair and rollback"
+      "title": "10 · Failure, repair and rollback"
     },
     "Settings.dc.html": {
       "x": 3040,
@@ -116,14 +116,14 @@
       "h": 900,
       "expand": "fill",
       "is_interactive": true,
-      "title": "11 \u00b7 Settings"
+      "title": "11 · Settings"
     },
     "Motion.dc.html": {
       "x": 4560,
       "y": 2800,
       "w": 1440,
       "h": 900,
-      "title": "12 \u00b7 Motion and tokens"
+      "title": "12 · Motion and tokens"
     },
     "Palette.dc.html": {
       "x": 6080,
@@ -131,14 +131,14 @@
       "w": 1440,
       "h": 900,
       "expand": "fill",
-      "title": "13 \u00b7 Command palette, regex builder and notifications"
+      "title": "13 · Command palette, regex builder and notifications"
     },
     "Features.dc.html": {
       "x": 0,
       "y": 4200,
       "w": 1440,
       "h": 1100,
-      "title": "14 \u00b7 Feature map"
+      "title": "14 · Feature map"
     },
     "Landing.dc.html": {
       "x": 1520,
@@ -146,7 +146,7 @@
       "w": 1440,
       "h": 4200,
       "expand": "fill",
-      "title": "15 \u00b7 Landing page"
+      "title": "15 · Landing page"
     },
     "Updates.dc.html": {
       "x": 0,
@@ -154,7 +154,7 @@
       "w": 1440,
       "h": 900,
       "expand": "fill",
-      "title": "16 \u00b7 Updates, provenance and exact check reasons"
+      "title": "16 · Updates, provenance and exact check reasons"
     },
     "Interaction.dc.html": {
       "x": 1520,
@@ -162,7 +162,7 @@
       "w": 1440,
       "h": 900,
       "expand": "fill",
-      "title": "17 \u00b7 Context menus, super confirmation, info buttons and accessibility tools"
+      "title": "17 · Context menus, super confirmation, info buttons and accessibility tools"
     },
     "Records.dc.html": {
       "x": 3040,
@@ -170,7 +170,16 @@
       "w": 1440,
       "h": 900,
       "expand": "fill",
-      "title": "18 \u00b7 Tabs, local history, changelog, offline docs and export"
+      "title": "18 · Tabs, local history, changelog, offline docs and export"
+    },
+    "Toys.dc.html": {
+      "x": 4560,
+      "y": 8700,
+      "w": 1440,
+      "h": 900,
+      "expand": "fill",
+      "is_interactive": true,
+      "title": "19 · Element locks, unlock ladder, Support Tickets and appearance editor"
     }
   },
   "order": [

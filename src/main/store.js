@@ -13,6 +13,8 @@ const DEFAULTS = Object.freeze({
   selection: null, draft: null, vocabulary: null,
   a11y: { textSize: 100, contrast: false, focus: false, targets: false, hidden: false },
   ui: { filtersOpen: {}, panels: {} },
+  tickets: [],
+  appearance: { elements: {}, presets: {} },
 });
 const HISTORY_LIMIT = 5000;
 const DEPLOY_LIMIT = 50;
@@ -36,6 +38,8 @@ const VALIDATORS = {
   draft: v => v === null || (v && typeof v === 'object' && JSON.stringify(v).length < 20000 && !('secrets' in v)),
   vocabulary: v => v === null || (v && typeof v === 'object' && v.entries && typeof v.entries === 'object'),
   a11y: v => v && typeof v === 'object' && Number.isInteger(v.textSize) && v.textSize >= 80 && v.textSize <= 160 && ['contrast', 'focus', 'targets', 'hidden'].every(k => typeof v[k] === 'boolean'),
+  tickets: v => Array.isArray(v) && v.length <= 200 && v.every(t => t && typeof t.id === 'string' && typeof t.description === 'string' && t.description.length <= 2000),
+  appearance: v => v && typeof v === 'object' && v.elements && typeof v.elements === 'object' && v.presets && typeof v.presets === 'object' && JSON.stringify(v).length < 200000,
   ui: v => v && typeof v === 'object' && v.filtersOpen && typeof v.filtersOpen === 'object' && v.panels && typeof v.panels === 'object' && JSON.stringify(v).length < 20000,
 };
 
