@@ -4,7 +4,7 @@
   const api = window.deployer;
   const root = document.getElementById('app');
   const live = document.getElementById('live');
-  const VERSION = '0.1.0';
+  let VERSION = '';
   const S = {
     view: 'setup', settings: null, prereq: null, profiles: null, profilesError: null,
     selection: null, identity: null, login: null, install: null,
@@ -439,6 +439,7 @@
 
   // ---------- start ----------
   (async () => {
+    VERSION = await api.version();
     S.settings = (await api.settings()).settings;
     applyAppearance();
     const d = S.settings.draft;

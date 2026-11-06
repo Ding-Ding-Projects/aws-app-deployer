@@ -18,6 +18,7 @@ contextBridge.exposeInMainWorld('deployer', {
   history: () => call('history'),
   exportHistory: () => call('export-history'),
   dimSum: () => call('dim-sum'),
+  version: () => call('version'),
   openExternal: url => call('open-external', url),
   window: action => call('window', action),
   onOperation: fn => { const l = (_e, ev) => fn(ev); ipcRenderer.on('op-event', l); return () => ipcRenderer.removeListener('op-event', l); },

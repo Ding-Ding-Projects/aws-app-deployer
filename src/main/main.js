@@ -32,6 +32,7 @@ function createWindow() {
 async function captureScreenshots(dir) {
   fs.mkdirSync(dir, { recursive: true });
   const routes = ['setup', 'deploys', 'accounts', 'wizard', 'settings', 'palette'];
+  await new Promise(res => setTimeout(res, 6000)); // let the first real checks finish
   for (const [w, tag] of [[1320, 'desktop'], [420, 'narrow']]) {
     win.setSize(w, 860);
     for (const r of routes) {
@@ -73,6 +74,7 @@ app.whenReady().then(() => {
   handle('reset-setting', k => bridge.resetSetting(k));
   handle('history', () => bridge.history());
   handle('dim-sum', () => bridge.dimSum());
+  handle('version', () => app.getVersion());
   handle('pick-source', async () => {
     const r = await dialog.showOpenDialog(win, { title: 'Choose a Dockerfile or Compose file', properties: ['openFile'], filters: [{ name: 'Dockerfile or Compose', extensions: ['yaml', 'yml', 'dockerfile', '*'] }] });
     return r.canceled ? { ok: false, error: 'CANCELLED' } : { ok: true, path: r.filePaths[0] };
