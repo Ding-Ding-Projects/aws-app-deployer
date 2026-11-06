@@ -97,7 +97,9 @@ Real AWS sign-in and deployment require a user-connected AWS profile and access 
 - Canonical repository and this handoff are published; the collaborating designer owns the desktop design and renderer work.
 - Backend profile discovery, AWS CLI 2.22+ browser SSO invocation, identity verification, bounded command execution, infrastructure generation, and deployment orchestration are implemented. All 24 local backend tests pass. They mock AWS and Docker and do not prove a live deployment. Stack and image-repository ownership tags are checked before reusing resources; unrelated resources with the same names are rejected.
 - The backend supports source build, ECR publication, automatic network provisioning, CloudFormation deployment, public-URL verification, and strict single-service Compose intake. The UI still needs to invoke these operations through the desktop bridge. Unknown or unsupported Compose features are rejected before provisioning; this is not full Compose compatibility.
-- Desktop integration, packaged application, full multi-service Compose support, prerequisite installation, comprehensive automatic repair, cloud update pipelines, and live AWS evidence remain unfinished.
+- The design handoff is in `design/` (artboards, tokens, prototype renders, review record).
+- Desktop integration now exists: `src/main/` exposes the backend through a named preload bridge with operation IDs and scoped events, adds a one-click Windows dependency installer and a local settings store, and `src/renderer/` implements the designed screens. Every push to `main` builds a Windows installer, captures screenshots of the built app on a Windows runner, and publishes a tagged release. See `ROADMAP.md` for the exact shipped, partial and not-started list.
+- Full multi-service Compose support, comprehensive automatic repair, cloud update pipelines, code signing, and live AWS evidence remain unfinished. The installer has been tested with stand-in commands, not yet on a clean Windows machine.
 
 
 ### Deployment implementation constraints

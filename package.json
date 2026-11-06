@@ -1,0 +1,45 @@
+{
+  "name": "aws-app-deployer",
+  "productName": "AWS App Deployer",
+  "version": "0.1.0",
+  "description": "Local desktop application that deploys a Dockerfile or Compose project to AWS ECS Fargate behind a public load balancer.",
+  "private": true,
+  "main": "src/main/main.js",
+  "scripts": {
+    "start": "electron .",
+    "test": "node --test tests/backend/*.test.js tests/main/*.test.js tests/renderer/*.test.js",
+    "screenshots": "electron . --screenshots=screenshots",
+    "dist:win": "electron-builder --win --publish never"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "electron": "^45.2.0",
+    "electron-builder": "^26.0.12"
+  },
+  "build": {
+    "appId": "io.github.dingdingprojects.awsappdeployer",
+    "productName": "AWS App Deployer",
+    "files": [
+      "src/**/*",
+      "package.json"
+    ],
+    "directories": {
+      "output": "dist"
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "artifactName": "AWS-App-Deployer-Setup-${version}.${ext}"
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false
+    }
+  }
+}

@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AWS App Deployer: from Dockerfile to a public link</title>
+<meta name="description" content="A free Windows app that builds your container, sets up AWS networking and a load balancer, runs it on Fargate, checks it is healthy, and hands you a public link.">
+<meta property="og:title" content="AWS App Deployer">
+<meta property="og:description" content="From Dockerfile to a public link on AWS. One click.">
+<meta property="og:type" content="website">
+<meta property="og:image" content="https://ding-ding-projects.github.io/aws-app-deployer/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="tokens.css">
+<style>
+@font-face{font-family:Inter;src:url(fonts/inter.woff2) format('woff2');font-weight:100 900;font-display:swap}
+@font-face{font-family:"JetBrains Mono";src:url(fonts/jetbrains-mono-400.woff2) format('woff2');font-weight:400;font-display:swap}
+@font-face{font-family:"JetBrains Mono";src:url(fonts/jetbrains-mono-500.woff2) format('woff2');font-weight:500;font-display:swap}
+@font-face{font-family:"Material Symbols Rounded";src:url(fonts/material-symbols-rounded.woff2) format('woff2');font-weight:100 700;font-display:block}
+html{scroll-behavior:smooth}@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+@media (prefers-color-scheme:light){body{background:#f4f6fa}}
+</style>
+
+
+<style>
+body{margin:0}
+a{color:#6ea8ff}a:hover{color:#9fc2ff}
+.wrap{width:min(1200px,100% - 32px);margin:0 auto}
+.nav{display:flex;align-items:center;gap:24px;padding:18px 0;flex-wrap:wrap}
+.nav a.l{color:var(--tx2);text-decoration:none;font-weight:500}
+.hero{display:flex;flex-wrap:wrap;gap:56px;align-items:center;padding:48px 0 80px}
+.hero .copy{flex:1 1 400px;display:flex;flex-direction:column;gap:22px}
+.big{font-size:clamp(40px,6vw,70px);line-height:1.02;letter-spacing:-.045em;font-weight:680;margin:0}
+.big em{font-style:normal;color:var(--ac)}
+.stagebox{flex:1 1 560px;min-width:0;position:relative;padding:28px 0 56px}
+.win{border-radius:18px;background:var(--s1);border:1px solid var(--line2);box-shadow:0 40px 90px rgba(0,0,0,.5);overflow:hidden}
+.win .tb{height:34px;display:flex;align-items:center;padding:0 14px;font-size:11.5px;font-weight:600;border-bottom:1px solid var(--line);background:var(--bg)}
+.win .in{display:flex}
+.win .rl{width:64px;display:flex;flex-direction:column;align-items:center;gap:14px;padding:16px 0;background:var(--bg)}
+.win .rl span{width:40px;height:26px;border-radius:13px;display:grid;place-items:center;color:var(--tx3)}
+.win .rl span.on{background:var(--ac-c);color:var(--on-ac-c)}
+.win .bd{flex:1;min-width:0;padding:18px;display:flex;flex-direction:column;gap:10px}
+.sat{position:absolute;border-radius:16px;background:var(--s3);border:1px solid var(--line2);box-shadow:0 24px 60px rgba(0,0,0,.5);padding:16px}
+.sat.ok{left:-24px;bottom:0;width:min(330px,70%);animation:rise 700ms var(--ease) 900ms both}
+.sat.lg{right:-16px;top:0;width:min(290px,60%);background:var(--bg);animation:rise 700ms var(--ease) 1300ms both}
+.strip{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;padding:22px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.sec{padding:80px 0 0;display:flex;flex-direction:column;gap:32px}
+.eyebrow{font-size:13px;font-weight:650;color:var(--ac);letter-spacing:.04em}
+.h3{font-size:clamp(30px,3.8vw,44px);letter-spacing:-.035em;font-weight:660;margin:0;line-height:1.1}
+.grid3{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}
+.num{width:36px;height:36px;border-radius:12px;background:var(--ac);color:var(--on-ac);display:grid;place-items:center;font-weight:700;flex:none}
+.mini{border-radius:12px;background:var(--s1);border:1px solid var(--line);padding:12px;display:flex;flex-direction:column;gap:8px;margin-top:auto}
+.arch{border-radius:24px;border:1px solid var(--line);background:var(--s1);padding:28px;display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:20px;align-items:center}
+.node{border-radius:14px;background:var(--s2);border:1px solid var(--line2);padding:14px 16px;display:flex;gap:12px;align-items:center}
+.vpc{border:1.5px dashed var(--ac);border-radius:18px;padding:18px;display:flex;flex-direction:column;gap:12px;position:relative}
+.vpc::before{content:"Your VPC · 2 availability zones";position:absolute;top:-11px;left:16px;background:var(--s1);padding:0 8px;font-size:12px;font-weight:650;color:var(--ac)}
+.flow{height:2px;background:linear-gradient(90deg,transparent,var(--ac),transparent);background-size:200% 100%;animation:shimmer 2.4s linear infinite;border-radius:2px}
+.bento{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+.bento .wide2{grid-column:span 2}
+.shots{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px}
+.shots .win{box-shadow:none}
+.faq{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:12px}
+details{background:var(--s2);border-radius:14px;padding:16px 18px}
+summary{font-weight:620;cursor:pointer}
+details p{margin:10px 0 0;color:var(--tx2)}
+.cta{margin:88px 0 0;border-radius:28px;padding:48px;background:var(--ac-c);display:flex;flex-wrap:wrap;gap:24px;align-items:center}
+@media (max-width:720px){.sat.lg{display:none}.bento .mini{flex-wrap:wrap}.bento{grid-template-columns:minmax(0,1fr)}.bento .wide2{grid-column:auto}.sat.ok{left:8px}.sat.lg{right:8px}.cta{padding:28px}.nav a.l{display:none}}
+</style>
+
+</head>
+<body style="margin:0">
+
+
+<div class="app " style="overflow: visible; min-height: 0">
+  <div class="wrap">
+    <nav class="nav" aria-label="Site">
+      <span style="font-weight: 700; letter-spacing: -.02em; font-size: 17px">AWS App Deployer</span>
+      <span style="flex: 1"></span>
+      <a class="l" href="#how">How it works</a><a class="l" href="#aws">What it creates</a><a class="l" href="#features">Features</a><a class="l" href="#faq">FAQ</a>
+      <a class="btn out" href="https://github.com/Ding-Ding-Projects/aws-app-deployer"><i class="ms" aria-hidden="true">code</i>GitHub</a>
+    </nav>
+    <section class="hero">
+      <div class="copy">
+        <span class="badge warn rise" style="align-self: flex-start">Early development · not yet released</span>
+        <h1 class="big rise" style="--i:1">From Dockerfile to a <em>public link</em>. One click.</h1>
+        <p class="sub rise" style="--i:2; margin: 0; font-size: 18px; max-width: 520px">A free Windows app that builds your container, sets up AWS networking and a load balancer, runs it on Fargate, checks it is healthy, and hands you a link anyone can open. All in your own AWS account.</p>
+        <div class="row rise" style="--i:3; flex-wrap: wrap">
+          <a class="btn fillb big" href="https://github.com/Ding-Ding-Projects/aws-app-deployer/releases/latest"><i class="ms fill" aria-hidden="true">download</i>Download for Windows</a>
+          <a class="btn out big" href="#how">See how it works</a>
+        </div>
+        <div class="row small rise" style="--i:4; gap: 16px; flex-wrap: wrap"><span class="row" style="gap: 6px"><i class="ms sm" aria-hidden="true">check</i>Free, source on GitHub</span><span class="row" style="gap: 6px"><i class="ms sm" aria-hidden="true">check</i>No account with us</span><span class="row" style="gap: 6px"><i class="ms sm" aria-hidden="true">check</i>No telemetry</span></div>
+      </div>
+      <div class="stagebox pop" style="--i:1">
+        <div class="win">
+          <div class="tb">AWS App Deployer</div>
+          <div class="in">
+            <div class="rl"><span class="on"><i class="ms sm" aria-hidden="true">rocket_launch</i></span><span><i class="ms sm" aria-hidden="true">key</i></span><span><i class="ms sm" aria-hidden="true">tune</i></span></div>
+            <div class="bd">
+              <div class="row"><span style="font-size: 18px; font-weight: 650; letter-spacing: -.02em">Deployments</span><span class="grow"></span><span class="chip" style="height: 30px; font-size: 12px"><span class="dot"></span>team-dev</span></div>
+              <div class="list" style="padding: 4px">
+                <span class="li" style="padding: 10px"><span class="tile ok" style="width: 34px; height: 34px"><i class="ms sm" aria-hidden="true">deployed_code</i></span><span class="stack grow"><span class="t">storefront-web</span><span class="m">2 tasks · us-east-1</span></span><span class="badge ok">Healthy</span></span>
+                <span class="li" style="padding: 10px"><span class="tile ac" style="width: 34px; height: 34px"><span class="spin"></span></span><span class="stack grow"><span class="t">orders-api</span><span class="bar" style="margin-top: 6px"><i style="width: 70%; animation: fillTo 2.6s var(--ease) both"></i></span></span><span class="badge ac">Stage 6 of 9</span></span>
+                <span class="li" style="padding: 10px"><span class="tile warn" style="width: 34px; height: 34px"><i class="ms sm" aria-hidden="true">history</i></span><span class="stack grow"><span class="t">docs-portal</span><span class="m">Rolled back safely</span></span><span class="badge warn">Rolled back</span></span>
+              </div>
+              <div style="height: 64px"></div>
+            </div>
+          </div>
+        </div>
+        <div class="sat lg mono" aria-hidden="true">
+          <div class="small" style="margin-bottom: 6px">Activity</div>
+          <div class="log" style="border: 0; padding: 0; background: transparent; font-size: 11.5px">
+            <div class="ln ok" style="--i:6"><time>14:31</time>Image pushed</div>
+            <div class="ln ok" style="--i:7"><time>14:32</time>Load balancer ready</div>
+            <div class="ln caret" style="--i:8"><time>14:33</time>Tasks starting</div>
+          </div>
+        </div>
+        <div class="sat ok">
+          <div class="row" style="gap: 12px"><span class="tile ok" style="width: 40px; height: 40px"><svg class="check" width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 12.5l4.2 4.2L19 7" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"></path></svg></span><span class="stack"><span style="font-weight: 650">Live and healthy</span><span class="small mono" style="color: var(--ac)">my-app-alb.elb.amazonaws.com</span></span></div>
+        </div>
+      </div>
+    </section>
+    <div class="strip" aria-label="Works with">
+      <span class="chip"><i class="ms sm" aria-hidden="true">desktop_windows</i>Windows 10 and 11</span>
+      <span class="chip"><i class="ms sm" aria-hidden="true">description</i>Dockerfile</span>
+      <span class="chip"><i class="ms sm" aria-hidden="true">stacks</i>compose.yaml</span>
+      <span class="chip"><i class="ms sm" aria-hidden="true">badge</i>IAM Identity Center</span>
+      <span class="chip"><i class="ms sm" aria-hidden="true">dns</i>ECS Fargate</span>
+      <span class="chip"><i class="ms sm" aria-hidden="true">alt_route</i>Application Load Balancer</span>
+      <span class="chip"><i class="ms sm" aria-hidden="true">inventory_2</i>Amazon ECR</span>
+    </div>
+    <section class="sec" id="how">
+      <div class="stack" style="gap: 10px"><span class="eyebrow">HOW IT WORKS</span><h2 class="h3">Three steps. No console, no YAML.</h2></div>
+      <div class="grid3">
+        <div class="card" style="min-height: 300px"><div class="row"><span class="num">1</span><span class="h2">Connect AWS</span></div><span class="sub">Sign in with IAM Identity Center in your browser. The app comes back to the front when AWS confirms who you are.</span>
+          <div class="mini"><span class="row small" style="gap: 8px"><span class="spin" style="width: 14px; height: 14px; border-width: 2px"></span>Waiting for browser sign-in</span><span class="row small" style="gap: 8px; color: var(--ok)"><i class="ms sm" aria-hidden="true">verified_user</i><span class="mono">1234 5678 9012</span> verified</span></div></div>
+        <div class="card" style="min-height: 300px"><div class="row"><span class="num">2</span><span class="h2">Pick your project</span></div><span class="sub">Choose a Dockerfile or Compose file. The app reads it and tells you exactly what it will deploy, before anything is created.</span>
+          <div class="mini"><span class="row small" style="gap: 8px"><i class="ms sm" aria-hidden="true">folder_open</i><span class="mono">compose.yaml</span></span><span class="row small" style="gap: 8px"><span class="badge ok">web · port 8080</span><span class="badge warn">db · not yet</span></span></div></div>
+        <div class="card" style="min-height: 300px"><div class="row"><span class="num">3</span><span class="h2">Press Deploy</span></div><span class="sub">Follow real progress from AWS. You get the link only after AWS reports healthy targets and the link answers.</span>
+          <div class="mini"><span class="bar"><i style="width: 100%; background: var(--ok)"></i></span><span class="row small" style="gap: 8px; color: var(--ok)"><i class="ms sm" aria-hidden="true">public</i>Link answered HTTP 200</span></div></div>
+      </div>
+    </section>
+    <section class="sec" id="aws">
+      <div class="stack" style="gap: 10px"><span class="eyebrow">WHAT IT CREATES</span><h2 class="h3">Production-shaped from the first deploy.</h2><p class="sub" style="margin: 0; max-width: 720px; font-size: 16px">One load balancer across two availability zones, two Fargate tasks, private subnets, immutable images, and automatic rollback when a release fails its health check.</p></div>
+      <div class="arch">
+        <div class="stack" style="gap: 12px">
+          <div class="node"><span class="tile"><i class="ms" aria-hidden="true">groups</i></span><span class="stack"><span style="font-weight: 620">Visitors</span><span class="small">Anyone with the link</span></span></div>
+          <div class="flow"></div>
+          <div class="node" style="border-color: var(--ac)"><span class="tile ac"><i class="ms" aria-hidden="true">alt_route</i></span><span class="stack"><span style="font-weight: 620">Application Load Balancer</span><span class="small">Public HTTP, optional HTTPS</span></span></div>
+        </div>
+        <div class="vpc" style="grid-column: span 1">
+          <div class="node"><span class="tile ok"><i class="ms" aria-hidden="true">dns</i></span><span class="stack"><span style="font-weight: 620">Fargate task A</span><span class="small">us-east-1a · private</span></span></div>
+          <div class="node"><span class="tile ok"><i class="ms" aria-hidden="true">dns</i></span><span class="stack"><span style="font-weight: 620">Fargate task B</span><span class="small">us-east-1b · private</span></span></div>
+        </div>
+        <div class="stack" style="gap: 12px">
+          <div class="node"><span class="tile"><i class="ms" aria-hidden="true">inventory_2</i></span><span class="stack"><span style="font-weight: 620">ECR image</span><span class="small mono">sha256 digest, never :latest</span></span></div>
+          <div class="node"><span class="tile"><i class="ms" aria-hidden="true">lock</i></span><span class="stack"><span style="font-weight: 620">Secrets Manager</span><span class="small">Secret values stay in AWS</span></span></div>
+          <div class="node"><span class="tile"><i class="ms" aria-hidden="true">receipt_long</i></span><span class="stack"><span style="font-weight: 620">CloudWatch Logs</span><span class="small">Shown sanitized in the app</span></span></div>
+        </div>
+      </div>
+    </section>
+    <section class="sec" id="features">
+      <div class="stack" style="gap: 10px"><span class="eyebrow">FEATURES</span><h2 class="h3">Built to finish the job, honestly.</h2></div>
+      <div class="bento">
+        <div class="card wide2" style="padding: 28px"><i class="ms lg fill" style="color: var(--ac)" aria-hidden="true">download</i><span class="h2" style="font-size: 20px">One-click setup, problems fixed for you</span><span class="sub">Missing AWS CLI or Docker? One button downloads each publisher's signed installer, checks the signature, installs it silently and repairs the usual snags: missing package manager, interrupted downloads, WSL not ready, PATH not refreshed, Docker not started.</span>
+          <div class="mini" style="flex-direction: row; flex-wrap: wrap; gap: 8px"><span class="badge ok"><i class="ms sm" aria-hidden="true">check</i>AWS CLI v2</span><span class="badge ac"><span class="spin" style="width: 12px; height: 12px; border-width: 2px"></span>Docker Desktop 64%</span><span class="badge mute">Windows permission next</span></div></div>
+        <div class="card"><i class="ms fill" style="color: var(--ac)" aria-hidden="true">history</i><span class="h2">Automatic rollback</span><span class="sub">A release that fails health checks rolls back. The last working version keeps serving.</span></div>
+        <div class="card"><i class="ms fill" style="color: var(--ac)" aria-hidden="true">autorenew</i><span class="h2">Honest repair</span><span class="sub">Throttling and timeouts retry inside a visible budget. What needs you is named exactly.</span></div>
+        <div class="card"><i class="ms fill" style="color: var(--ac)" aria-hidden="true">lock</i><span class="h2">Secrets stay secret</span><span class="sub">Secret values live in AWS Secrets Manager, never in drafts, logs or this app's files.</span></div>
+        <div class="card"><i class="ms fill" style="color: var(--ac)" aria-hidden="true">group</i><span class="h2">Every user, their own AWS</span><span class="sub">Each Windows user keeps separate profiles and credentials. No shared cloud database.</span></div>
+        <div class="card"><i class="ms fill" style="color: var(--ac)" aria-hidden="true">translate</i><span class="h2">English, Cantonese or both</span><span class="sub">A funny-level slider, narration, action sounds, focus and school modes, and your own wording.</span></div>
+        <div class="card wide2"><i class="ms fill" style="color: var(--ac)" aria-hidden="true">keyboard</i><span class="h2">Keyboard first</span><span class="sub">Ctrl+Shift+F opens a command palette with a live regex builder. Every control has a visible focus ring, and Reduce motion turns every animation into a simple fade.</span>
+          <div class="mini" style="flex-direction: row; align-items: center; gap: 10px"><i class="ms sm" aria-hidden="true">search</i><span class="mono">^(dep|roll)</span><span class="grow" style="flex: 1"></span><span class="badge ac mono">.* Regex</span><span class="badge mute mono">Ctrl+Shift+F</span></div></div>
+      </div>
+    </section>
+    <section class="sec">
+      <div class="stack" style="gap: 10px"><span class="eyebrow">SCREENS</span><h2 class="h3">Every state drawn, nothing faked.</h2><p class="small" style="margin: 0">Design previews. Screenshots of the built app replace these once a release is verified.</p></div>
+      <div class="shots">
+        <div class="win"><div class="tb">Sign-in</div><div class="bd" style="padding: 18px"><div class="step done"><span class="n"><i class="ms sm" aria-hidden="true">check</i></span><span class="t">Browser opened</span></div><div class="step now"><span class="n">3</span><span class="t">Waiting for approval</span></div><div class="step off"><span class="n">4</span><span class="t">Verify account</span></div></div></div>
+        <div class="win"><div class="tb">Rollback</div><div class="bd" style="padding: 18px"><div class="row"><span class="tile warn"><i class="ms fill" aria-hidden="true">history</i></span><span class="stack"><span class="t" style="font-weight: 650">Previous release kept live</span><span class="small">New tasks returned HTTP 500</span></span></div><span class="badge err" style="align-self: flex-start">Needs you: add DATABASE_URL</span><div class="step done"><span class="n"><i class="ms sm" aria-hidden="true">check</i></span><span class="t">Load balancer and link unchanged</span></div></div></div>
+        <div class="win"><div class="tb">Settings</div><div class="bd" style="padding: 18px"><div class="row"><span class="grow">Language</span><span class="seg"><button class="on">English</button><button>廣東話</button><button>Both</button></span></div><div class="row"><span class="grow">Reduce motion</span><span class="toggle on"></span></div><div class="row"><span class="grow">Dim sum surprise</span><span class="toggle on"></span></div></div></div>
+      </div>
+    </section>
+    <section class="sec" id="faq">
+      <div class="stack" style="gap: 10px"><span class="eyebrow">QUESTIONS</span><h2 class="h3">Before you deploy.</h2></div>
+      <div class="faq">
+        <details open><summary>Does it cost money?</summary><p>The app is free. AWS charges for the load balancer, Fargate tasks, image storage, logs and data transfer until you delete the deployment.</p></details>
+        <details><summary>Will closing the app delete my site?</summary><p>No. Infrastructure is only removed through a separate, explicit delete flow.</p></details>
+        <details><summary>Do visitors need an AWS account?</summary><p>No. The link is public. Your own app's sign-in, if it has one, keeps working.</p></details>
+        <details><summary>Does it support multi-service Compose?</summary><p>Not yet. This version deploys one Compose service and tells you before anything is created if others would be skipped.</p></details>
+        <details><summary>Can several people use it?</summary><p>Yes. Each Windows user signs in with their own AWS profile; nothing is shared through a server of ours.</p></details>
+        <details><summary>What if a deploy breaks?</summary><p>Known problems are retried or repaired automatically. A failed release rolls back, and the app names the one thing that needs you.</p></details>
+      </div>
+    </section>
+    <section class="cta">
+      <div class="stack grow" style="flex: 1 1 380px; gap: 8px"><span class="h3" style="color: var(--on-ac-c)">Ship your container today.</span><span style="color: var(--on-ac-c); opacity: .85">Windows 10 or 11 and an AWS account. The app installs the rest.</span></div>
+      <a class="btn fillb big" href="https://github.com/Ding-Ding-Projects/aws-app-deployer/releases/latest"><i class="ms fill" aria-hidden="true">download</i>Download for Windows</a>
+    </section>
+    <footer class="row small" style="padding: 48px 0 56px; flex-wrap: wrap; gap: 20px"><span>AWS App Deployer is an independent project, not affiliated with Amazon Web Services.</span><span style="flex: 1"></span><a href="https://github.com/Ding-Ding-Projects/aws-app-deployer/releases">Changelog</a><a href="https://github.com/Ding-Ding-Projects/aws-app-deployer">Source</a></footer>
+  </div>
+</div>
+
+<script>if(matchMedia('(prefers-color-scheme: light)').matches)document.querySelector('.app').classList.add('light')</script>
+</body>
+</html>
