@@ -19,6 +19,8 @@ npm test           # backend, main-process and renderer tests
 npm run dist:win   # build the Windows installer into dist/
 ```
 
+On Windows, `download-dependencies.bat`, `build.bat` (tests, then run) and `build-installer.bat` (tests, then the unsigned installer) wrap the same commands.
+
 `npm run screenshots` launches the app, saves a PNG of each main screen into `screenshots/`, and quits.
 
 ## What a deployment creates
