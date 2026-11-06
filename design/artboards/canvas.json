@@ -198,6 +198,15 @@
       "expand": "fill",
       "is_interactive": true,
       "title": "21 · Landing page tools: palette, language, accessibility, docs, direct download, dim sum switch"
+    },
+    "Attention.dc.html": {
+      "x": 1520,
+      "y": 10100,
+      "w": 1440,
+      "h": 900,
+      "expand": "fill",
+      "is_interactive": true,
+      "title": "22 · Attention modes and per-language funny levels"
     }
   },
   "order": [

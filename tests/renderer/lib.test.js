@@ -167,3 +167,9 @@ test('logo settings accept only known symbols, colours and real image data', () 
   assert.equal(Lib.imageKind(new Uint8Array([0x89, 0x50, 0x4e, 0x47])), 'png');
   assert.equal(Lib.imageKind(new Uint8Array([0x3c, 0x73, 0x76, 0x67])), null);
 });
+
+test('funny levels are independent per language', () => {
+  assert.equal(Lib.funny('success', { en: 1, yue: 5 }, 'en'), Lib.funny('success', 1, 'en'));
+  assert.equal(Lib.funny('success', { en: 1, yue: 5 }, 'yue'), Lib.funny('success', 5, 'yue'));
+  assert.equal(Lib.funny('success', { en: 2, yue: 4 }, 'both'), Lib.funny('success', 2, 'en') + ' · ' + Lib.funny('success', 4, 'yue'));
+});

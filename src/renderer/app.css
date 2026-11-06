@@ -8,7 +8,12 @@ body { overflow: hidden; }
 .app { height: 100vh; min-height: 0; }
 .app.reduce *, .app.reduce *::before, .app.reduce *::after { animation-duration: 1ms !important; animation-iteration-count: 1 !important; animation-delay: 0ms !important; transition-duration: 1ms !important; }
 .app.calm .step.now .n::after, .app.calm .drop.hot::before { animation: none; display: none; }
-.app.focus .side.extra { display: none; }
+.app.focus .main .li:not(:focus-within):not(:hover), .app.focus .main .card:not(:focus-within):not(:hover), .app.focus .main .set:not(:focus-within):not(:hover) { opacity: .45; filter: saturate(.5); transition: opacity var(--d2) var(--ease), filter var(--d2) var(--ease); }
+.app.focus .main .card:focus-within .li:not(:focus-within):not(:hover) { opacity: .55; }
+.app.calm .main, .app.calm .rail { filter: saturate(.65); }
+.next-bar { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 16px; background: var(--ac-c); color: var(--on-ac-c); font-weight: 600; flex-wrap: wrap; }
+.next-bar input { flex: 1 1 220px; min-width: 0; height: 38px; border-radius: 12px; border: 1px solid var(--line2); background: var(--s1); color: var(--tx); padding: 0 12px; font: inherit; font-weight: 500; }
+.next-bar .chip { height: 30px; cursor: pointer; }
 .titlebar { -webkit-app-region: drag; user-select: none; }
 .titlebar button, .titlebar .proto { -webkit-app-region: no-drag; }
 .caption button { width: 46px; height: 38px; border: 0; background: transparent; color: var(--tx2); display: grid; place-items: center; cursor: default; }

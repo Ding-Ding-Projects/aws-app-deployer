@@ -5,10 +5,10 @@ const path = require('node:path');
 
 const DEFAULTS = Object.freeze({
   theme: 'system', accent: '#6ea8ff', rainbow: false, reduceMotion: false,
-  displayName: '', language: 'en', funnyLevel: 3, emoji: true,
+  displayName: '', language: 'en', funnyLevel: 3, funnyLevels: { en: 5, yue: 5 }, emoji: true,
   narration: false, voice: '', rate: 1, pitch: 1, voices: { en: '', yue: '' }, sounds: true, logo: null,
   schedule: { enabled: false, lightAt: '07:00', darkAt: '19:00', days: [0, 1, 2, 3, 4, 5, 6] },
-  focus: false, calm: false, school: false,
+  focus: false, calm: false, school: false, timeAware: false, oneThing: false, nextAction: '', momentum: false, momentumUntil: 0,
   setupComplete: false, launches: 0,
   selection: null, draft: null, vocabulary: null,
   a11y: { textSize: 100, contrast: false, focus: false, targets: false, hidden: false },
@@ -27,6 +27,10 @@ const VALIDATORS = {
   displayName: v => typeof v === 'string' && v.length <= 60 && !/[\u0000-\u001f]/.test(v),
   language: v => ['en', 'yue', 'both'].includes(v),
   funnyLevel: v => Number.isInteger(v) && v >= 1 && v <= 5,
+  funnyLevels: v => v && typeof v === 'object' && ['en', 'yue'].every(k => Number.isInteger(v[k]) && v[k] >= 1 && v[k] <= 5),
+  timeAware: v => typeof v === 'boolean', oneThing: v => typeof v === 'boolean', momentum: v => typeof v === 'boolean',
+  nextAction: v => typeof v === 'string' && v.length <= 200 && !/[\u0000-\u001f]/.test(v),
+  momentumUntil: v => Number.isInteger(v) && v >= 0,
   emoji: v => typeof v === 'boolean', narration: v => typeof v === 'boolean',
   voice: v => typeof v === 'string' && v.length <= 200,
   rate: v => typeof v === 'number' && v >= 0.5 && v <= 2,

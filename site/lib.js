@@ -56,9 +56,11 @@
       ['Plot twist. Here is the culprit and the fix.', '劇情急轉！兇手同解藥喺下面。'],
     ],
   };
+  // level is either one number or { en, yue } so each language keeps its own playfulness.
   function funny(kind, level, lang) {
-    const row = FUNNY[kind][Math.min(5, Math.max(1, level | 0)) - 1];
-    return lang === 'yue' ? row[1] : lang === 'both' ? row[0] + ' · ' + row[1] : row[0];
+    const pick = l => FUNNY[kind][Math.min(5, Math.max(1, (typeof level === 'object' && level ? level[l] : level) | 0)) - 1];
+    const en = pick('en')[0], yue = pick('yue')[1];
+    return lang === 'yue' ? yue : lang === 'both' ? en + ' · ' + yue : en;
   }
 
   // ---- Personal vocabulary JSON: validated all at once, applied all at once ----
@@ -193,13 +195,17 @@
     voice: { what: 'Picks which installed voice reads status aloud. Choose automatically uses the system default.', steps: ['Pick a voice from the list.'] },
     rate: { what: 'Sets how fast narration speaks, from half speed to double speed.', steps: ['Move the practice slider.'] },
     sounds: { what: 'Plays short, quiet tones when a deployment starts, succeeds or stops.', steps: ['Toggle the practice switch.'] },
-    focus: { what: 'Hides side panels so each screen leads with one obvious next action. Nothing is disabled.', steps: ['Toggle the practice switch.'] },
-    calm: { what: 'Stops pulsing rings and looping highlights for a quieter screen. Progress still shows.', steps: ['Toggle the practice switch.'] },
+    focus: { what: 'Dims everything except the row or card you are on. Nothing is hidden: hover or move focus to bring anything forward.', steps: ['Toggle the practice switch.'] },
+    calm: { what: 'Low stimulation: quieter colour, no extra motion, and only notifications that need you pop up. Everything still lands in the notification list.', steps: ['Toggle the practice switch.'] },
+    timeAware: { what: 'Shows in the title bar how long the app has been open and how long since you last changed something. Just the numbers, no nudging.', steps: ['Toggle the practice switch.'] },
+    oneThing: { what: 'Keeps one next action you write yourself at the top of every screen, and remembers it after a restart.', steps: ['Turn it on, then type your next action at the top of the screen.'] },
+    momentum: { what: 'When a deployment draft sits untouched for 30 minutes, a small note offers to reopen it. Not now hides it for one hour.', steps: ['Toggle the practice switch.'] },
+    funnyLevels: { what: 'Separate playfulness for English and Cantonese, 1 (plain) to 5 (very playful). Both start at 5. It styles every kind of message, errors included, but names, accounts and errors stay exact.', steps: ['Move the English slider and watch the preview.', 'Move the Cantonese slider; English stays where it was.'] },
     school: { what: 'Hides playful extras everywhere: the dim sum surprise, the funny level, emoji and playful wording.', steps: ['Toggle the practice switch.'] },
     vocabulary: { what: 'Replaces words in the interface with your own from a JSON file. It stays on this computer and applies all at once or not at all.', steps: ['Choose or drop a file shaped like {"version": 1, "entries": {"Deploy": "Ship"}}.', 'Clear restores the original words.'] },
     a11y: { what: 'Text size, contrast, focus rings and target size from the accessibility tools menu.', steps: ['Open the accessibility button in the title bar.'] },
   };
-  const SETTINGS_ON_SCREEN = ['theme', 'accent', 'rainbow', 'reduceMotion', 'displayName', 'schedule', 'language', 'funnyLevel', 'emoji', 'narration', 'voice', 'rate', 'sounds', 'focus', 'calm', 'school', 'vocabulary', 'a11y'];
+  const SETTINGS_ON_SCREEN = ['theme', 'accent', 'rainbow', 'reduceMotion', 'displayName', 'schedule', 'language', 'funnyLevels', 'timeAware', 'oneThing', 'momentum', 'emoji', 'narration', 'voice', 'rate', 'sounds', 'focus', 'calm', 'school', 'vocabulary', 'a11y'];
 
   // ---- Export in every format that can carry the data, stating any loss first ----
   const FORMATS = {
@@ -265,7 +271,7 @@
   }
 
   // ---- Local history labels and categories ----
-  const CATEGORY = { theme: 'Appearance', accent: 'Appearance', rainbow: 'Appearance', reduceMotion: 'Appearance', schedule: 'Appearance', a11y: 'Accessibility', ui: 'Layout', displayName: 'Appearance', language: 'Language', funnyLevel: 'Language', emoji: 'Language', narration: 'Voice', voice: 'Voice', rate: 'Voice', sounds: 'Voice', focus: 'Comfort', calm: 'Comfort', school: 'Comfort', vocabulary: 'Language', setupComplete: 'Setup', 'deployments.removed': 'Records', restore: 'Restores', appearance: 'Appearance', tickets: 'Support' };
+  const CATEGORY = { theme: 'Appearance', accent: 'Appearance', rainbow: 'Appearance', reduceMotion: 'Appearance', schedule: 'Appearance', a11y: 'Accessibility', ui: 'Layout', displayName: 'Appearance', language: 'Language', funnyLevel: 'Language', funnyLevels: 'Language', timeAware: 'Comfort', oneThing: 'Comfort', nextAction: 'Comfort', momentum: 'Comfort', momentumUntil: 'Comfort', emoji: 'Language', narration: 'Voice', voice: 'Voice', rate: 'Voice', sounds: 'Voice', focus: 'Comfort', calm: 'Comfort', school: 'Comfort', vocabulary: 'Language', setupComplete: 'Setup', 'deployments.removed': 'Records', restore: 'Restores', appearance: 'Appearance', tickets: 'Support' };
   const short = v => { const t = typeof v === 'string' ? v : JSON.stringify(v); return t === undefined ? 'nothing' : t.length > 40 ? t.slice(0, 37) + '…' : t; };
   function historyLabel(h) {
     if (h.key === 'deployments.removed') return `Removed ${h.before?.length || 0} deployment record${h.before?.length === 1 ? '' : 's'}`;

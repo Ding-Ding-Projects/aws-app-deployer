@@ -49,7 +49,8 @@
   }
   function toast(text, kind = 'ok') {
     const id = Math.random().toString(36).slice(2);
-    S.toasts.push({ id, text, kind }); S.notes.unshift({ id, text, kind, at: time() }); S.notes = S.notes.slice(0, 200);
+    if (!(S.settings?.calm && kind !== 'err')) S.toasts.push({ id, text, kind });
+    S.notes.unshift({ id, text, kind, at: time() }); S.notes = S.notes.slice(0, 200);
     say(text); renderToasts();
     if (kind !== 'err') setTimeout(() => dismissToast(id), 4200);
   }
@@ -73,7 +74,7 @@
   }
   async function set(key, value) {
     const r = await api.setSetting(key, value);
-    if (r.ok) { S.settings[key] = r.value; S.sources[key] = 'file'; applyAppearance(); render(); cue('tap'); }
+    if (r.ok) { S.settings[key] = r.value; S.sources[key] = 'file'; S.lastChange = Date.now(); applyAppearance(); render(); cue('tap'); }
     return r;
   }
 
@@ -112,7 +113,7 @@
     if (ev.kind === 'deploy' && S.run?.op === ev.op) {
       if (ev.type === 'progress' && ev.stage) { S.run.stage = ev.stage; S.run.log.push([time(), stageLabel(ev.stage)]); }
       else if (ev.type !== 'started') { S.result = { ...ev.result, name: S.run.name, scope: ev.scope }; S.run = null; S.view = 'result'; loadHistory();
-        const ok = S.result.ok; cue(ok ? 'ok' : 'err'); toast(Lib.funny(ok ? 'success' : 'failure', S.settings.school ? 1 : S.settings.funnyLevel, S.settings.language) + (ok && emojiOn() ? ' 🎉' : ''), ok ? 'ok' : 'err'); }
+        const ok = S.result.ok; cue(ok ? 'ok' : 'err'); toast(Lib.funny(ok ? 'success' : 'failure', S.settings.school ? 1 : S.settings.funnyLevels, S.settings.language) + (ok && emojiOn() ? ' 🎉' : ''), ok ? 'ok' : 'err'); }
       render();
     }
   });
@@ -127,7 +128,7 @@
   function shell(content, { rail = true } = {}) {
     const nav = (v, icon, key) => `<button class="navi ${S.view === v || (v === 'deploys' && ['wizard', 'run', 'result'].includes(S.view)) ? 'on' : ''}" data-go="${v}" data-menu="nav" ${S.view === v ? 'aria-current="page"' : ''}><span class="pill">${ic(icon)}</span>${T(key)}</button>`;
     return `
-    <div class="titlebar">${logoHtml(20)}<span class="name">${esc(S.settings?.displayName || 'AWS App Deployer')}</span><span class="small mono" title="Running version and build time">${esc(provLine())}</span><span class="grow"></span>
+    <div class="titlebar">${logoHtml(20)}<span class="name">${esc(S.settings?.displayName || 'AWS App Deployer')}</span><span class="small mono" title="Running version and build time">${esc(provLine())}</span>${S.settings?.timeAware ? `<span class="small mono" id="time-aware" aria-live="off">${esc(timeLine())}</span>` : ''}<span class="grow"></span>
       <button class="chip" style="height: 28px; -webkit-app-region: no-drag" data-act="palette" aria-label="${T('palette')}">${ic('search', 'sm')}<span class="kbd">Ctrl+Shift+F</span></button>
       ${S.settings?.a11y?.hidden ? '' : `<button class="chip" style="height: 28px; -webkit-app-region: no-drag" data-panel-open="a11y" aria-label="Accessibility tools" data-menu="a11y">${ic('accessibility_new', 'sm')}</button>`}
       <button class="chip" style="height: 28px; -webkit-app-region: no-drag" data-panel-open="notes" aria-label="${T('notifications')}">${ic('notifications', 'sm')}${S.notes.length ? `<span class="badge ac" style="height: 18px">${S.notes.length}</span>` : ''}</button>
@@ -142,7 +143,7 @@
       <main class="main ${rail ? "" : "bare"}" id="main" tabindex="-1">${content}</main>
     </div>`;
   }
-  const page = (title, actions, body) => `<header class="topbar"><h1 class="rise">${title}</h1><span class="grow"></span>${actions || ''}</header><div class="content">${body}</div>`;
+  const page = (title, actions, body) => `<header class="topbar"><h1 class="rise">${title}</h1><span class="grow"></span>${actions || ''}</header><div class="content">${nextActionBar()}${body}</div>`;
 
   // ---------- views ----------
   function reason(code, cmd) {
@@ -231,7 +232,7 @@
       <div class="row" style="flex-wrap: wrap; gap: 6px"><button class="btn text" data-act="dep-all">Select all ${shown.length} shown</button><button class="btn text" data-act="dep-invert">Invert</button><span class="grow"></span>${S.depSel.size ? `<span class="badge ac">${S.depSel.size} selected</span><button class="btn text" data-act="dep-export">${ic('download')}Export</button><button class="btn text" style="color: var(--err)" data-act="dep-remove">${ic('delete')}Remove…</button>` : ''}</div>` : '';
     const rows = shown.map(x => `<div class="li static" data-menu="deploy" data-at="${esc(x.id || x.at)}" tabindex="0"><input type="checkbox" class="check" aria-label="Select ${esc(x.name)}" data-dep="${esc(x.id || x.at)}" ${S.depSel.has(x.id || x.at) ? 'checked' : ''}><span class="tile ${x.ok ? 'ok' : 'warn'}">${ic(x.ok ? 'deployed_code' : 'history', 'fill')}</span><span class="stack grow"><span class="t">${esc(x.name)}</span><span class="m">${esc(x.region)} · ${new Date(x.at).toLocaleString()}${x.ok ? '' : ' · ' + esc(Lib.errorText(x.error))}</span></span>${x.ok ? `<button class="btn text" data-act="open-url" data-url="${esc(x.url)}">${T('open')}</button><span class="badge ok">${ic('check', 'sm')}Healthy at deploy</span>` : `<span class="badge warn">Stopped</span>`}</div>`).join('');
     const body = !d.length && !S.run ? `<div class="empty rise"><span class="tile ac">${ic('rocket_launch', 'lg fill')}</span><span class="h2" style="font-size: 20px">${T('no_deployments')}</span><span class="sub" style="max-width: 480px">${T('no_deployments_sub')}</span><button class="btn fillb" data-go="wizard">${ic('add')}${T('new_deployment')}</button></div>`
-      : `${chartsCard()}${bar}<div class="list rise">${running}${rows || '<span class="small" style="padding: 12px">No records match the filter</span>'}</div><div class="row"><span class="small grow">Status shown is the result recorded when each deployment finished on this computer.</span><button class="btn text" data-panel-open="export:deploys">${T('export_history')}</button></div>`;
+      : `${momentumCard()}${chartsCard()}${bar}<div class="list rise">${running}${rows || '<span class="small" style="padding: 12px">No records match the filter</span>'}</div><div class="row"><span class="small grow">Status shown is the result recorded when each deployment finished on this computer.</span><button class="btn text" data-panel-open="export:deploys">${T('export_history')}</button></div>`;
     return page(T('deployments'), chip, body);
   }
   function viewWizard() {
@@ -307,7 +308,9 @@
       </div>
       <div class="card" style="flex: 1 1 360px; gap: 0"><span class="h2" style="padding-bottom: 6px">Language and voice</span>
         <div class="set" data-menu="setting" data-key="language" data-search="language english cantonese both"><span class="stack grow"><span class="t" style="font-weight: 600">${T('language')}</span></span>${ctl('language', T('language'), seg('language', [['en', 'English'], ['yue', '廣東話'], ['both', 'Both']]))}</div>
-        ${s.school ? '' : `<div class="set" style="flex-wrap: wrap" data-menu="setting" data-key="funnyLevel" data-search="funny level humour"><span class="stack grow" style="flex: 1 1 170px"><label class="t" for="fl" style="font-weight: 600">${T('funny')}</label><span class="small">Changes the wording only, never the facts</span></span> ${info('funnyLevel', T('funny'))}<input id="fl" type="range" min="1" max="5" value="${s.funnyLevel}" data-range="funnyLevel" style="flex: 1 1 100px; min-width: 0"><span class="badge ac" style="width: 28px; justify-content: center; padding: 0">${s.funnyLevel}</span><span class="card" style="flex: 1 1 100%; background: var(--s1); padding: 12px 14px; margin-top: 10px; gap: 2px"><span class="small">Preview</span><span>${esc(Lib.funny('success', s.funnyLevel, s.language))}</span></span></div>`}
+        ${s.school ? '' : `<div class="set" style="flex-wrap: wrap" data-menu="setting" data-key="funnyLevels" data-search="funny level humour english cantonese"><span class="stack grow" style="flex: 1 1 170px"><span class="t" style="font-weight: 600">${T('funny')}</span><span class="small">Styles every message, errors included. Both start at 5. Facts never change.</span></span>${info('funnyLevels', T('funny'))}
+          ${[['en', 'English'], ['yue', '廣東話']].map(([k, l]) => `<span class="row" style="flex: 1 1 100%; gap: 10px"><label for="fl-${k}" style="width: 70px">${l}</label><input id="fl-${k}" type="range" min="1" max="5" value="${s.funnyLevels[k]}" data-funny="${k}" style="flex: 1; min-width: 0" aria-valuetext="${s.funnyLevels[k]} of 5"><span class="badge ac" style="width: 28px; justify-content: center; padding: 0">${s.funnyLevels[k]}</span></span>`).join('')}
+          <span class="card" style="flex: 1 1 100%; background: var(--s1); padding: 12px 14px; margin-top: 10px; gap: 2px"><span class="small">Preview</span><span>${esc(Lib.funny('success', s.funnyLevels, s.language))}</span></span></div>`}
         ${s.school ? '' : tog('emoji', T('emoji'), 'Adds emoji to some messages')}
         ${tog('narration', T('narration'), voices.length ? 'Uses a voice installed on this computer' : 'No voices found on this computer')}
         ${s.narration && voices.length ? [['en', 'English voice', /^en/i], ['yue', 'Cantonese voice', /^(yue|zh-HK)/i]].map(([k, l, re]) => { const list = voices.filter(v => re.test(v.lang)); return `<div class="set" data-search="voice ${l}"><label class="grow" for="vc-${k}">${l}</label>${list.length ? `<select id="vc-${k}" data-voice="${k}" style="max-width: 220px"><option value="">System default</option>${list.map(v => `<option ${v.name === s.voices?.[k] ? 'selected' : ''}>${esc(v.name)}</option>`).join('')}</select>` : `<span class="badge mute">No ${k === 'yue' ? 'Cantonese' : 'English'} voice installed</span>`}</div>`; }).join('') + `<div class="set" data-search="voice pitch speed rate"><label class="grow" for="vp">Pitch</label><input id="vp" type="range" min="0.5" max="2" step="0.1" value="${s.pitch}" data-range="pitch" style="width: 130px"><span class="badge ac mono">${s.pitch}</span></div><div class="set" data-search="voice speed rate"><label class="grow" for="vr">Speed</label><input id="vr" type="range" min="0.5" max="2" step="0.1" value="${s.rate}" data-range="rate" style="width: 130px"><span class="badge ac mono">${s.rate}</span></div><button class="btn text" data-act="voice-try" style="align-self: flex-start">${ic('play_arrow')}Try this voice</button>` : ''}
@@ -316,7 +319,8 @@
       <div class="side">
         <div class="drop idle" style="flex-direction: column; align-items: flex-start; gap: 12px; padding: 22px" data-menu="setting" data-key="vocabulary" data-search="personal wording vocabulary json">${info('vocabulary', T('vocabulary'))}<div class="row"><span class="tile ac">${ic('dictionary', 'fill')}</span><span class="stack"><span style="font-weight: 650">${T('vocabulary')}</span><span class="small">${s.vocabulary ? Object.keys(s.vocabulary.entries).length + ' words active' : 'Drop a vocabulary JSON anywhere in the app'}</span></span></div><span class="small">Format: {"version": 1, "entries": {"Deploy": "Ship"}}. Stays on this computer. Applied all at once or not at all.</span><span class="row" style="gap: 8px"><label class="btn tonal" for="vf">Choose file</label><input id="vf" type="file" accept="application/json,.json" class="sr" data-file="vocab"><button class="btn text" data-act="vocab-clear" ${s.vocabulary ? '' : 'disabled'}>Clear</button></span></div>
         <div class="card" style="gap: 0"><span class="h2" style="padding-bottom: 6px">Focus and comfort</span>
-          ${tog('focus', T('focus'), 'Hides side panels so one action leads')}${tog('calm', T('calm'), 'No pulsing or looping motion')}${tog('school', T('school'), 'Hides playful extras everywhere')}
+          <span class="small" style="padding: 4px 0 6px">Attention modes: each is separate and off until you turn it on. Interface options only, not medical advice.</span>
+          ${tog('focus', 'Focus', 'Dims everything except the row or card you are on')}${tog('calm', 'Low stimulation', 'Quieter colour, no extra motion, only notifications that need you')}${tog('timeAware', 'Time awareness', 'Time open and since the last change, in the title bar')}${tog('oneThing', 'One thing at a time', 'Keeps the next action you chose in view')}${tog('momentum', 'Momentum', 'A gentle note when a draft sits untouched')}${tog('school', T('school'), 'Hides playful extras everywhere')}
           ${s.school ? '' : `<div class="set" style="flex-wrap: wrap" data-search="dim sum surprise"><span class="stack grow"><span class="t" style="font-weight: 600">${T('dim_sum')}</span><span class="small">A rare treat at launch</span></span><button class="toggle on" role="switch" aria-checked="true" aria-label="${T('dim_sum')}" data-act="troll"></button>${S.troll ? `<span class="card pop" style="flex: 1 1 100%; flex-direction: row; gap: 10px; align-items: center; padding: 10px 14px; margin-top: 10px; background: var(--warn-c)" role="status">${ic('lock', 'fill')}<span class="small" style="color: var(--tx)">${T('dim_sum_troll')}${emojiOn() ? ' 🥟' : ''}</span></span>` : ''}</div>`}
         </div>
         ${logoCard()}
@@ -755,6 +759,28 @@
   }
 
 
+
+  // ---------- attention modes ----------
+  S.openedAt = Date.now(); S.lastChange = Date.now();
+  const mins = ms => { const m = Math.floor(ms / 60000); return m < 60 ? `${m} min` : `${Math.floor(m / 60)} h ${m % 60} min`; };
+  const timeLine = () => `Open ${mins(Date.now() - S.openedAt)} · last change ${mins(Date.now() - S.lastChange)} ago`;
+  setInterval(() => { const el = document.getElementById('time-aware'); if (el) el.textContent = timeLine(); if (S.settings?.momentum && S.view === 'deploys' && !S.panel && !S.palette) { const was = !!document.querySelector('[data-momentum]'); if (was !== !!momentumDue()) render(); } }, 30000);
+  function nextActionBar() {
+    if (!S.settings?.oneThing) return '';
+    const a = S.settings.nextAction;
+    if (!a || S.editNext) return `<div class="next-bar"><i class="ms fill" aria-hidden="true">flag</i><label class="sr" for="na">Your next action</label><input id="na" data-input="nextDraft" maxlength="200" value="${esc(S.nextDraft ?? a ?? '')}" placeholder="Write the one next thing you want to do"><button class="btn fillb" data-act="next-save">Keep in view</button></div>`;
+    return `<div class="next-bar" role="note" aria-label="Your next action"><i class="ms fill" aria-hidden="true">flag</i><span class="grow" style="flex: 1">Next: ${esc(a)}</span><button class="chip" data-act="next-edit">Change</button><button class="chip" data-act="next-done">Done</button></div>`;
+  }
+  function momentumDue() {
+    const d = S.settings?.draft;
+    if (!S.settings?.momentum || !d?.savedAt || S.settings.momentumUntil > Date.now()) return null;
+    const idle = Date.now() - d.savedAt; return idle >= 30 * 60000 ? idle : null;
+  }
+  function momentumCard() {
+    const idle = momentumDue(); if (!idle) return '';
+    return `<div class="card raise" data-momentum="1" role="status" style="border: 1px solid var(--line)"><div class="row"><i class="ms" aria-hidden="true">schedule</i><span style="flex: 1">The deployment draft${S.settings.draft.name ? ` "${esc(S.settings.draft.name)}"` : ''} has not changed for ${mins(idle)}.</span></div><div class="row" style="gap: 6px"><button class="btn tonal" data-go="wizard">Open the draft</button><button class="btn text" data-act="momentum-snooze">Not now (1 hour)</button></div></div>`;
+  }
+
   // ---------- logo ----------
   const logo = () => Lib.cleanLogo(S.settings.logo) || { symbol: 'rocket_launch', shape: 'rounded', bg: null, fg: null };
   function logoHtml(size) {
@@ -858,7 +884,7 @@
   const SEVERITY = ['Mild inconvenience', 'Moderately dramatic', 'Catastrophic (ignored)', 'Existential'];
   const STATUSES = ['Received', 'Triaged by the Desk', 'Escalated to a drawer', 'Resolved: delete the app data folder'];
   function ticketStatus(t) { const mins = (Date.now() - new Date(t.createdAt)) / 60000; return STATUSES[Math.min(3, Math.floor(mins / 0.5))]; }
-  const cannedReply = () => ['Your request has been received and filed.', 'Thank you for contacting the Desk. Your case is in a queue of exactly one.', 'Thank you for contacting the Desk. We have reviewed your case with all the care our manual describes.', 'The Desk has convened. The Desk has deliberated. The Desk has a folder for you.', 'Our most senior drawer has escalated your ticket to an even deeper drawer. Resolution below.'][(S.settings.school ? 1 : S.settings.funnyLevel) - 1];
+  const cannedReply = () => ['Your request has been received and filed.', 'Thank you for contacting the Desk. Your case is in a queue of exactly one.', 'Thank you for contacting the Desk. We have reviewed your case with all the care our manual describes.', 'The Desk has convened. The Desk has deliberated. The Desk has a folder for you.', 'Our most senior drawer has escalated your ticket to an even deeper drawer. Resolution below.'][(S.settings.school ? 1 : S.settings.funnyLevels[S.settings.language === 'yue' ? 'yue' : 'en']) - 1];
   function viewSupport() {
     const tickets = S.settings.tickets || [], q = S.ticketQ || '';
     const r = Lib.search(tickets.map(t => ({ ...t, label: `${t.id} ${t.category} ${t.description}` })), q, { regex: !!S.ticketRegex });
@@ -898,7 +924,7 @@
   window.__go = v => {
     if (v === 'palette') { S.palette = { q: 'dep', regex: false, sel: 0 }; render(); return; }
     if (v === 'a11y') { go('deploys'); openPanel('a11y'); return; }
-    if (v === 'info') { go('settings'); openPanel('info:funnyLevel'); return; }
+    if (v === 'info') { go('settings'); openPanel('info:funnyLevels'); return; }
     if (v === 'tabs') { go('deploys'); ['history', 'docs', 'changelog'].forEach(x => { ensureData(x); openTab(x); }); S.active = S.tabs[1].id; render(); return; }
     if (v === 'export') { go('history'); openPanel('export:history'); return; }
     if (v === 'lockwiz') { go('deploys'); openLockWizard({ key: 'go:settings', label: 'Settings' }); S.lockWiz.policy = 'pin+totp'; api.lockTotp('Settings').then(x => { S.lockWiz.totp = x; S.lockWiz.pin = '2468'; render(); }); return; }
@@ -1045,6 +1071,10 @@
       case 'b64-edit': handoff(S.tools.b64mode === 'encode' ? 'encoded.txt' : 'decoded.txt', S.tools.b64out.text || '', t.dataset.e); break;
       case 'conv-save': { const c = S.tools.conv; const r = await api.saveFile(c.name, c.bytes || c.text); if (r.ok) toast(`Saved ${c.name}`); break; }
       case 'conv-edit': handoff(S.tools.conv.name, S.tools.conv.text, t.dataset.e); break;
+      case 'next-save': { const v = (S.nextDraft ?? '').trim(); if (!v) { toast('Write the next action first', 'err'); break; } S.editNext = false; S.nextDraft = null; await set('nextAction', v.slice(0, 200)); break; }
+      case 'next-edit': S.editNext = true; S.nextDraft = S.settings.nextAction; render(); document.getElementById('na')?.focus(); break;
+      case 'next-done': S.nextDraft = ''; await set('nextAction', ''); toast('Next action cleared'); break;
+      case 'momentum-snooze': await set('momentumUntil', Date.now() + 3600000); break;
       case 'vocab-clear': await set('vocabulary', null); toast('Original words restored'); break;
     }
   });
@@ -1057,7 +1087,7 @@
     S.run = { op: r.op, name: W.name, stage: 'validation', log: [[time(), 'Deployment started']], scope: { accountId: S.identity.accountId, region: S.identity.region } };
     cue('start'); say('Deployment started'); go('run');
   }
-  function saveDraft() { const W = S.wizard; api.setSetting('draft', { step: W.step, file: W.file, name: W.name, port: W.port, health: W.health, env: W.env.map(e => ({ k: e.k, v: '' })) }); }
+  function saveDraft() { const W = S.wizard; const d = { savedAt: Date.now(), step: W.step, file: W.file, name: W.name, port: W.port, health: W.health, env: W.env.map(e => ({ k: e.k, v: '' })) }; S.settings.draft = d; S.lastChange = Date.now(); api.setSetting('draft', d); }
   root.addEventListener('submit', e => { if (e.target.id === 'aws-code-form') { e.preventDefault(); root.querySelector('[data-act="submit-code"]')?.click(); } });
   root.addEventListener('input', e => {
     const el = e.target;
@@ -1069,6 +1099,8 @@
     if (el.dataset.tk === 'description') { S.ticketDraft = el.value; return; }
     if (el.dataset.lw) { const m = { 'lw-pin': 'pin', 'lw-pin2': 'pin2', 'lw-password': 'password', 'lw-password2': 'password2', 'lw-code': 'code' }[el.dataset.lw]; S.lockWiz[m] = el.value; if (m === 'pin') render(); return; }
     if (el.dataset.ul) { S.unlock[el.dataset.ul] = el.value; if (el.dataset.ul === 'pin') render(); return; }
+    if (el.dataset.input === 'nextDraft') { S.nextDraft = el.value; return; }
+    if (el.dataset.funny) { set('funnyLevels', { ...S.settings.funnyLevels, [el.dataset.funny]: +el.value }); return; }
     if (el.dataset.input === 'apPreset') { S.ap.preset = el.value; return; }
     if (el.dataset.ap && el.type === 'range') { apSet(el.dataset.ap, +el.value, !S.apDrag); S.apDrag = true; const b = el.nextElementSibling; if (b) { b.textContent = el.value; b.className = 'badge ac mono'; } return; }
     if (el.dataset.sum !== undefined) { S.unlock.ladder.sums[+el.dataset.sum] = el.value; return; }

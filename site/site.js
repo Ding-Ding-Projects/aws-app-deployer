@@ -7,7 +7,7 @@
   const app = document.getElementById('app');
   const REPO = 'Ding-Ding-Projects/aws-app-deployer';
   const KEY = 'aws-app-deployer.site/1';
-  const DEFAULTS = { theme: 'system', lang: 'en', funny: 3, textSize: 100, contrast: false, reduce: false, focus: false, targets: false };
+  const DEFAULTS = { theme: 'system', lang: 'en', funnyEn: 5, funnyYue: 5, textSize: 100, contrast: false, reduce: false, focus: false, targets: false, dim: false, low: false, clock: false, one: false, next: '', momentum: false, momentumUntil: 0 };
   let P = { ...DEFAULTS };
   try { P = { ...DEFAULTS, ...JSON.parse(localStorage.getItem(KEY) || '{}') }; } catch { /* storage blocked: defaults only */ }
   const save = () => { try { localStorage.setItem(KEY, JSON.stringify(P)); } catch { /* not saved, still applied */ } };
@@ -42,7 +42,7 @@
       el.innerHTML = !zh || P.lang === 'en' ? en : P.lang === 'yue' ? zh : `${en}<span class="both-yue" lang="zh-HK">${zh}</span>`;
     });
     const f = document.querySelector('[data-funny]');
-    if (f) { const [en, zh] = FUNNY[P.funny - 1]; f.textContent = P.lang === 'yue' ? zh : P.lang === 'both' ? `${en} ${zh}` : en; }
+    if (f) { const en = FUNNY[P.funnyEn - 1][0], zh = FUNNY[P.funnyYue - 1][1]; f.textContent = P.lang === 'yue' ? zh : P.lang === 'both' ? `${en} ${zh}` : en; }
     document.querySelectorAll('[data-set-lang]').forEach(b => { b.classList.toggle('on', b.dataset.setLang === P.lang); b.setAttribute('aria-pressed', b.dataset.setLang === P.lang); });
   }
 
@@ -51,7 +51,9 @@
     const dark = P.theme === 'dark' || (P.theme === 'system' && !matchMedia('(prefers-color-scheme: light)').matches);
     const reduce = P.reduce || matchMedia('(prefers-reduced-motion: reduce)').matches;
     app.classList.toggle('light', !dark); app.classList.toggle('contrast', P.contrast); app.classList.toggle('reduce', reduce);
-    app.classList.toggle('focusring', P.focus); app.classList.toggle('bigtargets', P.targets);
+    app.classList.toggle('focusring', P.focus); app.classList.toggle('bigtargets', P.targets); app.classList.toggle('attn-dim', P.dim); app.classList.toggle('attn-low', P.low);
+    if (P.low) app.classList.add('reduce');
+    drawAttention();
     document.body.style.background = dark ? '#0b0d12' : '#f4f6fa';
     document.documentElement.style.fontSize = P.textSize + '%';
     app.style.zoom = P.textSize / 100;
@@ -68,13 +70,34 @@
   const SETTINGS = [
     { id: 'theme', label: 'Theme: system, dark or light', icon: 'dark_mode', ctl: () => seg('theme', [['system', 'System'], ['dark', 'Dark'], ['light', 'Light']]) },
     { id: 'lang', label: 'Language: English, Cantonese or both', icon: 'translate', ctl: () => seg('lang', [['en', 'English'], ['yue', '廣東話'], ['both', 'Both']]) },
-    { id: 'funny', label: 'Funny level', icon: 'sentiment_very_satisfied', ctl: () => stepper('funny', 'funny', ' of 5', 1, 5, 1) },
+    { id: 'funnyEn', label: 'Funny level, English (styles every message; facts never change)', icon: 'sentiment_very_satisfied', ctl: () => stepper('funnyEn', 'English funny level', ' of 5', 1, 5, 1) },
+    { id: 'funnyYue', label: 'Funny level, Cantonese 廣東話', icon: 'sentiment_very_satisfied', ctl: () => stepper('funnyYue', 'Cantonese funny level', ' of 5', 1, 5, 1) },
+    { id: 'dim', label: 'Attention: Focus (dims every section except the one you are on)', icon: 'center_focus_weak', attn: true, ctl: () => sw('dim') },
+    { id: 'low', label: 'Attention: Low stimulation (quieter colour, no extra motion)', icon: 'do_not_disturb_on', attn: true, ctl: () => sw('low') },
+    { id: 'clock', label: 'Attention: Time awareness (time on this page)', icon: 'schedule', attn: true, ctl: () => sw('clock') },
+    { id: 'one', label: 'Attention: One thing at a time (keep your next step in view)', icon: 'flag', attn: true, ctl: () => sw('one') },
+    { id: 'momentum', label: 'Attention: Momentum (a gentle note after 10 quiet minutes)', icon: 'directions_run', attn: true, ctl: () => sw('momentum') },
     { id: 'textSize', label: 'Text size', icon: 'format_size', a11y: true, ctl: () => stepper('textSize', 'text size', '%', 80, 160, 10) },
     { id: 'contrast', label: 'High contrast', icon: 'contrast', a11y: true, ctl: () => sw('contrast') },
     { id: 'reduce', label: 'Reduce motion', icon: 'motion_photos_off', a11y: true, ctl: () => sw('reduce') },
     { id: 'focus', label: 'Always show focus', icon: 'center_focus_strong', a11y: true, ctl: () => sw('focus') },
     { id: 'targets', label: 'Larger targets', icon: 'touch_app', a11y: true, ctl: () => sw('targets') },
   ];
+
+
+  // ---------- attention modes (each off by default; interface options only) ----------
+  const opened = Date.now(); let lastInput = Date.now();
+  ['pointerdown', 'keydown', 'scroll'].forEach(ev => addEventListener(ev, () => { lastInput = Date.now(); }, { passive: true }));
+  const mins = ms => { const m = Math.floor(ms / 60000); return m < 60 ? `${m} min` : `${Math.floor(m / 60)} h ${m % 60} min`; };
+  function drawAttention() {
+    let bar = document.getElementById('attn'); if (!bar) { bar = document.createElement('div'); bar.id = 'attn'; bar.className = 'attn'; app.prepend(bar); }
+    const parts = [];
+    if (P.clock) parts.push(`<span class="badge mute mono" aria-live="off">${ic('schedule', 'sm')}On this page ${mins(Date.now() - opened)}</span>`);
+    if (P.one) parts.push(P.next && !drawAttention.edit ? `<span class="next-bar">${ic('flag', 'sm fill')}<span>Next: ${esc(P.next)}</span><button class="chip" data-act="next-edit">Change</button><button class="chip" data-act="next-done">Done</button></span>` : `<span class="next-bar">${ic('flag', 'sm fill')}<label class="sr" for="na">Your next step</label><input id="na" maxlength="200" value="${esc(P.next)}" placeholder="Write the one next thing you want to do"><button class="chip" data-act="next-save">Keep in view</button></span>`);
+    if (P.momentum && P.momentumUntil < Date.now() && Date.now() - lastInput > 600000) parts.push(`<span class="next-bar" role="status">${ic('schedule', 'sm')}Nothing has moved on this page for ${mins(Date.now() - lastInput)}.<button class="chip" data-act="momentum-snooze">Not now (1 hour)</button></span>`);
+    bar.innerHTML = parts.join(''); bar.hidden = !parts.length;
+  }
+  setInterval(() => { if (!document.activeElement?.closest?.('#attn')) drawAttention(); }, 30000);
 
   // ---------- command palette (Ctrl+Shift+F) ----------
   let palette = null, docs = [];
@@ -126,7 +149,7 @@
   function drawPanel() {
     if (!panel.host) { panel.host = document.createElement('section'); panel.host.className = 'a11y-panel'; panel.host.setAttribute('role', 'dialog'); panel.host.setAttribute('aria-label', 'Accessibility tools'); app.appendChild(panel.host); }
     panel.host.innerHTML = `<div class="row"><span class="h2" style="flex: 1">Accessibility tools</span><button class="btn text" data-act="panel-close" aria-label="Close">${ic('close')}</button></div>
-      ${SETTINGS.filter(s => s.a11y || s.id === 'theme').map(s => `<div class="set"><span class="grow">${esc(s.label)}</span>${s.ctl()}</div>`).join('')}
+      ${SETTINGS.filter(s => s.a11y || s.attn || s.id === 'theme').map(s => `<div class="set"><span class="grow">${esc(s.label)}</span>${s.ctl()}</div>`).join('')}
       <button class="btn tonal" data-act="read">${ic('record_voice_over')}Read this page aloud</button>
       <button class="btn text" data-act="reset-a11y">Reset accessibility tools</button>`;
   }
@@ -265,6 +288,10 @@
       case 'doc-regex': docRegex = !docRegex; return drawDocs();
       case 'doc-close': document.getElementById('docs-reader').hidden = true; return;
       case 'troll': return troll(t);
+      case 'next-save': { const v = document.getElementById('na')?.value.trim(); if (!v) return say('Write the next step first'); drawAttention.edit = false; return setPref('next', v.slice(0, 200)); }
+      case 'next-edit': drawAttention.edit = true; drawAttention(); return document.getElementById('na')?.focus();
+      case 'next-done': drawAttention.edit = false; return setPref('next', '');
+      case 'momentum-snooze': return setPref('momentumUntil', Date.now() + 3600000);
     }
   });
 

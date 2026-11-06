@@ -48,6 +48,9 @@ Honest inventory of the desktop app and its landing page. **Shipped** means impl
 - [x] Shipped: toy element locks from the context menu (Lock this element…), six policies (PIN, password, PIN plus password, password plus TOTP, PIN plus TOTP, all three), on-screen keypad, QR code for authenticator apps, scrypt hashes and an encrypted vault in the operating system's protected storage, 5 free tries then a doubling wait capped at one hour. Just for fun, never security: deleting the app data folder removes every lock
 - [x] Shipped: unlock ladder while waiting (dim sum quiz, ten sums, whack-a-mole, the clock), up to three ladders an hour; each rung clears a quarter of the wait and never reveals or resets the credential
 - [x] Shipped: Support Tickets, a local joke help desk that always resolves to the app data folder and states that nothing is sent anywhere
+- [x] Shipped: five separate attention modes (Focus dims instead of hiding, Low stimulation, Time awareness, One thing at a time, Momentum), all off by default, in the app and on the landing page
+- [x] Shipped: separate English and Cantonese funny levels, both starting at 5, in the app and on the landing page
+- [ ] Partial: the funny level styles result messages and Support Tickets; every other message category still uses one wording
 - [x] Shipped: per-element appearance editor from the context menu: rest, hover, focus and pressed states; font, size, weight, italic, underline, strikethrough, capitals, letter spacing, text, background and border colours, radius, glow, opacity; per-property, per-element and global reset; undo and redo; copy and paste style; presets; validated JSON export and import
 - [x] Shipped: live deployment charts (time per deployment, outcomes per day) from local records, with a table view
 - [x] Shipped: logo customization (symbol, shape, colour, or a checked PNG, JPEG or WebP)
