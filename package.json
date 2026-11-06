@@ -3,6 +3,7 @@
   "productName": "AWS App Deployer",
   "version": "0.1.0",
   "description": "Local desktop application that deploys a Dockerfile or Compose project to AWS ECS Fargate behind a public load balancer.",
+  "author": "Ding-Ding-Projects",
   "private": true,
   "main": "src/main/main.js",
   "scripts": {
