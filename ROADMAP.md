@@ -37,6 +37,5 @@ Honest inventory of the desktop app and its landing page. **Shipped** means impl
 ## Release and site
 
 - [x] Shipped: every push to main tests, builds the Windows installer, captures screenshots on a Windows runner, and publishes a tagged release with workflow time and line count
-- [x] Shipped: landing page source with vendored fonts and a link preview image
-- [ ] Waiting on the repository owner: enable GitHub Pages with GitHub Actions as the source so the landing page workflow can publish
+- [x] Shipped: landing page with vendored fonts and a link preview image, published by GitHub Pages at https://ding-ding-projects.github.io/aws-app-deployer/
 - [ ] Not started: code signing, Squirrel installer, automatic updates inside the app, dim sum release code names, original app icon

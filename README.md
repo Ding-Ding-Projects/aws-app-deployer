@@ -4,7 +4,7 @@ A local Windows desktop application for deploying containerized web applications
 
 Connect an AWS IAM Identity Center profile through browser sign-in, choose a Dockerfile or a single-service Compose file, and press Deploy. The app builds and publishes the image, creates networking and an Application Load Balancer, runs two ECS Fargate tasks, waits for healthy targets, checks the public link, and hands it to you. Each Windows user keeps their own AWS profiles and credentials.
 
-Landing page source: [`site/`](site/). Design: [`design/`](design/).
+Landing page: https://ding-ding-projects.github.io/aws-app-deployer/ (source in [`site/`](site/)). Design: [`design/`](design/).
 
 ## Status
 
