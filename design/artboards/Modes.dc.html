@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>School mode, schedules and colour</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="./app.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400..700&amp;family=JetBrains+Mono:wght@400;500&amp;family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,300..600,0..1,0&amp;display=block">
+<style>
+body{margin:0}
+.sv{height:150px;border-radius:14px;background:linear-gradient(to top,#000,transparent),linear-gradient(to right,#fff,hsl(150 90% 50%));position:relative}
+.sv i{position:absolute;left:70%;top:30%;width:16px;height:16px;border-radius:8px;border:2px solid #fff;box-shadow:0 0 0 1px #000}
+.hue{height:14px;border-radius:7px;background:linear-gradient(90deg,red,#ff0,lime,cyan,blue,#f0f,red)}
+.alpha{height:14px;border-radius:7px;background:linear-gradient(90deg,transparent,#4ade9a),repeating-conic-gradient(#888 0 25%,#ccc 0 50%) 0 0/10px 10px}
+.rule{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:8px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line);font-size:13px}
+</style>
+</helmet>
+<div class="app {{themeClass}}">
+  <div class="titlebar"><span class="name">AWS App Deployer</span><span class="grow"></span><div class="caption"><span><i class="ms">remove</i></span><span><i class="ms">crop_square</i></span><span><i class="ms">close</i></span></div></div>
+  <div class="body" style="padding: 24px; gap: 20px; align-items: flex-start; overflow: auto; flex-wrap: wrap">
+    <div class="card" style="flex: 1 1 340px; min-width: 0">
+      <div class="row"><span class="tile ac"><i class="ms fill" aria-hidden="true">school</i></span><span class="stack" style="flex: 1"><span class="h2">Study time</span><span class="small">Your name for School mode. Shared by every app on this computer.</span></span><span class="toggle on"></span></div>
+      <span class="small" style="color: var(--tx)">On: English only, no funny levels, no personal wording, no dim sum. Your other choices come back when you turn it off.</span>
+      <div class="field"><label>Rename</label><span class="chip" style="height: 40px; justify-content: flex-start">Study time</span></div>
+      <span class="label">TURN OFF</span>
+      <span class="chip" style="height: 44px; justify-content: flex-start">•••• PIN</span>
+      <span class="small">A speed bump, not security. Forgot it? Delete the shared School mode file in the app data folder.</span>
+    </div>
+    <div class="card" style="flex: 1 1 380px; min-width: 0">
+      <span class="h2">Scheduled settings</span>
+      <div class="rule"><span><b>Theme → Dark</b><br><span class="small">Every day at 19:00</span></span><span class="badge ok">Active</span><span class="btn text">Remove</span></div>
+      <div class="rule"><span><b>Language → 廣東話</b><br><span class="small">Sat, Sun at 09:00</span></span><span class="badge mute">Waiting</span><span class="btn text">Remove</span></div>
+      <div class="rule"><span><b>Low stimulation → On</b><br><span class="small">Mon to Fri at 22:00</span></span><span class="badge mute">Waiting</span><span class="btn text">Remove</span></div>
+      <div class="row" style="gap: 6px; flex-wrap: wrap"><span class="chip">Setting</span><span class="chip">Value</span><span class="chip mono">19:00</span><span class="chip">M T W T F S S</span><span class="btn tonal">Add</span></div>
+      <span class="label">EXTERNAL SOURCE</span>
+      <span class="chip mono" style="height: 40px; justify-content: flex-start; overflow: hidden">https://home.local:8123/api/states/input_select.theme</span>
+      <span class="small">Checked every 5 minutes. Only known settings and valid values are applied; anything else is ignored and listed.</span>
+    </div>
+    <div class="card raise" style="flex: 1 1 300px; min-width: 0; border: 1px solid var(--line)">
+      <span class="h2">Accent colour</span>
+      <div class="sv"><i></i></div>
+      <div class="hue"></div>
+      <div class="alpha"></div>
+      <div class="row" style="gap: 8px"><span class="chip mono" style="flex: 1">#4ade9acc</span><span class="badge ok">Contrast 9.8 : 1</span></div>
+      <span class="small mono">rgba(74, 222, 154, 0.8) · hsla(152, 70%, 58%, 0.8)</span>
+    </div>
+    <div class="card" style="flex: 1 1 300px; min-width: 0">
+      <span class="h2">Funny level on every message</span>
+      <span class="small">Level 1</span><span>Removed 2 deployment records.</span>
+      <span class="small">Level 5</span><span>Poof! Removed 2 deployment records. The dumplings never saw it coming.</span>
+      <span class="small">The facts stay exactly the same.</span>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["dark","light"],"default":"dark"},"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+renderVals() {
+return { themeClass: (this.props.theme ?? 'dark') === 'light' ? 'light' : '' };
+}
+}
+</script>
+</body>
+</html>

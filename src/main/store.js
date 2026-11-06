@@ -9,6 +9,7 @@ const DEFAULTS = Object.freeze({
   narration: false, voice: '', rate: 1, pitch: 1, voices: { en: '', yue: '' }, sounds: true, logo: null,
   schedule: { enabled: false, lightAt: '07:00', darkAt: '19:00', days: [0, 1, 2, 3, 4, 5, 6] },
   focus: false, calm: false, school: false, timeAware: false, oneThing: false, nextAction: '', momentum: false, momentumUntil: 0,
+  schedules: [], externalSource: { enabled: false, url: '', mapKey: 'theme', every: 5 },
   setupComplete: false, launches: 0,
   selection: null, draft: null, vocabulary: null,
   a11y: { textSize: 100, contrast: false, focus: false, targets: false, hidden: false },
@@ -23,7 +24,7 @@ const isTime = v => typeof v === 'string' && /^([01]\d|2[0-3]):[0-5]\d$/.test(v)
 const isHex = v => typeof v === 'string' && /^#[0-9a-f]{6}$/i.test(v);
 const VALIDATORS = {
   theme: v => ['system', 'light', 'dark'].includes(v),
-  accent: isHex, rainbow: v => typeof v === 'boolean', reduceMotion: v => typeof v === 'boolean',
+  accent: v => typeof v === 'string' && /^#[0-9a-f]{6}([0-9a-f]{2})?$/i.test(v), rainbow: v => typeof v === 'boolean', reduceMotion: v => typeof v === 'boolean',
   displayName: v => typeof v === 'string' && v.length <= 60 && !/[\u0000-\u001f]/.test(v),
   language: v => ['en', 'yue', 'both'].includes(v),
   funnyLevel: v => Number.isInteger(v) && v >= 1 && v <= 5,
@@ -31,6 +32,8 @@ const VALIDATORS = {
   timeAware: v => typeof v === 'boolean', oneThing: v => typeof v === 'boolean', momentum: v => typeof v === 'boolean',
   nextAction: v => typeof v === 'string' && v.length <= 200 && !/[\u0000-\u001f]/.test(v),
   momentumUntil: v => Number.isInteger(v) && v >= 0,
+  schedules: v => Array.isArray(v) && v.length <= 100 && JSON.stringify(v).length < 20000 && v.every(r => r && typeof r.key === 'string' && typeof r.at === 'string' && Array.isArray(r.days)),
+  externalSource: v => v && typeof v === 'object' && typeof v.enabled === 'boolean' && typeof v.url === 'string' && v.url.length <= 500 && typeof v.mapKey === 'string' && Number.isInteger(v.every) && v.every >= 1 && v.every <= 1440,
   emoji: v => typeof v === 'boolean', narration: v => typeof v === 'boolean',
   voice: v => typeof v === 'string' && v.length <= 200,
   rate: v => typeof v === 'number' && v >= 0.5 && v <= 2,

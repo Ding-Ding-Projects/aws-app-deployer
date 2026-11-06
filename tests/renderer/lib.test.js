@@ -173,3 +173,41 @@ test('funny levels are independent per language', () => {
   assert.equal(Lib.funny('success', { en: 1, yue: 5 }, 'yue'), Lib.funny('success', 5, 'yue'));
   assert.equal(Lib.funny('success', { en: 2, yue: 4 }, 'both'), Lib.funny('success', 2, 'en') + ' · ' + Lib.funny('success', 4, 'yue'));
 });
+
+test('colour translator handles alpha, conversions and contrast', () => {
+  assert.equal(Lib.parseColor('rgba(74, 222, 154, 0.8)'), '#4ade9acc');
+  assert.equal(Lib.parseColor('#4ade9a80'), '#4ade9a80');
+  assert.equal(Lib.parseColor('hsla(0, 100%, 50%, 50%)'), '#ff000080');
+  assert.equal(Lib.parseColor('rgba(1,2,3,2)'), null);
+  assert.equal(Lib.parseColor('rgb(1,2,3)'), '#010203');
+  assert.equal(Lib.toRgb('#4ade9acc'), 'rgba(74, 222, 154, 0.8)');
+  assert.equal(Lib.hsvToHex(0, 100, 100), '#ff0000');
+  assert.deepEqual(Lib.hexToHsv('#ff0000'), { h: 0, s: 100, v: 100 });
+  assert.equal(Lib.contrast('#ffffff', '#000000'), 21);
+  assert.ok(Lib.contrast('#ffffff00', '#000000') < 1.1);
+});
+
+test('scheduled settings pick the latest rule per setting and validate values', () => {
+  const rules = [
+    { key: 'theme', value: 'light', at: '07:00', days: [0, 1, 2, 3, 4, 5, 6] },
+    { key: 'theme', value: 'dark', at: '19:00', days: [0, 1, 2, 3, 4, 5, 6] },
+    { key: 'language', value: 'yue', at: '09:00', days: [6] },
+    { key: 'theme', value: 'purple', at: '10:00', days: [1] },
+  ];
+  const fri20 = new Date(2026, 10, 6, 20, 0), fri08 = new Date(2026, 10, 6, 8, 0), mon01 = new Date(2026, 10, 9, 1, 0);
+  assert.deepEqual(Lib.scheduledValues(rules, fri20), { theme: 'dark', language: 'yue' });
+  assert.equal(Lib.scheduledValues(rules, fri08).theme, 'light');
+  assert.equal(Lib.scheduledValues(rules, mon01).theme, 'dark');
+  assert.equal(Lib.validRule(rules[3]), false);
+  const ha = Lib.parseExternal('{"entity_id":"input_select.theme","state":"dark"}', { mapKey: 'theme' });
+  assert.deepEqual(ha.applied, { theme: 'dark' });
+  const obj = Lib.parseExternal('{"settings":{"calm":"on","theme":"neon","evil":1}}');
+  assert.deepEqual(obj.applied, { calm: true }); assert.deepEqual(obj.ignored, ['theme', 'evil']);
+});
+
+test('funny level styles every message but keeps the facts', () => {
+  const fact = 'Removed 2 deployment records.';
+  assert.equal(Lib.styleMessage(fact, 'ok', { en: 1, yue: 1 }, 'en'), fact);
+  for (const lv of [2, 3, 4, 5]) for (const k of ['ok', 'err']) assert.ok(Lib.styleMessage(fact, k, { en: lv, yue: lv }, 'en').includes(fact));
+  assert.ok(Lib.styleMessage(fact, 'err', { en: 5, yue: 5 }, 'yue').startsWith('劇情急轉'));
+});

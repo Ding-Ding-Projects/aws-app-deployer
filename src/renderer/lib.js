@@ -127,11 +127,26 @@
     if (NAMED[v]) return NAMED[v];
     let m = /^#?([0-9a-f]{3})$/.exec(v); if (m) return '#' + m[1].split('').map(c => c + c).join('');
     m = /^#?([0-9a-f]{6})$/.exec(v); if (m) return '#' + m[1];
-    m = /^rgb\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*\)$/.exec(v);
-    if (m && m.slice(1).every(n => +n <= 255)) return '#' + m.slice(1).map(n => (+n).toString(16).padStart(2, '0')).join('');
-    m = /^hsl\(\s*(\d{1,3})\s*,\s*(\d{1,3})%\s*,\s*(\d{1,3})%\s*\)$/.exec(v);
-    if (m) return hslToHex(+m[1], +m[2], +m[3]);
+    m = /^#?([0-9a-f]{4})$/.exec(v); if (m) return withAlpha('#' + m[1].slice(0, 3).split('').map(c => c + c).join(''), parseInt(m[1][3] + m[1][3], 16) / 255);
+    m = /^#?([0-9a-f]{8})$/.exec(v); if (m) return withAlpha('#' + m[1].slice(0, 6), parseInt(m[1].slice(6), 16) / 255);
+    m = /^rgba?\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*(?:,\s*([\d.]+%?)\s*)?\)$/.exec(v);
+    if (m && m.slice(1, 4).every(n => +n <= 255)) { const a = alphaOf(m[4]); if (a === null) return null; return withAlpha('#' + m.slice(1, 4).map(n => (+n).toString(16).padStart(2, '0')).join(''), a); }
+    m = /^hsla?\(\s*(\d{1,3})\s*,\s*(\d{1,3})%\s*,\s*(\d{1,3})%\s*(?:,\s*([\d.]+%?)\s*)?\)$/.exec(v);
+    if (m && +m[1] <= 360 && +m[2] <= 100 && +m[3] <= 100) { const a = alphaOf(m[4]); if (a === null) return null; return withAlpha(hslToHex(+m[1], +m[2], +m[3]), a); }
     return null;
+  }
+  function alphaOf(raw) { if (raw === undefined) return 1; const n = raw.endsWith('%') ? parseFloat(raw) / 100 : parseFloat(raw); return Number.isFinite(n) && n >= 0 && n <= 1 ? n : null; }
+  // Fully opaque colours stay #rrggbb; anything translucent becomes #rrggbbaa.
+  function withAlpha(hex, a) { return a >= 1 ? hex : hex + Math.round(a * 255).toString(16).padStart(2, '0'); }
+  function rgba(hex) { const h = hex.slice(1); return { r: parseInt(h.slice(0, 2), 16), g: parseInt(h.slice(2, 4), 16), b: parseInt(h.slice(4, 6), 16), a: h.length === 8 ? Math.round(parseInt(h.slice(6), 16) / 255 * 100) / 100 : 1 }; }
+  function hexToHsv(hex) { const { r, g, b } = rgba(hex); const R = r / 255, G = g / 255, B = b / 255, mx = Math.max(R, G, B), mn = Math.min(R, G, B), d = mx - mn; let h = 0; if (d) h = mx === R ? ((G - B) / d) % 6 : mx === G ? (B - R) / d + 2 : (R - G) / d + 4; return { h: Math.round((h * 60 + 360) % 360), s: mx ? Math.round(d / mx * 100) : 0, v: Math.round(mx * 100) }; }
+  function hsvToHex(h, s, v, a = 1) { s /= 100; v /= 100; const f = n => { const k = (n + h / 60) % 6; return Math.round(255 * (v - v * s * Math.max(0, Math.min(k, 4 - k, 1)))).toString(16).padStart(2, '0'); }; return withAlpha('#' + f(5) + f(3) + f(1), a); }
+  // WCAG 2 contrast of a (possibly translucent) colour composited over a background.
+  function contrast(fg, bg) {
+    const F = rgba(fg), B = rgba(bg), mix = k => F[k] * F.a + B[k] * (1 - F.a);
+    const lum = (r, g, b) => [r, g, b].map(c => { c /= 255; return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4; }).reduce((s, c, i) => s + c * [0.2126, 0.7152, 0.0722][i], 0);
+    const L1 = lum(mix('r'), mix('g'), mix('b')), L2 = lum(B.r, B.g, B.b);
+    return Math.round((Math.max(L1, L2) + 0.05) / (Math.min(L1, L2) + 0.05) * 10) / 10;
   }
   function hslToHex(h, s, l) {
     s /= 100; l /= 100;
@@ -139,7 +154,8 @@
     const f = n => Math.round(255 * (l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1))))).toString(16).padStart(2, '0');
     return '#' + f(0) + f(8) + f(4);
   }
-  function toRgb(hex) { const n = parseInt(hex.slice(1), 16); return `rgb(${n >> 16}, ${(n >> 8) & 255}, ${n & 255})`; }
+  function toRgb(hex) { const { r, g, b, a } = rgba(hex); return a < 1 ? `rgba(${r}, ${g}, ${b}, ${a})` : `rgb(${r}, ${g}, ${b})`; }
+  function toHsl(hex) { const { r, g, b, a } = rgba(hex); const R = r / 255, G = g / 255, B = b / 255, mx = Math.max(R, G, B), mn = Math.min(R, G, B), l = (mx + mn) / 2, d = mx - mn; let h = 0, s = 0; if (d) { s = d / (1 - Math.abs(2 * l - 1)); h = mx === R ? ((G - B) / d) % 6 : mx === G ? (B - R) / d + 2 : (R - G) / d + 4; } const H = Math.round((h * 60 + 360) % 360), S = Math.round(s * 100), L = Math.round(l * 100); return a < 1 ? `hsla(${H}, ${S}%, ${L}%, ${a})` : `hsl(${H}, ${S}%, ${L}%)`; }
 
   // ---- Scheduled appearance ----
   function scheduledTheme(schedule, date) {
@@ -150,6 +166,66 @@
     if (light === dark) return null;
     const inLight = light < dark ? mins >= light && mins < dark : mins >= light || mins < dark;
     return inLight ? 'light' : 'dark';
+  }
+
+
+  // ---- Scheduled settings: rules plus an optional external source ----
+  // A rule is { key, value, at: 'HH:MM', days: [0..6] }. For each key, the rule whose time most
+  // recently passed (looking back up to 7 days) wins. Values are validated before use.
+  const SCHEDULABLE = {
+    theme: { label: 'Theme', values: [['system', 'System'], ['light', 'Light'], ['dark', 'Dark']] },
+    language: { label: 'Language', values: [['en', 'English'], ['yue', '廣東話'], ['both', 'Both']] },
+    accent: { label: 'Accent colour', colour: true },
+    reduceMotion: { label: 'Reduce motion', values: [[true, 'On'], [false, 'Off']] },
+    focus: { label: 'Focus', values: [[true, 'On'], [false, 'Off']] },
+    calm: { label: 'Low stimulation', values: [[true, 'On'], [false, 'Off']] },
+    timeAware: { label: 'Time awareness', values: [[true, 'On'], [false, 'Off']] },
+    sounds: { label: 'Action sounds', values: [[true, 'On'], [false, 'Off']] },
+    emoji: { label: 'Emoji in messages', values: [[true, 'On'], [false, 'Off']] },
+    displayName: { label: 'App name', text: true },
+  };
+  function validScheduleValue(key, value) {
+    const d = SCHEDULABLE[key]; if (!d) return false;
+    if (d.colour) return typeof value === 'string' && /^#[0-9a-f]{6}([0-9a-f]{2})?$/.test(value);
+    if (d.text) return typeof value === 'string' && value.length <= 60 && !/[\u0000-\u001f<>]/.test(value);
+    return d.values.some(([v]) => v === value);
+  }
+  const validRule = r => r && validScheduleValue(r.key, r.value) && /^([01]\d|2[0-3]):[0-5]\d$/.test(r.at || '') && Array.isArray(r.days) && r.days.length > 0 && r.days.every(d => Number.isInteger(d) && d >= 0 && d <= 6);
+  function scheduledValues(rules, date) {
+    const out = {}, best = {};
+    const now = date.getTime();
+    for (const r of (rules || []).filter(validRule)) {
+      for (let back = 0; back < 8; back++) {
+        const d = new Date(date); d.setDate(d.getDate() - back); d.setHours(+r.at.slice(0, 2), +r.at.slice(3), 0, 0);
+        if (d.getTime() > now || !r.days.includes(d.getDay())) continue;
+        if (!best[r.key] || d.getTime() > best[r.key]) { best[r.key] = d.getTime(); out[r.key] = r.value; }
+        break;
+      }
+    }
+    return out;
+  }
+  // External source: JSON object of settings, or a Home Assistant state ({ state: 'dark', entity_id }).
+  function parseExternal(text, { mapKey } = {}) {
+    let data; try { data = JSON.parse(text); } catch { return { ok: false, error: 'MALFORMED_JSON' }; }
+    if (!data || typeof data !== 'object') return { ok: false, error: 'SCHEMA' };
+    const raw = typeof data.state === 'string' && mapKey ? { [mapKey]: data.state } : data.settings && typeof data.settings === 'object' ? data.settings : data;
+    const applied = {}, ignored = [];
+    for (const [k, v0] of Object.entries(raw)) { const v = v0 === 'on' ? true : v0 === 'off' ? false : v0; if (validScheduleValue(k, v)) applied[k] = v; else ignored.push(k); }
+    return { ok: true, applied, ignored };
+  }
+
+  // ---- Funny level on every message: voice around the facts, never instead of them ----
+  const MSG_STYLE = {
+    ok: [['', ''], ['Done. ', '搞掂。'], ['Nice. ', '好嘢。'], ['Sorted! ', '搞掂晒！'], ['Ta-da! ', '噹噹！']],
+    err: [['', ''], ['Problem: ', '有問題：'], ['Hmm, that did not work. ', '咦，唔得喎。'], ['Oops, a dumpling fell off the trolley. ', '哎呀，有粒點心跌咗落地。'], ['Plot twist! ', '劇情急轉！']],
+  };
+  const MSG_TAIL = { ok: [['', ''], ['', ''], ['', ''], ['', ''], [' The dumplings approve.', ' 點心都讚好。']], err: [['', ''], ['', ''], ['', ''], ['', ''], [' Nobody panic, here is what happened.', ' 唔使驚，睇下發生咩事。']] };
+  function styleMessage(text, kind, levels, lang) {
+    const lv = l => Math.min(5, Math.max(1, (typeof levels === 'object' && levels ? levels[l] : levels) | 0)) - 1;
+    const k = kind === 'err' ? 'err' : 'ok';
+    const en = MSG_STYLE[k][lv('en')][0] + text + MSG_TAIL[k][lv('en')][0];
+    const yue = MSG_STYLE[k][lv('yue')][1] + text + MSG_TAIL[k][lv('yue')][1];
+    return lang === 'yue' ? yue : lang === 'both' ? (MSG_STYLE[k][lv('yue')][1] || MSG_TAIL[k][lv('yue')][1] ? en + ' · ' + MSG_STYLE[k][lv('yue')][1] + MSG_TAIL[k][lv('yue')][1] : en) : en;
   }
 
   // ---- Deployment stages: backend stage names to the nine visible steps ----
@@ -441,5 +517,5 @@
 
   const historyCategory = h => (h.restoredFrom !== undefined ? 'Restores' : CATEGORY[h.key] || (h.key.startsWith('deployments') ? 'Records' : 'Other'));
 
-  return { b64encode, b64decode, parseCsv, CONVERSIONS, convertText, chartData, linePoints, LOGO_SYMBOLS, LOGO_SHAPES, cleanLogo, imageKind, AP_STATES, AP_PROPS, AP_FONTS, AP_FONT_LABELS, cleanStyle, cleanAppearance, appearanceCss, parseStyleFile, FORMATS, exportAs, zip, crc32, markdown, historyLabel, historyCategory, EXPLAIN, SETTINGS_ON_SCREEN, STRINGS, t, funny, parseVocabulary, applyVocabulary, explainRegex, search, parseColor, toRgb, scheduledTheme, STAGES, stageIndex, errorText };
+  return { rgba, hexToHsv, hsvToHex, contrast, toHsl, SCHEDULABLE, validRule, scheduledValues, parseExternal, styleMessage, b64encode, b64decode, parseCsv, CONVERSIONS, convertText, chartData, linePoints, LOGO_SYMBOLS, LOGO_SHAPES, cleanLogo, imageKind, AP_STATES, AP_PROPS, AP_FONTS, AP_FONT_LABELS, cleanStyle, cleanAppearance, appearanceCss, parseStyleFile, FORMATS, exportAs, zip, crc32, markdown, historyLabel, historyCategory, EXPLAIN, SETTINGS_ON_SCREEN, STRINGS, t, funny, parseVocabulary, applyVocabulary, explainRegex, search, parseColor, toRgb, scheduledTheme, STAGES, stageIndex, errorText };
 });

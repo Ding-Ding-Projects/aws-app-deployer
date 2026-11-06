@@ -50,7 +50,10 @@ Honest inventory of the desktop app and its landing page. **Shipped** means impl
 - [x] Shipped: Support Tickets, a local joke help desk that always resolves to the app data folder and states that nothing is sent anywhere
 - [x] Shipped: five separate attention modes (Focus dims instead of hiding, Low stimulation, Time awareness, One thing at a time, Momentum), all off by default, in the app and on the landing page
 - [x] Shipped: separate English and Cantonese funny levels, both starting at 5, in the app and on the landing page
-- [ ] Partial: the funny level styles result messages and Support Tickets; every other message category still uses one wording
+- [x] Shipped: the funny level styles every notification, errors included, with the facts unchanged
+- [x] Shipped: renamable School mode shared by every app on the Windows user, with a PIN or password to turn it off, removing Cantonese, funny levels, personal wording and dim sum while on; the landing page has its own
+- [x] Shipped: scheduled settings for ten settings plus an external JSON or Home Assistant source with an encrypted token
+- [x] Shipped: colour picker with opacity, hex with alpha, rgba() and hsla(), and a WCAG contrast check
 - [x] Shipped: per-element appearance editor from the context menu: rest, hover, focus and pressed states; font, size, weight, italic, underline, strikethrough, capitals, letter spacing, text, background and border colours, radius, glow, opacity; per-property, per-element and global reset; undo and redo; copy and paste style; presets; validated JSON export and import
 - [x] Shipped: live deployment charts (time per deployment, outcomes per day) from local records, with a table view
 - [x] Shipped: logo customization (symbol, shape, colour, or a checked PNG, JPEG or WebP)

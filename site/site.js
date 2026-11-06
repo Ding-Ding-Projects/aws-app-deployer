@@ -7,7 +7,7 @@
   const app = document.getElementById('app');
   const REPO = 'Ding-Ding-Projects/aws-app-deployer';
   const KEY = 'aws-app-deployer.site/1';
-  const DEFAULTS = { theme: 'system', lang: 'en', funnyEn: 5, funnyYue: 5, textSize: 100, contrast: false, reduce: false, focus: false, targets: false, dim: false, low: false, clock: false, one: false, next: '', momentum: false, momentumUntil: 0 };
+  const DEFAULTS = { theme: 'system', lang: 'en', funnyEn: 5, funnyYue: 5, textSize: 100, contrast: false, reduce: false, focus: false, targets: false, dim: false, low: false, clock: false, one: false, next: '', momentum: false, momentumUntil: 0, accent: '', schedules: [], school: { enabled: false, name: 'School mode', salt: '', hash: '' } };
   let P = { ...DEFAULTS };
   try { P = { ...DEFAULTS, ...JSON.parse(localStorage.getItem(KEY) || '{}') }; } catch { /* storage blocked: defaults only */ }
   const save = () => { try { localStorage.setItem(KEY, JSON.stringify(P)); } catch { /* not saved, still applied */ } };
@@ -15,6 +15,17 @@
   const ic = (n, cls = '') => `<i class="ms ${cls}" aria-hidden="true">${n}</i>`;
   const live = document.getElementById('live');
   const say = t => { live.textContent = ''; setTimeout(() => (live.textContent = t), 30); };
+
+  // Effective values: scheduled rules and School mode sit on top of the saved choices.
+  const MAP = { theme: 'theme', language: 'lang', focus: 'dim', calm: 'low', timeAware: 'clock', accent: 'accent' };
+  let E = {};
+  function effective() {
+    E = { ...P }; const sched = Lib.scheduledValues(P.schedules, new Date());
+    for (const [k, v] of Object.entries(sched)) if (MAP[k]) E[MAP[k]] = v;
+    if (P.school.enabled) E.lang = 'en';
+    return E;
+  }
+  setInterval(() => { const before = JSON.stringify(E); effective(); if (JSON.stringify(E) !== before) apply(); }, 30000);
 
   // ---------- language ----------
   const YUE = {
@@ -35,6 +46,7 @@
   ];
   const originals = new Map();
   function applyLanguage() {
+    const P = E;
     document.documentElement.lang = P.lang === 'yue' ? 'zh-HK' : 'en';
     document.querySelectorAll('[data-i18n]').forEach(el => {
       if (!originals.has(el)) originals.set(el, el.innerHTML);
@@ -42,12 +54,14 @@
       el.innerHTML = !zh || P.lang === 'en' ? en : P.lang === 'yue' ? zh : `${en}<span class="both-yue" lang="zh-HK">${zh}</span>`;
     });
     const f = document.querySelector('[data-funny]');
-    if (f) { const en = FUNNY[P.funnyEn - 1][0], zh = FUNNY[P.funnyYue - 1][1]; f.textContent = P.lang === 'yue' ? zh : P.lang === 'both' ? `${en} ${zh}` : en; }
+    if (f) { f.hidden = P.school.enabled; const en = FUNNY[P.funnyEn - 1][0], zh = FUNNY[P.funnyYue - 1][1]; f.textContent = P.lang === 'yue' ? zh : P.lang === 'both' ? `${en} ${zh}` : en; }
+    document.querySelectorAll('[data-school-hide]').forEach(el => { el.hidden = P.school.enabled; });
     document.querySelectorAll('[data-set-lang]').forEach(b => { b.classList.toggle('on', b.dataset.setLang === P.lang); b.setAttribute('aria-pressed', b.dataset.setLang === P.lang); });
   }
 
   // ---------- appearance and accessibility ----------
   function apply() {
+    effective(); const P = E;
     const dark = P.theme === 'dark' || (P.theme === 'system' && !matchMedia('(prefers-color-scheme: light)').matches);
     const reduce = P.reduce || matchMedia('(prefers-reduced-motion: reduce)').matches;
     app.classList.toggle('light', !dark); app.classList.toggle('contrast', P.contrast); app.classList.toggle('reduce', reduce);
@@ -55,6 +69,7 @@
     if (P.low) app.classList.add('reduce');
     drawAttention();
     document.body.style.background = dark ? '#0b0d12' : '#f4f6fa';
+    if (P.accent && /^#[0-9a-f]{6}([0-9a-f]{2})?$/.test(P.accent)) app.style.setProperty('--ac', P.accent); else app.style.removeProperty('--ac');
     document.documentElement.style.fontSize = P.textSize + '%';
     app.style.zoom = P.textSize / 100;
     const t = document.querySelector('[data-act="theme"]'); if (t) { t.innerHTML = ic(dark ? 'dark_mode' : 'light_mode', 'sm'); t.setAttribute('aria-label', `Theme: ${P.theme}. Activate to change.`); }
@@ -64,12 +79,14 @@
   matchMedia('(prefers-color-scheme: light)').addEventListener('change', apply);
 
   // Settings shared by the palette and the accessibility panel, each with a live control.
-  const seg = (k, opts) => `<span class="seg" role="radiogroup">${opts.map(([v, l]) => `<button role="radio" aria-checked="${P[k] === v}" class="${P[k] === v ? 'on' : ''}" data-pref="${k}" data-v="${v}">${l}</button>`).join('')}</span>`;
-  const sw = k => `<button class="toggle ${P[k] ? 'on' : ''}" role="switch" aria-checked="${P[k]}" data-flip="${k}" aria-label="${k}"></button>`;
+  const seg = (k, opts) => `<span class="seg" role="radiogroup">${opts.map(([v, l]) => `<button role="radio" aria-checked="${E[k] === v}" class="${E[k] === v ? 'on' : ''}" data-pref="${k}" data-v="${v}">${l}</button>`).join('')}</span>`;
+  const sw = k => `<button class="toggle ${E[k] ? 'on' : ''}" role="switch" aria-checked="${!!E[k]}" data-flip="${k}" aria-label="${k}"></button>`;
   const stepper = (k, label, unit, lo, hi, step) => `<span class="row" style="gap: 6px"><span class="badge ac mono">${P[k]}${unit}</span><button class="chip" data-step="${k}" data-d="${-step}" data-lo="${lo}" data-hi="${hi}" aria-label="Less ${label}">−</button><button class="chip" data-step="${k}" data-d="${step}" data-lo="${lo}" data-hi="${hi}" aria-label="More ${label}">+</button></span>`;
   const SETTINGS = [
     { id: 'theme', label: 'Theme: system, dark or light', icon: 'dark_mode', ctl: () => seg('theme', [['system', 'System'], ['dark', 'Dark'], ['light', 'Light']]) },
     { id: 'lang', label: 'Language: English, Cantonese or both', icon: 'translate', ctl: () => seg('lang', [['en', 'English'], ['yue', '廣東話'], ['both', 'Both']]) },
+    { id: 'school', get label() { return (P.school.name || 'School mode') + ': English only, no funny levels or dim sum'; }, icon: 'school', always: true, ctl: () => `<button class="toggle ${P.school.enabled ? 'on' : ''}" role="switch" aria-checked="${P.school.enabled}" data-act="school" aria-label="${esc(P.school.name)}"></button>` },
+    { id: 'accent', label: 'Accent colour with opacity and contrast check', icon: 'palette', ctl: () => accentCtl() },
     { id: 'funnyEn', label: 'Funny level, English (styles every message; facts never change)', icon: 'sentiment_very_satisfied', ctl: () => stepper('funnyEn', 'English funny level', ' of 5', 1, 5, 1) },
     { id: 'funnyYue', label: 'Funny level, Cantonese 廣東話', icon: 'sentiment_very_satisfied', ctl: () => stepper('funnyYue', 'Cantonese funny level', ' of 5', 1, 5, 1) },
     { id: 'dim', label: 'Attention: Focus (dims every section except the one you are on)', icon: 'center_focus_weak', attn: true, ctl: () => sw('dim') },
@@ -101,11 +118,34 @@
 
   // ---------- command palette (Ctrl+Shift+F) ----------
   let palette = null, docs = [];
+  const SCHOOL_HIDDEN = ['lang', 'funnyEn', 'funnyYue'], SCHOOL_HIDDEN_DOCS = ['dim-sum-surprise', 'language-and-wording'];
+  const visibleSetting = s => !(P.school.enabled && SCHOOL_HIDDEN.includes(s.id));
+  function accentCtl() {
+    const hex = E.accent || getComputedStyle(app).getPropertyValue('--ac').trim() || '#6ea8ff', base = (Lib.parseColor(hex) || '#6ea8ff');
+    const a = Lib.rgba(base).a, bg = app.classList.contains('light') ? '#f4f6fa' : '#0b0d12', ratio = Lib.contrast(base, bg);
+    return `<span class="row" style="gap: 6px; flex-wrap: wrap"><input type="color" value="${base.slice(0, 7)}" data-accent="rgb" aria-label="Accent colour"><input type="range" min="10" max="100" value="${Math.round(a * 100)}" data-accent="alpha" aria-label="Accent opacity" style="width: 90px"><span class="badge ${ratio >= 4.5 ? 'ok' : ratio >= 3 ? 'warn' : 'err'} mono" title="Contrast against the page">${ratio} : 1</span><button class="chip" data-act="accent-reset" aria-label="Reset accent">↺</button></span>`;
+  }
+  async function pinHash(pin, salt) { const k = await crypto.subtle.importKey('raw', new TextEncoder().encode(pin), 'PBKDF2', false, ['deriveBits']); const bits = await crypto.subtle.deriveBits({ name: 'PBKDF2', hash: 'SHA-256', salt: new TextEncoder().encode(salt), iterations: 150000 }, k, 256); return [...new Uint8Array(bits)].map(b => b.toString(16).padStart(2, '0')).join(''); }
+  const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'], SITE_SCHED = ['theme', 'language', 'focus', 'calm', 'timeAware', 'accent'];
+  function schoolBlock() {
+    const sc = P.school, f = panel.schoolForm || {};
+    return `<div class="set" style="flex-direction: column; align-items: stretch; gap: 8px"><span class="row"><span class="grow" style="font-weight: 650">${esc(sc.name)}</span><button class="toggle ${sc.enabled ? 'on' : ''}" role="switch" aria-checked="${sc.enabled}" data-act="school" aria-label="${esc(sc.name)}"></button></span>
+      <span class="small">${sc.enabled ? 'On: English only; funny levels and dim sum are gone from this page. Turning it off needs your PIN.' : 'English only, no funny levels and no dim sum on this page. Turning it off needs a PIN you set now.'} A speed bump in this browser, not security: clearing this site's data resets it.</span>
+      ${panel.schoolForm ? `<span class="row" style="gap: 6px; flex-wrap: wrap"><label class="sr" for="sc-pin">PIN</label><input id="sc-pin" type="password" inputmode="numeric" maxlength="12" placeholder="${sc.enabled ? 'Your PIN' : 'New PIN, 4 to 12 digits'}" style="width: 160px; height: 36px; border-radius: 10px; border: 1px solid var(--line2); background: var(--s1); color: var(--tx); padding: 0 10px"><button class="chip" data-act="school-go">${sc.enabled ? 'Turn off' : 'Turn on'}</button></span>${f.error ? `<span class="badge err" role="alert">${esc(f.error)}</span>` : ''}` : ''}
+      ${sc.enabled ? '' : `<span class="row" style="gap: 6px"><label class="sr" for="sc-name">Name for this mode</label><input id="sc-name" maxlength="40" value="${esc(sc.name)}" style="flex: 1; height: 36px; border-radius: 10px; border: 1px solid var(--line2); background: var(--s1); color: var(--tx); padding: 0 10px"><button class="chip" data-act="school-rename">Rename</button></span>`}</div>`;
+  }
+  function schedBlock() {
+    const F = panel.sched || (panel.sched = { key: 'theme', value: 'dark', at: '19:00', days: [0, 1, 2, 3, 4, 5, 6] }), d = Lib.SCHEDULABLE[F.key], active = Lib.scheduledValues(P.schedules, new Date());
+    const val = d.values ? `<select data-sched="value" aria-label="Value">${d.values.filter(([v]) => !(P.school.enabled && F.key === 'language' && v !== 'en')).map(([v, l]) => `<option value='${esc(JSON.stringify(v))}' ${JSON.stringify(v) === JSON.stringify(F.value) ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select>` : `<input data-sched="value" value="${esc(F.value)}" placeholder="#4ade9a" aria-label="Value" style="width: 110px">`;
+    return `<div class="set" style="flex-direction: column; align-items: stretch; gap: 8px"><span style="font-weight: 650">Scheduled settings</span>
+      ${P.schedules.map((r, i) => `<span class="row" style="gap: 8px"><span class="grow small">${esc(Lib.SCHEDULABLE[r.key].label)} → ${esc(String((Lib.SCHEDULABLE[r.key].values || []).find(([v]) => v === r.value)?.[1] ?? r.value))} · ${r.days.length === 7 ? 'every day' : r.days.map(x => DAYS[x]).join(', ')} at ${esc(r.at)}</span><span class="badge ${JSON.stringify(active[r.key]) === JSON.stringify(r.value) ? 'ok' : 'mute'}">${JSON.stringify(active[r.key]) === JSON.stringify(r.value) ? 'Active' : 'Waiting'}</span><button class="chip" data-act="sched-del" data-i="${i}" aria-label="Remove rule">×</button></span>`).join('') || '<span class="small">No rules yet.</span>'}
+      <span class="row sched" style="gap: 6px; flex-wrap: wrap"><select data-sched="key" aria-label="Setting">${SITE_SCHED.filter(k => !(P.school.enabled && k === 'language')).map(k => `<option value="${k}" ${F.key === k ? 'selected' : ''}>${esc(Lib.SCHEDULABLE[k].label)}</option>`).join('')}</select>${val}<input type="time" data-sched="at" value="${esc(F.at)}" aria-label="Time"><span class="row" style="gap: 2px">${DAYS.map((n, i) => `<button class="badge ${F.days.includes(i) ? 'ac' : 'mute'}" style="border: 0; cursor: pointer" aria-pressed="${F.days.includes(i)}" data-act="sched-day" data-d="${i}" aria-label="${n}">${n[0]}</button>`).join('')}</span><button class="chip" data-act="sched-add">Add</button></span></div>`;
+  }
   function entries() {
     const sections = [...document.querySelectorAll('section[id], [data-teleport]')].map(s => ({ kind: 'Section', icon: 'near_me', label: 'Go to: ' + (s.querySelector('h1, h2, .h3')?.textContent.trim() || s.id), run: () => teleport(s) }));
-    const controls = [...document.querySelectorAll('[data-teleport-el]')].map(el => ({ kind: 'Element', icon: 'ads_click', label: el.dataset.teleportEl, run: () => teleport(el) }));
-    const sets = SETTINGS.map(s => ({ kind: 'Setting', icon: s.icon, label: s.label, ctl: s.ctl }));
-    const articles = docs.map(a => ({ kind: 'Article', icon: 'menu_book', label: 'Docs: ' + a.title, run: () => openDoc(a.id) }));
+    const controls = [...document.querySelectorAll('[data-teleport-el]')].filter(el => !el.closest('[hidden]')).map(el => ({ kind: 'Element', icon: 'ads_click', label: el.dataset.teleportEl, run: () => teleport(el) }));
+    const sets = SETTINGS.filter(visibleSetting).map(s => ({ kind: 'Setting', icon: s.icon, label: s.label, ctl: s.ctl }));
+    const articles = docs.filter(a => !(P.school.enabled && SCHOOL_HIDDEN_DOCS.includes(a.id))).map(a => ({ kind: 'Article', icon: 'menu_book', label: 'Docs: ' + a.title, run: () => openDoc(a.id) }));
     const actions = [
       { kind: 'Action', icon: 'download', label: 'Download the Windows installer', run: () => document.querySelector('[data-download]')?.click() },
       { kind: 'Action', icon: 'record_voice_over', label: 'Read this page aloud', run: readAloud },
@@ -147,9 +187,10 @@
   function openPanel() { panel = { opener: document.activeElement }; drawPanel(); panel.host.querySelector('button')?.focus(); }
   function closePanel() { const o = panel?.opener; panel?.host.remove(); panel = null; o?.focus?.(); }
   function drawPanel() {
-    if (!panel.host) { panel.host = document.createElement('section'); panel.host.className = 'a11y-panel'; panel.host.setAttribute('role', 'dialog'); panel.host.setAttribute('aria-label', 'Accessibility tools'); app.appendChild(panel.host); }
-    panel.host.innerHTML = `<div class="row"><span class="h2" style="flex: 1">Accessibility tools</span><button class="btn text" data-act="panel-close" aria-label="Close">${ic('close')}</button></div>
-      ${SETTINGS.filter(s => s.a11y || s.attn || s.id === 'theme').map(s => `<div class="set"><span class="grow">${esc(s.label)}</span>${s.ctl()}</div>`).join('')}
+    if (!panel.host) { panel.host = document.createElement('section'); panel.host.className = 'a11y-panel'; panel.host.setAttribute('role', 'dialog'); panel.host.setAttribute('aria-label', 'Accessibility and settings'); app.appendChild(panel.host); }
+    panel.host.innerHTML = `<div class="row"><span class="h2" style="flex: 1">Accessibility and settings</span><button class="btn text" data-act="panel-close" aria-label="Close">${ic('close')}</button></div>
+      ${SETTINGS.filter(s => (s.a11y || s.attn || s.id === 'theme' || s.id === 'accent') && visibleSetting(s)).map(s => `<div class="set"><span class="grow">${esc(s.label)}</span>${s.ctl()}</div>`).join('')}
+      ${schoolBlock()}${schedBlock()}
       <button class="btn tonal" data-act="read">${ic('record_voice_over')}Read this page aloud</button>
       <button class="btn text" data-act="reset-a11y">Reset accessibility tools</button>`;
   }
@@ -229,7 +270,7 @@
 
   // ---------- dim sum surprise (a troll switch: it cannot be turned off) ----------
   async function loadDimSum() {
-    const box = document.getElementById('dimsum-dish'); if (!box) return;
+    const box = document.getElementById('dimsum-dish'); if (!box || P.school.enabled) return;
     try {
       const r = await fetch('https://api.github.com/repos/Ding-Ding-Projects/dim-sum-photos/releases/tags/catalog-v1');
       const imgs = ((await r.json()).assets || []).filter(a => /^hk-dish-\d+-[a-z0-9-]+\.png$/.test(a.name) && /^https:\/\/github\.com\//.test(a.browser_download_url));
@@ -266,6 +307,11 @@
     }
     if (panel && e.key === 'Escape') { e.preventDefault(); closePanel(); }
   });
+  document.addEventListener('change', e => {
+    const el = e.target;
+    if (el.dataset.sched && panel?.sched) { const F = panel.sched; if (el.dataset.sched === 'key') { F.key = el.value; const d = Lib.SCHEDULABLE[F.key]; F.value = d.values ? d.values[0][0] : ''; drawPanel(); } else if (el.dataset.sched === 'value') F.value = el.tagName === 'SELECT' ? JSON.parse(el.value) : el.value; else F.at = el.value; }
+    if (el.dataset.accent) { const box = el.closest('.row'), rgb = box.querySelector('[data-accent="rgb"]').value, a = +box.querySelector('[data-accent="alpha"]').value / 100; setPref('accent', a >= 1 ? rgb : rgb + Math.round(a * 255).toString(16).padStart(2, '0')); }
+  });
   document.addEventListener('input', e => { if (e.target.id === 'pq') { palette.q = e.target.value; palette.sel = 0; drawPalette(); } });
   document.addEventListener('click', e => {
     if (menu && !e.target.closest('.ctx')) closeMenu(false);
@@ -288,6 +334,19 @@
       case 'doc-regex': docRegex = !docRegex; return drawDocs();
       case 'doc-close': document.getElementById('docs-reader').hidden = true; return;
       case 'troll': return troll(t);
+      case 'school': if (!panel) openPanel(); panel.schoolForm = {}; drawPanel(); return document.getElementById('sc-pin')?.focus();
+      case 'school-go': return (async () => {
+        const pin = document.getElementById('sc-pin').value, sc = P.school;
+        if (!/^\d{4,12}$/.test(pin)) { panel.schoolForm.error = 'A PIN is 4 to 12 digits.'; return drawPanel(); }
+        if (!sc.enabled) { const salt = crypto.getRandomValues(new Uint32Array(4)).join('-'); P.school = { ...sc, enabled: true, salt, hash: await pinHash(pin, salt) }; panel.schoolForm = null; save(); apply(); drawPanel(); return say(`${sc.name} is on`); }
+        if (await pinHash(pin, sc.salt) !== sc.hash) { panel.schoolForm.error = 'That PIN did not match. Forgot it? Clear this site\'s data in the browser.'; return drawPanel(); }
+        P.school = { ...sc, enabled: false }; panel.schoolForm = null; save(); apply(); drawPanel(); loadDimSum(); say(`${sc.name} is off`);
+      })();
+      case 'school-rename': { const n = document.getElementById('sc-name').value.trim(); if (!n || n.length > 40 || /[<>]/.test(n)) return say('Use 1 to 40 characters, no angle brackets'); P.school = { ...P.school, name: n }; save(); apply(); drawPanel(); return say('Renamed to ' + n); }
+      case 'accent-reset': return setPref('accent', '');
+      case 'sched-day': { const F = panel.sched, d = +t.dataset.d; F.days = F.days.includes(d) ? F.days.filter(x => x !== d) : [...F.days, d].sort(); return drawPanel(); }
+      case 'sched-add': { const F = panel.sched, rule = { key: F.key, value: Lib.SCHEDULABLE[F.key].colour ? Lib.parseColor(String(F.value)) : F.value, at: F.at, days: F.days }; if (!Lib.validRule(rule)) return say('Pick a value, a time and at least one day'); return setPref('schedules', [...P.schedules, rule]); }
+      case 'sched-del': { const l = [...P.schedules]; l.splice(+t.dataset.i, 1); return setPref('schedules', l); }
       case 'next-save': { const v = document.getElementById('na')?.value.trim(); if (!v) return say('Write the next step first'); drawAttention.edit = false; return setPref('next', v.slice(0, 200)); }
       case 'next-edit': drawAttention.edit = true; drawAttention(); return document.getElementById('na')?.focus();
       case 'next-done': drawAttention.edit = false; return setPref('next', '');

@@ -222,3 +222,20 @@ test('landing page shares the app library and bundles every feature article', ()
   const files = fs.readdirSync(path.join(root, 'docs/features')).filter(f => f.endsWith('.md')).map(f => f.replace(/\.md$/, '')).sort();
   assert.deepEqual(docs.articles.map(a => a.id), files);
 });
+
+test('shared School mode record: rename, credential, wait and reset by deleting the file', () => {
+  const { createSchool } = require('../../src/main/school');
+  const dir = fs.mkdtempSync(path.join(require('node:os').tmpdir(), 'school-'));
+  let t = 1e12; const sc = createSchool({ dir, now: () => t });
+  assert.equal(sc.state().name, 'School mode');
+  assert.equal(sc.rename('Study time').name, 'Study time');
+  assert.equal(sc.rename('<b>').error, 'NAME_INVALID');
+  assert.equal(sc.enable(null).error, 'CREDENTIAL_NEEDED');
+  assert.equal(sc.enable({ kind: 'pin', value: '2468' }).enabled, true);
+  assert.doesNotMatch(fs.readFileSync(sc.file, 'utf8'), /2468/);
+  for (let i = 0; i < 5; i++) assert.equal(sc.disable('0000').ok, false);
+  assert.equal(sc.disable('2468').error, 'WAIT');
+  t += 3600000; assert.equal(sc.disable('2468').enabled, false);
+  assert.equal(sc.enable(null).enabled, true, 'existing credential is reused');
+  fs.unlinkSync(sc.file); assert.equal(sc.state().enabled, false);
+});

@@ -18,11 +18,11 @@
     drawer: false, notes: [], toasts: [], dimsum: null, troll: false, maximized: false,
   };
   const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-  const T = k => esc(Lib.t(k, S.settings?.language || 'en'));
+  const T = k => k === 'school' ? esc(S.schoolState?.name || 'School mode') : esc(Lib.t(k, S.settings?.language || 'en'));
   const ic = (name, cls = '') => `<i class="ms ${cls}" aria-hidden="true">${name}</i>`;
   const time = () => new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
   const stamp = iso => { try { const d = new Date(iso); const p = new Intl.DateTimeFormat(undefined, { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false, timeZoneName: 'short' }).formatToParts(d); const g = t => p.find(x => x.type === t)?.value || ''; return `${g('year')}-${g('month')}-${g('day')} ${g('hour')}:${g('minute')}:${g('second')} ${g('timeZoneName')}`; } catch { return 'unavailable'; } };
-  const provLine = () => { const p = S.prov; if (!p) return 'v' + VERSION; const cn = p.codeName?.available ? ` · ${p.codeName.en} · ${p.codeName.zh}` : ''; return p.ok ? `v${p.version}${cn} · built ${stamp(p.builtAt)}` : `v${p.version} · build time unavailable (not a release build)`; };
+  const provLine = () => { const p = S.prov; if (!p) return 'v' + VERSION; const cn = p.codeName?.available && !S.settings?.school ? ` · ${p.codeName.en} · ${p.codeName.zh}` : ''; return p.ok ? `v${p.version}${cn} · built ${stamp(p.builtAt)}` : `v${p.version} · build time unavailable (not a release build)`; };
   const emojiOn = () => S.settings?.emoji && !S.settings?.school;
 
   // ---------- feedback: live region, narration, sounds, toasts, notifications ----------
@@ -47,8 +47,9 @@
     const v = speechSynthesis.getVoices().find(x => x.name === want); if (v) u.voice = v;
     u.rate = S.settings.rate || 1; u.pitch = S.settings.pitch || 1; speechSynthesis.cancel(); speechSynthesis.speak(u);
   }
-  function toast(text, kind = 'ok') {
+  function toast(text, kind = 'ok', opts = {}) {
     const id = Math.random().toString(36).slice(2);
+    if (S.settings && !S.settings.school && !opts.raw) text = Lib.styleMessage(text, kind, S.settings.funnyLevels, S.settings.language);
     if (!(S.settings?.calm && kind !== 'err')) S.toasts.push({ id, text, kind });
     S.notes.unshift({ id, text, kind, at: time() }); S.notes = S.notes.slice(0, 200);
     say(text); renderToasts();
@@ -74,6 +75,7 @@
   }
   async function set(key, value) {
     const r = await api.setSetting(key, value);
+    if (r.ok && S.overlaid?.[key]) { const sched = Lib.scheduledValues(S.settings.schedules, new Date()); S.overrides[key] = JSON.stringify(sched[key]); delete S.base[key]; delete S.overlaid[key]; }
     if (r.ok) { S.settings[key] = r.value; S.sources[key] = 'file'; S.lastChange = Date.now(); applyAppearance(); render(); cue('tap'); }
     return r;
   }
@@ -113,7 +115,7 @@
     if (ev.kind === 'deploy' && S.run?.op === ev.op) {
       if (ev.type === 'progress' && ev.stage) { S.run.stage = ev.stage; S.run.log.push([time(), stageLabel(ev.stage)]); }
       else if (ev.type !== 'started') { S.result = { ...ev.result, name: S.run.name, scope: ev.scope }; S.run = null; S.view = 'result'; loadHistory();
-        const ok = S.result.ok; cue(ok ? 'ok' : 'err'); toast(Lib.funny(ok ? 'success' : 'failure', S.settings.school ? 1 : S.settings.funnyLevels, S.settings.language) + (ok && emojiOn() ? ' 🎉' : ''), ok ? 'ok' : 'err'); }
+        const ok = S.result.ok; cue(ok ? 'ok' : 'err'); toast(Lib.funny(ok ? 'success' : 'failure', S.settings.school ? 1 : S.settings.funnyLevels, S.settings.language) + (ok && emojiOn() ? ' 🎉' : ''), ok ? 'ok' : 'err', { raw: true }); }
       render();
     }
   });
@@ -288,11 +290,12 @@
       <div class="card outline"><span class="label">${T('still_running').toUpperCase()}</span><span class="small">${r.resourcesMayExist ? 'Some AWS resources may already exist for this deployment. Nothing was deleted; check the CloudFormation stack in AWS or redeploy with the same name.' : 'Nothing was created in AWS.'}</span>
       ${(r.reasons || []).map(x => `<span class="badge warn" style="align-self: flex-start">${esc(x.service || 'project')} · ${esc(x.feature)}</span>`).join('')}</div>`);
   }
+  const srcLabel = key => ({ scheduled: 'scheduled right now', external: 'from the external source', school: 'set by ' + (S.schoolState?.name || 'School mode') }[S.overlaid?.[key]] || (S.sources[key] === 'file' ? 'set by you' : 'default'));
   function viewSettings() {
     const s = S.settings;
     const info = (key, label) => Lib.EXPLAIN[key] ? `<button class="info" data-info="${key}" aria-label="About ${esc(label)}: explanation and guided steps">${ic('info', 'sm')}</button>` : '';
     const ctl = (key, label, control) => `<span class="stack" style="align-items: flex-end; gap: 4px">${info(key, label)}${control}</span>`;
-    const tog = (key, label, sub, extra = '') => `<div class="set" data-menu="setting" data-key="${key}" data-search="${esc(label + ' ' + sub)}"><span class="stack grow"><span class="t" style="font-weight: 600">${label}</span><span class="small">${sub} · ${S.sources[key] === 'file' ? 'set by you' : 'default'}</span></span>${ctl(key, label, `<button class="toggle ${s[key] ? 'on' : ''}" role="switch" aria-checked="${!!s[key]}" aria-label="${label}" data-toggle="${key}"></button>`)}${extra}</div>`;
+    const tog = (key, label, sub, extra = '') => `<div class="set" data-menu="setting" data-key="${key}" data-search="${esc(label + ' ' + sub)}"><span class="stack grow"><span class="t" style="font-weight: 600">${label}</span><span class="small">${sub} · ${srcLabel(key)}</span></span>${ctl(key, label, `<button class="toggle ${s[key] ? 'on' : ''}" role="switch" aria-checked="${!!s[key]}" aria-label="${label}" data-toggle="${key}"></button>`)}${extra}</div>`;
     const seg = (key, opts) => `<span class="seg" role="radiogroup">${opts.map(([v, l]) => `<button role="radio" aria-checked="${s[key] === v}" class="${s[key] === v ? 'on' : ''}" data-set="${key}" data-val="${v}">${l}</button>`).join('')}</span>`;
     const voices = 'speechSynthesis' in window ? speechSynthesis.getVoices() : [];
     const q = S.settingsQuery || '';
@@ -301,13 +304,14 @@
       <div class="card" style="flex: 1 1 360px; gap: 0"><span class="h2" style="padding-bottom: 6px">Appearance</span>
         <div class="set" data-menu="setting" data-key="theme" data-search="theme light dark system"><span class="stack grow"><span class="t" style="font-weight: 600">${T('theme')}</span><span class="small">Follows Windows unless you pick one</span></span>${ctl('theme', T('theme'), seg('theme', [['system', 'System'], ['light', 'Light'], ['dark', 'Dark']]))}</div>
         <div class="set" data-menu="setting" data-key="accent" data-search="accent colour color"><span class="stack grow"><span class="t" style="font-weight: 600">${T('accent')}</span><span class="small">Type a hex, rgb(), hsl() or colour name</span></span><span class="row" style="gap: 8px">${info('accent', T('accent'))}${['#6ea8ff', '#4ade9a', '#f5b451', '#ff8a8a'].map(c => `<button class="sw ${!s.rainbow && s.accent === c ? 'on' : ''}" style="background: ${c}" data-act="accent" data-c="${c}" aria-label="Accent ${c}"></button>`).join('')}<button class="sw rainbow ${s.rainbow ? 'on' : ''}" data-act="rainbow" aria-label="Rainbow accent"></button></span></div>
-        <div class="set" data-search="accent custom colour"><span class="stack grow"><label class="t" for="acc" style="font-weight: 600">Custom colour</label><span class="small mono">${esc(s.accent)} · ${esc(Lib.toRgb(s.accent))}</span></span><input id="acc" class="mono" style="width: 150px; height: 40px; border-radius: 12px; border: 1px solid var(--line2); background: var(--s1); color: var(--tx); padding: 0 10px" data-input="accentText" placeholder="#6ea8ff"></div>
+        <div class="set" data-search="accent custom colour"><span class="stack grow"><label class="t" for="acc" style="font-weight: 600">Custom colour</label><span class="small mono">${esc(s.accent)} · ${esc(Lib.toRgb(s.accent))}</span></span><input id="acc" class="mono" style="width: 150px; height: 40px; border-radius: 12px; border: 1px solid var(--line2); background: var(--s1); color: var(--tx); padding: 0 10px" data-input="accentText" placeholder="#6ea8ff"><button class="btn tonal" data-act="pick-accent" aria-label="Open the colour picker">${ic('colorize')}Pick</button></div>
         ${tog('reduceMotion', T('reduce_motion'), 'Replaces movement with simple fades')}
         <div class="set" data-menu="setting" data-key="displayName" data-search="app name rename display"><span class="stack grow"><label class="t" for="dn" style="font-weight: 600">${T('app_title')}</label><span class="small">Shown in the title bar and taskbar</span></span>${info('displayName', T('app_title'))}<input id="dn" style="width: 180px; height: 40px; border-radius: 12px; border: 1px solid var(--line2); background: var(--s1); color: var(--tx); padding: 0 10px" data-input="displayName" value="${esc(s.displayName)}" placeholder="AWS App Deployer"><button class="btn text" data-act="reset" data-key="displayName">${T('reset')}</button></div>
         <div class="set" data-menu="setting" data-key="schedule" data-search="schedule light dark time"><span class="stack grow"><span class="t" style="font-weight: 600">${T('schedule')}</span><span class="small">Light from ${esc(s.schedule.lightAt)}, dark from ${esc(s.schedule.darkAt)}, every day</span></span>${ctl('schedule', T('schedule'), `<button class="toggle ${s.schedule.enabled ? 'on' : ''}" role="switch" aria-checked="${s.schedule.enabled}" aria-label="${T('schedule')}" data-act="schedule"></button>`)}</div>
       </div>
+      ${schedulesCard()}
       <div class="card" style="flex: 1 1 360px; gap: 0"><span class="h2" style="padding-bottom: 6px">Language and voice</span>
-        <div class="set" data-menu="setting" data-key="language" data-search="language english cantonese both"><span class="stack grow"><span class="t" style="font-weight: 600">${T('language')}</span></span>${ctl('language', T('language'), seg('language', [['en', 'English'], ['yue', '廣東話'], ['both', 'Both']]))}</div>
+        <div class="set" data-menu="setting" data-key="language" data-search="language english cantonese both"><span class="stack grow"><span class="t" style="font-weight: 600">${T('language')}</span></span>${ctl('language', T('language'), (s.school ? `<span class="badge mute">English</span>` : seg('language', [['en', 'English'], ['yue', '廣東話'], ['both', 'Both']])))}</div>
         ${s.school ? '' : `<div class="set" style="flex-wrap: wrap" data-menu="setting" data-key="funnyLevels" data-search="funny level humour english cantonese"><span class="stack grow" style="flex: 1 1 170px"><span class="t" style="font-weight: 600">${T('funny')}</span><span class="small">Styles every message, errors included. Both start at 5. Facts never change.</span></span>${info('funnyLevels', T('funny'))}
           ${[['en', 'English'], ['yue', '廣東話']].map(([k, l]) => `<span class="row" style="flex: 1 1 100%; gap: 10px"><label for="fl-${k}" style="width: 70px">${l}</label><input id="fl-${k}" type="range" min="1" max="5" value="${s.funnyLevels[k]}" data-funny="${k}" style="flex: 1; min-width: 0" aria-valuetext="${s.funnyLevels[k]} of 5"><span class="badge ac" style="width: 28px; justify-content: center; padding: 0">${s.funnyLevels[k]}</span></span>`).join('')}
           <span class="card" style="flex: 1 1 100%; background: var(--s1); padding: 12px 14px; margin-top: 10px; gap: 2px"><span class="small">Preview</span><span>${esc(Lib.funny('success', s.funnyLevels, s.language))}</span></span></div>`}
@@ -317,10 +321,10 @@
         ${tog('sounds', T('sounds'), 'Soft cues for deploy, success and errors')}
       </div></div>
       <div class="side">
-        <div class="drop idle" style="flex-direction: column; align-items: flex-start; gap: 12px; padding: 22px" data-menu="setting" data-key="vocabulary" data-search="personal wording vocabulary json">${info('vocabulary', T('vocabulary'))}<div class="row"><span class="tile ac">${ic('dictionary', 'fill')}</span><span class="stack"><span style="font-weight: 650">${T('vocabulary')}</span><span class="small">${s.vocabulary ? Object.keys(s.vocabulary.entries).length + ' words active' : 'Drop a vocabulary JSON anywhere in the app'}</span></span></div><span class="small">Format: {"version": 1, "entries": {"Deploy": "Ship"}}. Stays on this computer. Applied all at once or not at all.</span><span class="row" style="gap: 8px"><label class="btn tonal" for="vf">Choose file</label><input id="vf" type="file" accept="application/json,.json" class="sr" data-file="vocab"><button class="btn text" data-act="vocab-clear" ${s.vocabulary ? '' : 'disabled'}>Clear</button></span></div>
+        ${s.school ? '' : `<div class="drop idle" style="flex-direction: column; align-items: flex-start; gap: 12px; padding: 22px" data-menu="setting" data-key="vocabulary" data-search="personal wording vocabulary json">${info('vocabulary', T('vocabulary'))}<div class="row"><span class="tile ac">${ic('dictionary', 'fill')}</span><span class="stack"><span style="font-weight: 650">${T('vocabulary')}</span><span class="small">${s.vocabulary ? Object.keys(s.vocabulary.entries).length + ' words active' : 'Drop a vocabulary JSON anywhere in the app'}</span></span></div><span class="small">Format: {"version": 1, "entries": {"Deploy": "Ship"}}. Stays on this computer. Applied all at once or not at all.</span><span class="row" style="gap: 8px"><label class="btn tonal" for="vf">Choose file</label><input id="vf" type="file" accept="application/json,.json" class="sr" data-file="vocab"><button class="btn text" data-act="vocab-clear" ${s.vocabulary ? '' : 'disabled'}>Clear</button></span></div>`}
         <div class="card" style="gap: 0"><span class="h2" style="padding-bottom: 6px">Focus and comfort</span>
           <span class="small" style="padding: 4px 0 6px">Attention modes: each is separate and off until you turn it on. Interface options only, not medical advice.</span>
-          ${tog('focus', 'Focus', 'Dims everything except the row or card you are on')}${tog('calm', 'Low stimulation', 'Quieter colour, no extra motion, only notifications that need you')}${tog('timeAware', 'Time awareness', 'Time open and since the last change, in the title bar')}${tog('oneThing', 'One thing at a time', 'Keeps the next action you chose in view')}${tog('momentum', 'Momentum', 'A gentle note when a draft sits untouched')}${tog('school', T('school'), 'Hides playful extras everywhere')}
+          ${tog('focus', 'Focus', 'Dims everything except the row or card you are on')}${tog('calm', 'Low stimulation', 'Quieter colour, no extra motion, only notifications that need you')}${tog('timeAware', 'Time awareness', 'Time open and since the last change, in the title bar')}${tog('oneThing', 'One thing at a time', 'Keeps the next action you chose in view')}${tog('momentum', 'Momentum', 'A gentle note when a draft sits untouched')}${schoolCard()}
           ${s.school ? '' : `<div class="set" style="flex-wrap: wrap" data-search="dim sum surprise"><span class="stack grow"><span class="t" style="font-weight: 600">${T('dim_sum')}</span><span class="small">A rare treat at launch</span></span><button class="toggle on" role="switch" aria-checked="true" aria-label="${T('dim_sum')}" data-act="troll"></button>${S.troll ? `<span class="card pop" style="flex: 1 1 100%; flex-direction: row; gap: 10px; align-items: center; padding: 10px 14px; margin-top: 10px; background: var(--warn-c)" role="status">${ic('lock', 'fill')}<span class="small" style="color: var(--tx)">${T('dim_sum_troll')}${emojiOn() ? ' 🥟' : ''}</span></span>` : ''}</div>`}
         </div>
         ${logoCard()}
@@ -337,7 +341,7 @@
   }
   function aboutBody() {
     const p = S.prov; if (!p) return '';
-    const cn = p.codeName;
+    const cn = S.settings?.school ? null : p.codeName;
     return `${cn?.available ? `<div class="row">${cn.photo ? `<img src="${esc(cn.photo)}" alt="${esc(cn.alt || cn.en)}" style="width: 72px; height: 72px; border-radius: 16px; object-fit: cover; background: var(--s4)">` : ''}<span class="stack"><span class="label">CODE NAME</span><span style="font-weight: 650">${esc(cn.en)} · ${esc(cn.zh)}</span></span></div>` : ''}
       <dl class="kv" style="margin: 0"><dt>Version</dt><dd class="mono">${esc(p.version)}</dd><dt>Built</dt><dd class="mono">${p.ok ? esc(stamp(p.builtAt)) : 'Unavailable: not a release build'}</dd>${p.ok ? `<dt>Commit</dt><dd class="mono"><button class="btn text mono" style="padding: 0; height: auto" data-act="open-url" data-url="https://github.com/Ding-Ding-Projects/aws-app-deployer/commit/${esc(p.commit)}">${esc(p.commit.slice(0, 7))}</button></dd>` : ''}<dt>${browser ? 'Runtime' : 'Installer'}</dt><dd>${browser ? 'Browser companion' : 'Squirrel, unsigned'}</dd></dl>`;
   }
@@ -365,6 +369,9 @@
     { id: 'a11y', label: 'Accessibility tools', keywords: 'text size contrast focus targets read aloud', run: () => openPanel('a11y') },
     { id: 'a11y-show', label: 'Show the accessibility button', keywords: 'accessibility hidden restore', run: () => setA11y({ hidden: false }) },
     { id: 'keys', label: 'Keyboard help', keywords: 'shortcuts', run: () => openPanel('keys') },
+    { id: 'school', get label() { return (S.settings?.school ? 'Turn off ' : 'Turn on ') + (S.schoolState?.name || 'School mode'); }, keywords: 'study quiet english only', run: () => openPanel('school') },
+    { id: 'colour', label: 'Pick the accent colour', keywords: 'color colour alpha transparency contrast', run: () => openColour() },
+    { id: 'schedules', label: 'Scheduled settings', keywords: 'schedule timer time home assistant automation', run: () => { go('settings'); setTimeout(() => scrollToEl('schedules'), 50); } },
   ];
   function paletteHtml() {
     const P = S.palette; if (!P) return '';
@@ -395,7 +402,7 @@
 
 
   // ---------- anchored panels: accessibility, notifications, info, keyboard help ----------
-  function openPanel(id, anchor) { if (!['unlock', 'lockwiz', 'appearance'].includes(id) && guard('panel:' + id.split(':')[0])) return; S.panel = { id, anchor: anchor || null }; S.infoStep = 0; render(); setTimeout(() => document.querySelector(`[data-panel="${id.split(':')[0]}"] [data-autofocus]`)?.focus(), 30); }
+  function openPanel(id, anchor) { if (!['unlock', 'lockwiz', 'appearance', 'colour', 'school'].includes(id) && guard('panel:' + id.split(':')[0])) return; S.panel = { id, anchor: anchor || null }; S.infoStep = 0; render(); setTimeout(() => document.querySelector(`[data-panel="${id.split(':')[0]}"] [data-autofocus]`)?.focus(), 30); }
   function closePanel() { const a = S.panel?.anchor; S.panel = null; render(); if (a) document.querySelector(a)?.focus(); }
   async function setA11y(patch) { await set('a11y', { ...S.settings.a11y, ...patch }); }
   function panelFrame(id, title, body, anchorStyle) {
@@ -427,6 +434,8 @@
     if (P.id === 'newtab') return newTabPanel();
     if (P.id === 'lockwiz') return lockWizPanel();
     if (P.id === 'appearance') return appearancePanel();
+    if (P.id === 'colour') return colourPanel();
+    if (P.id === 'school') return schoolPanel();
     if (P.id === 'unlock') return unlockPanel();
     if (P.id.startsWith('export:')) return exportPanel(P.id.slice(7));
     if (P.id.startsWith('info:')) {
@@ -781,6 +790,89 @@
     return `<div class="card raise" data-momentum="1" role="status" style="border: 1px solid var(--line)"><div class="row"><i class="ms" aria-hidden="true">schedule</i><span style="flex: 1">The deployment draft${S.settings.draft.name ? ` "${esc(S.settings.draft.name)}"` : ''} has not changed for ${mins(idle)}.</span></div><div class="row" style="gap: 6px"><button class="btn tonal" data-go="wizard">Open the draft</button><button class="btn text" data-act="momentum-snooze">Not now (1 hour)</button></div></div>`;
   }
 
+
+  function scrollToEl(id) { const el = document.getElementById(id); if (!el) return; let m = el.parentElement; while (m && m !== root && m.scrollHeight <= m.clientHeight) m = m.parentElement; if (m && m !== root) m.scrollTo({ top: el.getBoundingClientRect().top - m.getBoundingClientRect().top + m.scrollTop - 16, behavior: 'smooth' }); el.focus?.({ preventScroll: true }); }
+  // ---------- School mode (shared record, renamable, credential to turn off) ----------
+  async function refreshSchool() {
+    const st = await api.schoolState?.(); if (!st?.ok) return;
+    const changed = st.enabled !== S.schoolState?.enabled || st.name !== S.schoolState?.name;
+    S.schoolState = st; if (changed && S.settings) { applyOverlays(); applyAppearance(); render(); }
+  }
+  addEventListener('focus', refreshSchool); setInterval(refreshSchool, 30000);
+  function schoolCard() {
+    const st = S.schoolState || { enabled: false, name: 'School mode' };
+    return `<div class="set" data-search="${esc(st.name)} school study english only" style="flex-wrap: wrap"><span class="stack grow"><span class="t" style="font-weight: 600">${esc(st.name)}</span><span class="small">${st.enabled ? 'On for every app on this computer. Turning it off needs your PIN or password.' : 'English only, no funny levels, personal wording or dim sum, in every app on this computer.'}</span></span><button class="toggle ${st.enabled ? 'on' : ''}" role="switch" aria-checked="${st.enabled}" aria-label="${esc(st.name)}" data-act="school-open"></button></div>`;
+  }
+  function schoolPanel() {
+    const st = S.schoolState || {}, F = S.schoolForm || (S.schoolForm = { kind: 'pin', value: '', value2: '', name: st.name || '', error: null });
+    const inp = (id, label, val, extra = '') => `<div class="field"><label for="${id}">${label}</label><input id="${id}" data-sf="${id}" value="${esc(val)}" autocomplete="off" ${extra}></div>`;
+    let body;
+    if (st.enabled) body = `<span>${esc(st.name)} is on. Enter your ${st.credentialKind === 'password' ? 'password' : 'PIN'} to turn it off.</span>${inp('sf-value', st.credentialKind === 'password' ? 'Password' : 'PIN', F.value, `type="password" ${st.credentialKind === 'password' ? '' : 'inputmode="numeric"'}`)}
+      ${F.error ? `<span class="badge err" role="alert">${esc(F.error)}</span>` : ''}<div class="row" style="justify-content: flex-end"><button class="btn text" data-act="panel-close">Cancel</button><button class="btn fillb" data-act="school-off">Turn off</button></div>`;
+    else body = `<span class="small">While on: English only, and funny levels, personal wording and everything dim sum disappear from every app on this computer. Your choices come back when you turn it off.</span>
+      ${inp('sf-name', 'Name for this mode', F.name, 'maxlength="40"')}<button class="btn text" data-act="school-rename" style="align-self: flex-start">Save name</button>
+      ${st.hasCredential ? `<span class="small">Turning it off will ask for your existing ${st.credentialKind === 'password' ? 'password' : 'PIN'}.</span>` : `<span class="label">SET HOW TO TURN IT OFF</span><div class="seg">${[['pin', 'PIN'], ['password', 'Password']].map(([k, l]) => `<button class="${F.kind === k ? 'on' : ''}" aria-pressed="${F.kind === k}" data-act="school-kind" data-k="${k}">${l}</button>`).join('')}</div>
+      ${inp('sf-value', F.kind === 'pin' ? 'PIN (4 to 12 digits)' : 'Password (6 or more characters)', F.value, `type="password" ${F.kind === 'pin' ? 'inputmode="numeric"' : ''}`)}${inp('sf-value2', 'Repeat it', F.value2, 'type="password"')}`}
+      ${F.error ? `<span class="badge err" role="alert">${esc(F.error)}</span>` : ''}<div class="row" style="justify-content: flex-end"><button class="btn text" data-act="panel-close">Cancel</button><button class="btn fillb" data-act="school-on">Turn on</button></div>`;
+    return panelFrame('school', st.name || 'School mode', body + `<span class="small" style="color: var(--tx)">A speed bump, not security. Forgot it? Delete the shared file: <span class="mono" style="overflow-wrap: anywhere">${esc(st.file || '')}</span></span>`, 'top: 80px; left: calc(50% - 220px); width: 440px;');
+  }
+
+  // ---------- scheduled settings and an external source ----------
+  S.base = {}; S.overrides = {}; S.external = { applied: {}, ignored: [], error: null, at: null };
+  function applyOverlays() {
+    if (!S.settings) return;
+    for (const k of Object.keys(S.base)) S.settings[k] = S.base[k];
+    S.base = {}; S.overlaid = {};
+    const sched = Lib.scheduledValues(S.settings.schedules, new Date());
+    const over = { ...(S.settings.externalSource?.enabled ? S.external.applied : {}), ...sched };
+    if (S.schoolState?.enabled) over.language = 'en';
+    for (const [k, v] of Object.entries(over)) { if (S.overrides[k] === JSON.stringify(sched[k])) continue; S.base[k] = S.settings[k]; S.settings[k] = v; S.overlaid[k] = k in sched ? 'scheduled' : k === 'language' && S.schoolState?.enabled ? 'school' : 'external'; }
+    S.settings.school = !!S.schoolState?.enabled;
+  }
+  setInterval(() => { const before = JSON.stringify(S.overlaid); applyOverlays(); if (JSON.stringify(S.overlaid) !== before) { applyAppearance(); render(); } }, 30000);
+  async function pollExternal() {
+    const X = S.settings?.externalSource; if (!X?.enabled || !X.url) return;
+    const r = await api.externalFetch(X.url);
+    if (!r.ok) { S.external = { ...S.external, error: r.error, at: Date.now() }; }
+    else { const p = Lib.parseExternal(r.text, { mapKey: X.mapKey }); S.external = p.ok ? { applied: p.applied, ignored: p.ignored, error: null, at: Date.now() } : { applied: {}, ignored: [], error: p.error, at: Date.now() }; }
+    applyOverlays(); applyAppearance(); if (S.view === 'settings') render();
+  }
+  let extTimer; function scheduleExternal() { clearInterval(extTimer); const X = S.settings?.externalSource; if (X?.enabled) { pollExternal(); extTimer = setInterval(pollExternal, X.every * 60000); } }
+  const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const valLabel = (k, v) => { const d = Lib.SCHEDULABLE[k]; return d.values ? (d.values.find(([x]) => x === v) || [, String(v)])[1] : String(v); };
+  function schedulesCard() {
+    const rules = S.settings.schedules || [], active = Lib.scheduledValues(rules, new Date()), F = S.schedForm || (S.schedForm = { key: 'theme', value: 'dark', at: '19:00', days: [0, 1, 2, 3, 4, 5, 6] });
+    const d = Lib.SCHEDULABLE[F.key], X = S.settings.externalSource;
+    const valueCtl = d.values ? `<select id="sch-val" data-sch="value" aria-label="Value">${d.values.map(([v, l]) => `<option value="${esc(JSON.stringify(v))}" ${JSON.stringify(v) === JSON.stringify(F.value) ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select>` : `<input id="sch-val" data-sch="value" aria-label="Value" value="${esc(F.value)}" placeholder="${d.colour ? '#4ade9a' : 'Name'}" style="width: 130px">`;
+    return `<div class="card" id="schedules" style="flex: 1 1 360px; gap: 0" data-search="schedule scheduled settings time home assistant external source"><span class="h2" style="padding-bottom: 6px">Scheduled settings</span>
+      <span class="small" style="padding-bottom: 8px">For each setting, the rule whose time passed most recently wins. Changing a scheduled setting yourself holds until its next rule.</span>
+      ${rules.map((r, i) => `<div class="set"><span class="stack grow"><span class="t" style="font-weight: 600">${esc(Lib.SCHEDULABLE[r.key]?.label || r.key)} → ${esc(valLabel(r.key, r.value))}</span><span class="small">${r.days.length === 7 ? 'Every day' : r.days.map(x => DAYS[x]).join(', ')} at ${esc(r.at)}</span></span><span class="badge ${JSON.stringify(active[r.key]) === JSON.stringify(r.value) && S.overlaid?.[r.key] === 'scheduled' ? 'ok' : 'mute'}">${JSON.stringify(active[r.key]) === JSON.stringify(r.value) && S.overlaid?.[r.key] === 'scheduled' ? 'Active' : 'Waiting'}</span><button class="btn text" data-act="sch-del" data-i="${i}" aria-label="Remove rule ${i + 1}">Remove</button></div>`).join('') || '<span class="small" style="padding: 8px 0">No rules yet.</span>'}
+      <div class="row sched-form" style="gap: 6px; flex-wrap: wrap; padding: 10px 0"><select data-sch="key" aria-label="Setting">${Object.entries(Lib.SCHEDULABLE).map(([k, x]) => `<option value="${k}" ${F.key === k ? 'selected' : ''}>${esc(x.label)}</option>`).join('')}</select>${valueCtl}<input type="time" data-sch="at" value="${esc(F.at)}" aria-label="Time"><span class="row" style="gap: 2px" role="group" aria-label="Days">${DAYS.map((n, i) => `<button class="badge ${F.days.includes(i) ? 'ac' : 'mute'}" style="border: 0; cursor: pointer" aria-pressed="${F.days.includes(i)}" data-act="sch-day" data-d="${i}">${n[0]}</button>`).join('')}</span><button class="btn tonal" data-act="sch-add">Add rule</button></div>
+      <span class="label" style="padding-top: 6px">EXTERNAL SOURCE</span>
+      <div class="set"><span class="stack grow"><span class="t" style="font-weight: 600">Read settings from a URL</span><span class="small">A JSON object of settings, or a Home Assistant entity state mapped to one setting. Checked every ${X.every} min.</span></span><button class="toggle ${X.enabled ? 'on' : ''}" role="switch" aria-checked="${X.enabled}" aria-label="Read settings from a URL" data-act="ext-toggle"></button></div>
+      <div class="row sched-form" style="gap: 6px; flex-wrap: wrap"><input data-ext="url" value="${esc(X.url)}" placeholder="https://homeassistant.local:8123/api/states/input_select.theme" aria-label="Source URL" style="flex: 1 1 260px"><select data-ext="mapKey" aria-label="Entity state sets">${Object.entries(Lib.SCHEDULABLE).map(([k, x]) => `<option value="${k}" ${X.mapKey === k ? 'selected' : ''}>${esc(x.label)}</option>`).join('')}</select><input type="password" data-ext="token" placeholder="Access token (optional)" aria-label="Access token" autocomplete="off" style="width: 170px"><button class="btn text" data-act="ext-save">Save</button><button class="btn text" data-act="ext-now" ${X.enabled ? '' : 'disabled'}>Check now</button></div>
+      ${S.external.at ? `<span class="small" style="padding-top: 6px">${S.external.error ? `Last check failed: ${esc(S.external.error.toLowerCase().replace(/_/g, ' '))}. Nothing was changed.` : `Applied ${Object.keys(S.external.applied).map(k => `${Lib.SCHEDULABLE[k].label} → ${valLabel(k, S.external.applied[k])}`).join(', ') || 'nothing'}${S.external.ignored.length ? `. Ignored: ${esc(S.external.ignored.join(', '))}` : ''}.`} ${new Date(S.external.at).toLocaleTimeString()}</span>` : ''}
+    </div>`;
+  }
+
+  // ---------- colour picker with alpha and contrast ----------
+  function openColour() { const hex = S.settings.accent; const { h, s: sat, v } = Lib.hexToHsv(hex); S.colour = { h, s: sat, v, a: Lib.rgba(hex).a, text: hex }; openPanel('colour'); }
+  const pickerHex = () => Lib.hsvToHex(S.colour.h, S.colour.s, S.colour.v, S.colour.a);
+  function colourPanel() {
+    const C = S.colour, hex = pickerHex(), bg = document.body.style.background?.startsWith('rgb') ? '#0b0d12' : '#0b0d12';
+    const light = root.classList.contains('light'), ratio = Lib.contrast(hex, light ? '#f4f6fa' : '#0b0d12');
+    return panelFrame('colour', 'Accent colour', `<div class="sv-box" data-sv="1" style="background: linear-gradient(to top, #000, transparent), linear-gradient(to right, #fff, hsl(${C.h} 100% 50%))" role="slider" tabindex="0" aria-label="Saturation and brightness" aria-valuetext="saturation ${C.s}%, brightness ${C.v}%"><i style="left: ${C.s}%; top: ${100 - C.v}%"></i></div>
+      <label class="small" for="cp-h">Hue ${C.h}°</label><input id="cp-h" type="range" min="0" max="360" value="${C.h}" data-cp="h" class="hue-range">
+      <label class="small" for="cp-a">Opacity ${Math.round(C.a * 100)}%</label><input id="cp-a" type="range" min="0" max="100" value="${Math.round(C.a * 100)}" data-cp="a" class="alpha-range" style="--c: ${hex.slice(0, 7)}">
+      <div class="row" style="gap: 8px"><span class="sw" style="background: ${hex}; flex: none" aria-hidden="true"></span><label class="sr" for="cp-text">Colour value</label><input id="cp-text" class="mono" data-cp="text" value="${esc(C.text)}" style="flex: 1; min-width: 0; height: 38px; border-radius: 10px; border: 1px solid var(--line2); background: var(--s1); color: var(--tx); padding: 0 10px"><span class="badge ${ratio >= 4.5 ? 'ok' : ratio >= 3 ? 'warn' : 'err'}" title="WCAG contrast against the page background">Contrast ${ratio} : 1</span></div>
+      <span class="small mono">${esc(Lib.toRgb(hex))} · ${esc(Lib.toHsl(hex))}</span>
+      <span class="small">${ratio >= 4.5 ? 'Readable as text on this background.' : ratio >= 3 ? 'Fine for large text and icons; small text may be hard to read.' : 'Too faint on this background for text.'} Accepts hex with alpha, rgb(), rgba(), hsl(), hsla() and colour names.</span>
+      <div class="row" style="justify-content: flex-end"><button class="btn text" data-act="panel-close">Cancel</button><button class="btn fillb" data-act="cp-apply">Use this colour</button></div>`, 'top: 70px; left: calc(50% - 200px); width: 400px;');
+  }
+  function cpFromPointer(e, box) { const r = box.getBoundingClientRect(); S.colour.s = Math.round(Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)) * 100); S.colour.v = Math.round(100 - Math.max(0, Math.min(1, (e.clientY - r.top) / r.height)) * 100); S.colour.text = pickerHex(); render(); }
+  root.addEventListener('pointerdown', e => { const box = e.target.closest('[data-sv]'); if (!box) return; cpFromPointer(e, box); const mv = ev => cpFromPointer(ev, document.querySelector('[data-sv]')); const up = () => { removeEventListener('pointermove', mv); removeEventListener('pointerup', up); }; addEventListener('pointermove', mv); addEventListener('pointerup', up); });
+  root.addEventListener('keydown', e => { if (!e.target.matches?.('[data-sv]')) return; const d = { ArrowLeft: ['s', -2], ArrowRight: ['s', 2], ArrowUp: ['v', 2], ArrowDown: ['v', -2] }[e.key]; if (!d) return; e.preventDefault(); S.colour[d[0]] = Math.max(0, Math.min(100, S.colour[d[0]] + d[1])); S.colour.text = pickerHex(); render(); document.querySelector('[data-sv]')?.focus(); });
+
   // ---------- logo ----------
   const logo = () => Lib.cleanLogo(S.settings.logo) || { symbol: 'rocket_launch', shape: 'rounded', bg: null, fg: null };
   function logoHtml(size) {
@@ -902,7 +994,7 @@
 
   // ---------- render ----------
   function vocabularize(node) {
-    const v = S.settings?.vocabulary; if (!v) return;
+    const v = S.settings?.vocabulary; if (!v || S.settings.school) return;
     const walker = document.createTreeWalker(node, NodeFilter.SHOW_TEXT, { acceptNode: n => (n.parentElement.closest('.ms, .mono, input, textarea, script, style') ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT) });
     for (let n; (n = walker.nextNode());) { const next = Lib.applyVocabulary(n.nodeValue, v); if (next !== n.nodeValue) n.nodeValue = next; }
   }
@@ -928,7 +1020,10 @@
     if (v === 'tabs') { go('deploys'); ['history', 'docs', 'changelog'].forEach(x => { ensureData(x); openTab(x); }); S.active = S.tabs[1].id; render(); return; }
     if (v === 'export') { go('history'); openPanel('export:history'); return; }
     if (v === 'lockwiz') { go('deploys'); openLockWizard({ key: 'go:settings', label: 'Settings' }); S.lockWiz.policy = 'pin+totp'; api.lockTotp('Settings').then(x => { S.lockWiz.totp = x; S.lockWiz.pin = '2468'; render(); }); return; }
-    if (v === 'unlock') { go('deploys'); api.lockCreate('go:settings', { label: 'Settings', policy: 'pin', pin: '2468' }).then(async () => { await refreshLocks(); render(); openUnlock({ key: 'go:settings', label: 'Settings' }); S.unlock.pin = '24'; render(); }); return; }
+    if (v === 'unlock') { go('deploys'); api.lockCreate('go:help', { label: 'Help', policy: 'pin', pin: '2468' }).then(async () => { await refreshLocks(); render(); openUnlock({ key: 'go:help', label: 'Help' }); S.unlock.pin = '24'; render(); }); return; }
+    if (v === 'school') { go('settings'); S.schoolForm = null; openPanel('school'); return; }
+    if (v === 'colour') { go('settings'); openColour(); S.colour.a = 0.8; S.colour.text = pickerHex(); render(); return; }
+    if (v === 'schedules') { go('settings'); S.settings.schedules = [{ key: 'theme', value: 'dark', at: '19:00', days: [0, 1, 2, 3, 4, 5, 6] }, { key: 'calm', value: true, at: '22:00', days: [1, 2, 3, 4, 5] }]; applyOverlays(); applyAppearance(); render(); setTimeout(() => scrollToEl('schedules'), 50); return; }
     if (v === 'tools') { go('deploys'); ensureData('tools'); openTab('tools'); S.tools.b64in = 'hello, har gow'; S.tools.b64out = { ok: true, text: Lib.b64encode('hello, har gow') }; S.tools.conv = { name: 'menu.yaml', text: 'x', note: '' }; render(); return; }
     if (v === 'party') { S.active = 'ws'; go('deploys'); celebrate('42 words applied'); return; }
     if (v === 'appearance') { go('deploys'); openAppearance({ key: 'go:accounts', label: 'Accounts' }); apSet('weight', 750); apSet('color', '#4ade9a'); apSet('glow', 12); apSet('radius', 18); apSet('underline', true); render(); return; }
@@ -1075,6 +1170,19 @@
       case 'next-edit': S.editNext = true; S.nextDraft = S.settings.nextAction; render(); document.getElementById('na')?.focus(); break;
       case 'next-done': S.nextDraft = ''; await set('nextAction', ''); toast('Next action cleared'); break;
       case 'momentum-snooze': await set('momentumUntil', Date.now() + 3600000); break;
+      case 'school-open': S.schoolForm = null; openPanel('school'); break;
+      case 'school-kind': S.schoolForm.kind = t.dataset.k; S.schoolForm.value = ''; S.schoolForm.value2 = ''; render(); break;
+      case 'school-rename': { const r = await api.schoolRename(S.schoolForm.name); if (!r.ok) { S.schoolForm.error = 'Use 1 to 40 characters, no angle brackets.'; render(); break; } S.schoolState = r; toast(`Renamed to ${r.name}`); render(); break; }
+      case 'school-on': { const F = S.schoolForm; if (!S.schoolState.hasCredential && F.value !== F.value2) { F.error = 'The two entries differ.'; render(); break; } const r = await api.schoolEnable(S.schoolState.hasCredential ? null : { kind: F.kind, value: F.value }); if (!r.ok) { F.error = r.error === 'CREDENTIAL_NEEDED' ? (F.kind === 'pin' ? 'A PIN is 4 to 12 digits.' : 'A password is 6 to 200 characters.') : r.error; render(); break; } S.schoolState = r; S.schoolForm = null; S.panel = null; applyOverlays(); applyAppearance(); toast(`${r.name} is on`); render(); break; }
+      case 'school-off': { const r = await api.schoolDisable(S.schoolForm.value); if (!r.ok) { S.schoolForm.error = r.error === 'WAIT' ? `Too many tries. Wait about ${Math.ceil(r.waitMs / 60000)} min.` : `That did not match.${r.attemptsBeforeWait ? ` ${r.attemptsBeforeWait} more tries before a wait.` : ''}`; S.schoolForm.value = ''; render(); break; } S.schoolState = r; S.schoolForm = null; S.panel = null; applyOverlays(); applyAppearance(); toast(`${r.name} is off. Your choices are back.`); render(); break; }
+      case 'sch-day': { const F = S.schedForm, d = +t.dataset.d; F.days = F.days.includes(d) ? F.days.filter(x => x !== d) : [...F.days, d].sort(); render(); break; }
+      case 'sch-add': { const F = S.schedForm, rule = { key: F.key, value: Lib.SCHEDULABLE[F.key].colour ? Lib.parseColor(String(F.value)) : F.value, at: F.at, days: F.days }; if (!Lib.validRule(rule)) { toast('That rule is not complete: pick a value, a time and at least one day.', 'err'); break; } await set('schedules', [...(S.settings.schedules || []), rule]); applyOverlays(); applyAppearance(); render(); break; }
+      case 'sch-del': { const list = [...S.settings.schedules]; list.splice(+t.dataset.i, 1); await set('schedules', list); applyOverlays(); applyAppearance(); render(); break; }
+      case 'ext-toggle': await set('externalSource', { ...S.settings.externalSource, enabled: !S.settings.externalSource.enabled }); scheduleExternal(); applyOverlays(); applyAppearance(); render(); break;
+      case 'ext-save': { const url = root.querySelector('[data-ext="url"]').value.trim(), mapKey = root.querySelector('[data-ext="mapKey"]').value, token = root.querySelector('[data-ext="token"]').value; if (url && !/^https?:\/\//.test(url)) { toast('Use an http or https address', 'err'); break; } if (token) { const r = await api.externalToken(token); if (!r.ok) { toast('The token could not be stored: ' + r.error.toLowerCase().replace(/_/g, ' '), 'err'); break; } } await set('externalSource', { ...S.settings.externalSource, url, mapKey }); scheduleExternal(); toast('External source saved'); break; }
+      case 'ext-now': await pollExternal(); render(); break;
+      case 'pick-accent': openColour(); break;
+      case 'cp-apply': { const hex = Lib.parseColor(S.colour.text) || pickerHex(); S.panel = null; await set('rainbow', false); await set('accent', hex); break; }
       case 'vocab-clear': await set('vocabulary', null); toast('Original words restored'); break;
     }
   });
@@ -1099,6 +1207,8 @@
     if (el.dataset.tk === 'description') { S.ticketDraft = el.value; return; }
     if (el.dataset.lw) { const m = { 'lw-pin': 'pin', 'lw-pin2': 'pin2', 'lw-password': 'password', 'lw-password2': 'password2', 'lw-code': 'code' }[el.dataset.lw]; S.lockWiz[m] = el.value; if (m === 'pin') render(); return; }
     if (el.dataset.ul) { S.unlock[el.dataset.ul] = el.value; if (el.dataset.ul === 'pin') render(); return; }
+    if (el.dataset.sf) { const m = { 'sf-value': 'value', 'sf-value2': 'value2', 'sf-name': 'name' }[el.dataset.sf]; S.schoolForm[m] = el.value; return; }
+    if (el.dataset.cp) { const C = S.colour; if (el.dataset.cp === 'text') { C.text = el.value; const hx = Lib.parseColor(el.value); if (hx) { Object.assign(C, Lib.hexToHsv(hx), { a: Lib.rgba(hx).a }); } } else { if (el.dataset.cp === 'h') C.h = +el.value; else C.a = +el.value / 100; C.text = pickerHex(); } render(); return; }
     if (el.dataset.input === 'nextDraft') { S.nextDraft = el.value; return; }
     if (el.dataset.funny) { set('funnyLevels', { ...S.settings.funnyLevels, [el.dataset.funny]: +el.value }); return; }
     if (el.dataset.input === 'apPreset') { S.ap.preset = el.value; return; }
@@ -1118,6 +1228,7 @@
     if (el.dataset.input === 'displayName') set('displayName', el.value.trim());
     if (el.dataset.input === 'accentText') { const hex = Lib.parseColor(el.value); if (hex) { await set('rainbow', false); set('accent', hex); } else toast('Not a colour this app can read', 'err'); }
     if (el.dataset.select) set(el.dataset.select, el.value);
+    if (el.dataset.sch) { const F = S.schedForm; if (el.dataset.sch === 'key') { F.key = el.value; const d = Lib.SCHEDULABLE[F.key]; F.value = d.values ? d.values[0][0] : ''; render(); } else if (el.dataset.sch === 'value') F.value = el.tagName === 'SELECT' ? JSON.parse(el.value) : el.value; else F.at = el.value; }
     if (el.dataset.voice) set('voices', { ...S.settings.voices, [el.dataset.voice]: el.value });
     if (el.dataset.file === 'logo' && el.files[0]) logoUpload(el.files[0]);
     if (el.dataset.input === 'logoBg') { const c = Lib.parseColor(el.value); if (c) set('logo', { ...logo(), bg: c }); }
@@ -1180,6 +1291,7 @@
     const settingsResult = await api.settings();
     if (!settingsResult.ok || !settingsResult.settings) return;
     S.settings = settingsResult.settings;
+    S.schoolState = (await api.schoolState?.()) || { enabled: false, name: 'School mode' }; applyOverlays(); scheduleExternal();
     S.sources = settingsResult.sources || {}; S.defaults = settingsResult.defaults || {};
     applyAppearance();
     const d = S.settings.draft;
@@ -1192,6 +1304,6 @@
     if (S.wizard.file) api.inspectSource(S.wizard.file).then(i => { S.wizard.inspect = i; render(); });
     render();
     const ds = await api.dimSum();
-    if (ds.ok && ds.show && !S.run) { S.dimsum = ds.dish; render(); setTimeout(() => { S.dimsum = null; render(); }, 7000); }
+    if (ds.ok && ds.show && !S.run && !S.settings.school) { S.dimsum = ds.dish; render(); setTimeout(() => { S.dimsum = null; render(); }, 7000); }
   })();
 })();

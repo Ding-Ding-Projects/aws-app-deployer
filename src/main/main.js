@@ -8,6 +8,7 @@ const { createStore } = require('./store');
 const { createBridge } = require('./bridge');
 const { createUpdater, handleSquirrelEvent } = require('./updater');
 const { createLocks } = require('./locks');
+const { createSchool } = require('./school');
 
 const squirrelEvent = handleSquirrelEvent(app);
 function provenance() {
@@ -41,7 +42,7 @@ function createWindow() {
 
 async function captureScreenshots(dir) {
   fs.mkdirSync(dir, { recursive: true });
-  const routes = ['setup', 'deploys', 'accounts', 'wizard', 'settings', 'help', 'palette', 'a11y', 'info', 'menu', 'confirm', 'history', 'docs', 'changelog', 'tabs', 'export', 'lockwiz', 'unlock', 'support', 'appearance', 'tools', 'party'];
+  const routes = ['setup', 'deploys', 'accounts', 'wizard', 'settings', 'help', 'palette', 'a11y', 'info', 'menu', 'confirm', 'history', 'docs', 'changelog', 'tabs', 'export', 'lockwiz', 'unlock', 'support', 'appearance', 'tools', 'party', 'school', 'colour', 'schedules'];
   for (let i = 0; i < 90 && !(await win.webContents.executeJavaScript('!!(window.__ready && window.__ready())')); i++) await new Promise(res => setTimeout(res, 1000));
   for (const [w, tag] of [[1320, 'desktop'], [420, 'narrow']]) {
     win.setSize(w, 860);
@@ -89,6 +90,33 @@ if (!squirrelEvent) app.whenReady().then(() => {
   if (screenshotDir && process.platform === 'linux') safeStorage.setUsePlainTextEncryption?.(true);
   const locks = createLocks({ dir: app.getPath('userData'), safeStorage, catalog: async () => { try { return (await (await fetch('https://raw.githubusercontent.com/Ding-Ding-Projects/dim-sum-photos/main/catalog/index.json', { signal: AbortSignal.timeout(6000) })).json()).dishes || []; } catch { return []; } } });
   handle('lock-status', () => locks.status());
+  // Shared School mode record for every app from this publisher on this Windows user.
+  const school = createSchool({ dir: path.join(app.getPath('appData'), 'Ding-Ding-Projects Shared') });
+  handle('school-state', () => school.state());
+  handle('school-rename', n => school.rename(n));
+  handle('school-enable', c => school.enable(c));
+  handle('school-disable', v => school.disable(v));
+  handle('school-credential', (o, c) => school.changeCredential(o, c));
+  // External settings source (for example a Home Assistant entity). The token is kept encrypted
+  // with the operating system's protected storage, never in settings, history or exports.
+  const tokenFile = path.join(app.getPath('userData'), 'external-source.token');
+  handle('external-token', t => {
+    if (t === null) { try { fs.unlinkSync(tokenFile); } catch { } return { ok: true, hasToken: false }; }
+    if (typeof t !== 'string' || t.length > 4096 || !safeStorage.isEncryptionAvailable()) return { ok: false, error: safeStorage.isEncryptionAvailable() ? 'INVALID_INPUT' : 'VAULT_UNAVAILABLE' };
+    fs.writeFileSync(tokenFile, safeStorage.encryptString(t)); return { ok: true, hasToken: true };
+  });
+  handle('external-fetch', async url => {
+    let u; try { u = new URL(url); } catch { return { ok: false, error: 'URL_INVALID' }; }
+    if (!['https:', 'http:'].includes(u.protocol) || u.username || u.password) return { ok: false, error: 'URL_INVALID' };
+    const headers = { Accept: 'application/json' };
+    try { if (fs.existsSync(tokenFile)) headers.Authorization = 'Bearer ' + safeStorage.decryptString(fs.readFileSync(tokenFile)); } catch { return { ok: false, error: 'TOKEN_UNREADABLE' }; }
+    try {
+      const r = await fetch(u, { headers, redirect: 'error', signal: AbortSignal.timeout(8000) });
+      if (!r.ok) return { ok: false, error: 'HTTP_' + r.status };
+      const text = await r.text(); if (text.length > 65536) return { ok: false, error: 'TOO_LARGE' };
+      return { ok: true, text, hasToken: !!headers.Authorization };
+    } catch (e) { return { ok: false, error: e.name === 'TimeoutError' ? 'TIMEOUT' : 'UNREACHABLE' }; }
+  });
   handle('lock-totp', async label => { const t = locks.newTotp(label); return { ...t, qr: await require('qrcode').toString(t.uri, { type: 'svg', margin: 1, errorCorrectionLevel: 'M' }) }; });
   handle('lock-create', (id, opts) => locks.create(id, opts));
   handle('lock-verify', (id, creds) => locks.verify(id, creds));
