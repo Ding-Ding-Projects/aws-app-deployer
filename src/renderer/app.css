@@ -194,3 +194,4 @@ select { height: 40px; border-radius: var(--r2); border: 1px solid var(--line2);
 .sk-stage { border-radius: 14px; background: #fff center / cover no-repeat; overflow: hidden; }
 #sk-canvas { display: block; width: 100%; height: auto; aspect-ratio: 1200 / 750; touch-action: none; cursor: crosshair; }
 .tabs { scrollbar-width: thin; } .tabs::-webkit-scrollbar { height: 4px; }
+.card select[size] { height: auto; min-height: 150px; padding: 4px; }
