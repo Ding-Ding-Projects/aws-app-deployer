@@ -106,9 +106,8 @@ test('browser provenance reports actual server version without claiming a packag
   assert.equal(JSON.parse(h.calls[0].body).method, 'version');
 });
 
-test('browser exposes new history bridge and explicitly unsupported sound preview', async () => {
+test('browser exposes the history removal bridge', async () => {
   const h = harness();
-  assert.equal((await h.api.previewSound()).error, 'UNSUPPORTED_OPERATION');
   await h.api.removeDeployments([123]);
   assert.deepEqual(JSON.parse(h.calls[0].body), { method: 'removeDeployments', args: [[123]] });
 });

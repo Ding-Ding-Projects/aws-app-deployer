@@ -63,3 +63,5 @@ See [the feature audit](FEATURE-AUDIT.md) for remaining requirements and [the de
 The local container successfully served the real interface in Chromium. Access-key entry, actual AWS CLI authorization-link generation, cancellation, sample source inspection, uploaded Dockerfile inspection and sign-out passed with no browser page errors. The CLI was AWS CLI 2.39.5. These checks did not submit a real AWS authorization code or create AWS resources. Automated checks cover isolated sessions, denied login, failed STS verification, cancellation, expiry, late-write cleanup, concurrent login, source traversal and secret redaction.
 
 Actual local captures: [desktop](evidence/browser-login-desktop.png), [mobile](evidence/browser-login-mobile.png). [Verification record and source hashes](evidence/browser-check.json). The screenshots show an authorization request awaiting the user, not a connected AWS account.
+
+The latest integration has 66 passing automated checks. Earlier captures and their original hashes are preserved in [the initial preview record](evidence/initial-preview/browser-check.json).

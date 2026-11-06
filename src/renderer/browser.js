@@ -102,7 +102,6 @@
     provenance: async () => ({ ok: false, version: await api.version() }),
     updateState: async () => ({ status: 'not-installed' }),
     checkUpdates: async () => ({ status: 'not-installed' }),
-    previewSound: async () => ({ ok: false, error: 'UNSUPPORTED_OPERATION' }),
     installUpdate: async () => ({ ok: false, error: 'UNSUPPORTED_OPERATION' }),
     onUpdate: () => () => {},
     window: async () => ({ ok: true }), onWindow: () => () => {},

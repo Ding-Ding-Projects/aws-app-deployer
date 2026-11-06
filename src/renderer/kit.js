@@ -32,7 +32,7 @@ window.Kit = (() => {
     host.querySelector('input')?.focus();
   }
   function visible() {
-    const r = Lib.search(menu.items.map(i => ({ ...i, label: i.label })), menu.q, { regex: menu.regex });
+    const r = Lib.search(menu.items, menu.q, { regex: menu.regex });
     return { ok: r.ok, list: r.ok ? r.items : [], parts: r.parts || [], error: r.error };
   }
   function draw() {
@@ -106,9 +106,9 @@ window.Kit = (() => {
     if (k !== undefined && !e.ctrlKey && !e.altKey) { e.preventDefault(); sc.keys[k] = true; drawConfirm(); if (sc.keys[0] && sc.keys[1]) sc.host.querySelector('#scs').focus(); }
   }, true);
   document.addEventListener('input', async e => {
-    if (!sc || e.target.id !== 'scs') return;
+    if (!sc || e.target.id !== 'scs' || !sc.host.contains(e.target)) return;
     sc.value = +e.target.value; e.target.style.setProperty('--v', sc.value + '%');
-    if (sc.value >= 100 && !sc.done) { sc.done = true; const fn = sc.onConfirm; drawConfirm(); sc.host.classList.add('sc-done'); setTimeout(() => closeConfirm(true), 700); await fn(); }
+    if (sc.keys[0] && sc.keys[1] && sc.value >= 100 && !sc.done) { sc.done = true; const fn = sc.onConfirm; drawConfirm(); sc.host.classList.add('sc-done'); setTimeout(() => closeConfirm(true), 700); await fn(); }
   });
 
   // ---- Anchored panels: drag by header, resize from edges, persisted per surface ----

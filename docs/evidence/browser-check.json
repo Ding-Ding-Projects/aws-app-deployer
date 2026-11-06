@@ -1,7 +1,7 @@
 {
   "date": "2026-11-06",
   "route": "headless Chromium against the running local companion container",
-  "containerImage": "sha256:1ae8f1b49c23fbe706c82cbdee480121b9e6f9f2274c383aac025e07d5a6b843",
+  "containerImage": "sha256:62403c795eb202ea6caf1f97cd474b9998773ac4d509e2fcfb4faeeea7fcd97b",
   "viewports": [
     [
       1440,
@@ -29,12 +29,16 @@
     "nested Docker engine on current host"
   ],
   "sha256": {
-    "src/web/server.js": "66a4d845ea22b719ddf0fb93e0420bd061bd937569d1effda2cfadf7bfead626",
+    "src/web/server.js": "3aa9faf91db0e3a6788585edcbc562fc9a6c829dd8413bf61f52a5acc0d4ded3",
     "src/web/auth.js": "f949167a90ff71b646b9fb753d769584841b528ff4c6609f8d3ef9c7f871ef98",
     "src/web/uploads.js": "65fffbd95aeebbbba377eb9d3d9beb733312de83e37a934d8925413ff024d7c6",
-    "src/renderer/browser.js": "a7730343b2722669b4b050a6eb350c957e9eb92701526a71adda614dc6bcbb18",
-    "src/renderer/app.js": "dcb6186f85aaa6e697cea666596eafd1107ea4b6910a332c151063583c140e13",
-    "src/renderer/index.html": "abeba14d6390f6c419c26035a97be32602cab366d05f0e5d87acbda995d673a4",
-    "Dockerfile": "74ceeb427aa7599884219e54fdae441c5a99de02c7fcd03488bc57e8f8950a21"
-  }
+    "src/renderer/browser.js": "20b2ea99a05872058d424c97186c6b1e9eb6295714dd3766fb5a754c39eed851",
+    "src/renderer/app.js": "7408ea91a74a4977397b6ea9b16313625428f57405fbf3efa3eaa2ecd1637c93",
+    "src/renderer/index.html": "3dc8bad965e531b3d06abac3a4ce6769ba23d025d0311b8bb2075d614bb7c2cd",
+    "Dockerfile": "74ceeb427aa7599884219e54fdae441c5a99de02c7fcd03488bc57e8f8950a21",
+    "src/renderer/kit.js": "946faf6ae5a78c0272629a2bc4524e15df9af21c2495810a717a38677d2cf95f",
+    "src/main/bridge.js": "0a5ef9fa763b6ae90340dac8975ab36b0a19b66617a33867f9be00d44ba19752",
+    "src/main/store.js": "719a4b8a6f1b79b65cbe9af189d8ef1f2d403b429f1de7c404e385d145b41792"
+  },
+  "automatedChecks": 66
 }

@@ -124,3 +124,7 @@ The approved test route is the existing renderer served by `src/web/server.js`, 
 The complete 115-entry baseline gap reconciliation is in [docs/FEATURE-AUDIT.md](docs/FEATURE-AUDIT.md). Fixing the preview does not close those broader requirements. See [docs/BROWSER-PREVIEW.md](docs/BROWSER-PREVIEW.md) for launch, login, tunnel and teardown steps. Cloudflare connectivity is currently blocked; no public preview URL or real AWS authentication is verified. Never substitute a landing-page link for the functional companion.
 
 Local browser acceptance now covers key entry, real AWS authorization-link generation, cancellation, sample/upload inspection and sign-out without browser page errors. Automated coverage includes expiry/late-write cleanup and concurrent-login protection. AWS account completion, AWS deployment, the nested Docker engine on this managed host, and the public tunnel remain blocked or unverified.
+
+### Latest integration verification
+
+The browser work preserves the designer updates through `77731dd`, including Squirrel packaging, updates, provenance, accessibility and interaction controls. Context-menu target identity and the final two-key confirmation guard were corrected with regressions. All 66 automated checks pass, and the rebuilt companion passed the same real browser login-link/upload/cancellation/sign-out check at desktop and mobile widths. See the source-bound browser record for exact hashes; no complete AWS sign-in or cloud deployment is claimed.
