@@ -1,0 +1,35 @@
+services:
+  companion:
+    build: .
+    init: true
+    ports:
+      - "127.0.0.1:8787:8787"
+    environment:
+      AWS_DEPLOYER_ACCESS_TOKEN: ${AWS_DEPLOYER_ACCESS_TOKEN:?Set a random access token of at least 32 characters}
+      AWS_DEPLOYER_PUBLIC_ORIGIN: ${AWS_DEPLOYER_PUBLIC_ORIGIN:-}
+      HOST: 0.0.0.0
+      PORT: "8787"
+      DOCKER_HOST: tcp://engine:2376
+      DOCKER_TLS_VERIFY: "1"
+      DOCKER_CERT_PATH: /certs/client
+    volumes:
+      - client-certs:/certs/client:ro
+    depends_on:
+      engine:
+        condition: service_healthy
+  engine:
+    image: docker:29.0.0-dind
+    privileged: true
+    environment:
+      DOCKER_TLS_CERTDIR: /certs
+    volumes:
+      - client-certs:/certs/client
+      - engine-data:/var/lib/docker
+    healthcheck:
+      test: ["CMD", "docker", "info"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+volumes:
+  client-certs:
+  engine-data:

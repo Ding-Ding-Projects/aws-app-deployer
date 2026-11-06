@@ -8,10 +8,11 @@
   "main": "src/main/main.js",
   "scripts": {
     "start": "electron .",
-    "test": "node --test tests/backend/*.test.js tests/main/*.test.js tests/renderer/*.test.js",
+    "test": "node --test tests/backend/*.test.js tests/main/*.test.js tests/renderer/*.test.js tests/web/*.test.js",
     "screenshots": "electron . --screenshots=screenshots",
     "dist:win": "electron-builder --win --publish never",
-    "icons": "node scripts/build-icons.mjs"
+    "icons": "node scripts/build-icons.mjs",
+    "web:start": "node src/web/server.js"
   },
   "devDependencies": {
     "@resvg/resvg-js": "^2.6.2",

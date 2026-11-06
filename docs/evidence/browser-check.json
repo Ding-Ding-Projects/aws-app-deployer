@@ -1,0 +1,40 @@
+{
+  "date": "2026-11-06",
+  "route": "headless Chromium against the running local companion container",
+  "containerImage": "sha256:1ae8f1b49c23fbe706c82cbdee480121b9e6f9f2274c383aac025e07d5a6b843",
+  "viewports": [
+    [
+      1440,
+      1000
+    ],
+    [
+      390,
+      844
+    ]
+  ],
+  "verified": [
+    "access-key entry",
+    "real AWS CLI remote authorization link",
+    "cancel sign-in",
+    "sample inspection",
+    "uploaded Dockerfile inspection",
+    "sign-out",
+    "no browser page errors",
+    "no mobile horizontal overflow"
+  ],
+  "unverified": [
+    "completed AWS account sign-in",
+    "live AWS deployment",
+    "public Cloudflare tunnel",
+    "nested Docker engine on current host"
+  ],
+  "sha256": {
+    "src/web/server.js": "66a4d845ea22b719ddf0fb93e0420bd061bd937569d1effda2cfadf7bfead626",
+    "src/web/auth.js": "f949167a90ff71b646b9fb753d769584841b528ff4c6609f8d3ef9c7f871ef98",
+    "src/web/uploads.js": "65fffbd95aeebbbba377eb9d3d9beb733312de83e37a934d8925413ff024d7c6",
+    "src/renderer/browser.js": "a7730343b2722669b4b050a6eb350c957e9eb92701526a71adda614dc6bcbb18",
+    "src/renderer/app.js": "dcb6186f85aaa6e697cea666596eafd1107ea4b6910a332c151063583c140e13",
+    "src/renderer/index.html": "abeba14d6390f6c419c26035a97be32602cab366d05f0e5d87acbda995d673a4",
+    "Dockerfile": "74ceeb427aa7599884219e54fdae441c5a99de02c7fcd03488bc57e8f8950a21"
+  }
+}

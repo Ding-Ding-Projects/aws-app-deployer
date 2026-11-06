@@ -2,6 +2,7 @@
 'use strict';
 (() => {
   const api = window.deployer;
+  const browser = !!api.browser;
   const root = document.getElementById('app');
   const live = document.getElementById('live');
   let VERSION = '';
@@ -77,8 +78,9 @@
   async function loadProfiles() {
     S.profiles = null; S.profilesError = null; render();
     const r = await api.profiles();
-    if (r.ok) S.profiles = r.profiles; else { S.profiles = []; S.profilesError = r.error; }
+    if (r.ok) S.profiles = browser && !r.profiles.length ? [{ name: 'default', region: 'us-east-1' }] : r.profiles; else { S.profiles = []; S.profilesError = r.error; }
     if (!S.selection && S.settings.selection) S.selection = S.settings.selection;
+    if (browser && !S.selection && S.profiles?.length) S.selection = { profile: S.profiles[0].name, region: S.profiles[0].region || 'us-east-1' };
     render();
   }
   async function verify() {
@@ -93,6 +95,7 @@
   // ---------- operations ----------
   api.onOperation(ev => {
     if (ev.kind === 'login' && S.login?.op === ev.op) {
+      if (browser && ev.type === 'progress' && (ev.authorizationUrl || ev.url)) { S.login.authorizationUrl = safeAwsUrl(ev.authorizationUrl || ev.url); }
       if (ev.type === 'succeeded') { S.identity = ev.result.identity; S.login = null; S.loginExpired = false; api.window('focus'); toast('Connected to ' + ev.result.identity.accountId + ' as ' + roleOf(ev.result.identity.arn)); cue('ok'); }
       else if (ev.type === 'failed' || ev.type === 'cancelled') { S.login = { ...S.login, done: true, error: ev.result?.error || 'CANCELLED' }; cue('err'); }
       render();
@@ -124,7 +127,7 @@
       <button class="chip" style="height: 28px; -webkit-app-region: no-drag" data-act="palette" aria-label="${T('palette')}">${ic('search', 'sm')}<span class="kbd">Ctrl+Shift+F</span></button>
       ${S.settings?.a11y?.hidden ? '' : `<button class="chip" style="height: 28px; -webkit-app-region: no-drag" data-panel-open="a11y" aria-label="Accessibility tools" data-menu="a11y">${ic('accessibility_new', 'sm')}</button>`}
       <button class="chip" style="height: 28px; -webkit-app-region: no-drag" data-panel-open="notes" aria-label="${T('notifications')}">${ic('notifications', 'sm')}${S.notes.length ? `<span class="badge ac" style="height: 18px">${S.notes.length}</span>` : ''}</button>
-      <div class="caption"><button data-win="minimize" aria-label="Minimize">${ic('remove')}</button><button data-win="maximize" aria-label="${S.maximized ? 'Restore' : 'Maximize'}">${ic(S.maximized ? 'filter_none' : 'crop_square')}</button><button class="x" data-win="close" aria-label="Close">${ic('close')}</button></div></div>
+      ${browser ? '<span class="badge ac">Browser companion</span><button class="chip" data-act="sign-out">Sign out</button>' : `<div class="caption"><button data-win="minimize" aria-label="Minimize">${ic('remove')}</button><button data-win="maximize" aria-label="${S.maximized ? 'Restore' : 'Maximize'}">${ic(S.maximized ? 'filter_none' : 'crop_square')}</button><button class="x" data-win="close" aria-label="Close">${ic('close')}</button></div>`}</div>
     ${S.update?.status === 'ready' && !S.updateLater ? `<div class="banner" role="status">${ic('system_update', 'fill')}<span class="stack grow" style="flex: 1 1 320px"><span style="font-weight: 650">Version ${esc(S.update.next)} is ready to install</span><span class="small" style="color: inherit; opacity: .85">Unsigned build: Windows may show an unknown-publisher or SmartScreen warning. Your settings and drafts are kept.</span></span><button class="btn text" style="color: inherit" data-act="open-url" data-url="https://github.com/Ding-Ding-Projects/aws-app-deployer/releases/latest">Release notes</button><button class="btn out" style="color: inherit; border-color: currentColor" data-act="update-later">Later</button><button class="btn fillb" data-act="update-install">${ic('restart_alt')}Restart to install update</button></div>` : ''}
     <div class="body">
       ${rail ? `<nav class="rail" aria-label="Main">
@@ -148,7 +151,7 @@
     const installing = S.install && !S.install.done;
     return `<div class="card rise" style="--i:3; flex: 1">
       <span class="h2">${T('checking')}</span>
-      <div class="steps">${row(p.aws?.available, 'AWS CLI v2.22 or later', p.aws?.available ? 'Found' : reason(p.aws?.error, 'aws'))}
+      <div class="steps">${row(p.aws?.available, browser ? 'AWS CLI with console sign-in support' : 'AWS CLI v2.22 or later', p.aws?.available ? 'Found' : reason(p.aws?.error, 'aws'))}
       ${row(p.docker?.available && p.docker?.running, 'Docker Engine and Compose', p.docker?.available ? (p.docker.running ? 'Running' : 'Installed, but the engine is not running (' + reason(p.docker?.error, 'docker').toLowerCase() + ')') : reason(p.docker?.error, 'docker'))}</div>
       ${missing.length ? `<button class="btn fillb" data-act="install" data-tools="${missing.join(',')}" ${installing || p.platform !== 'win32' ? 'disabled' : ''}>${ic('download', 'fill')}${T('install_missing')}</button>
         <span class="small">${p.platform === 'win32' ? T('install_note') : esc(Lib.errorText('UNSUPPORTED_PLATFORM'))}</span>` : `<span class="badge ok" style="align-self: flex-start">${ic('check', 'sm')}${T('all_ready')}</span>`}
@@ -173,7 +176,7 @@
       : `<div class="list" style="background: var(--s1)">${pr.map(p => `<button class="li ${S.selection?.profile === p.name ? 'sel' : ''}" data-act="pick-profile" data-profile="${esc(p.name)}" data-region="${esc(p.region || '')}">${ic(S.selection?.profile === p.name ? 'radio_button_checked' : 'radio_button_unchecked')}<span class="stack grow"><span class="t mono">${esc(p.name)}</span><span class="m">${p.region ? esc(p.region) : 'No region set'}</span></span></button>`).join('')}</div>`;
     return `<div style="padding: 32px; display: flex; flex-direction: column; gap: 24px; max-width: 1120px; margin: 0 auto; width: 100%">
       <div class="row rise"><span class="badge ac">${T('setup')}</span><span class="grow"></span><button class="btn text" data-act="skip-setup">Skip for now</button></div>
-      <div class="stack rise" style="--i:1; gap: 10px; max-width: 720px"><h1 class="h1" style="font-size: 38px; letter-spacing: -.035em">Deploy a container to your own AWS account.</h1><p class="sub" style="margin: 0; font-size: 16px">Pick a Dockerfile or Compose project, press Deploy, and get a public link anyone can open. Everything runs on this computer with your own AWS credentials.</p></div>
+      <div class="stack rise" style="--i:1; gap: 10px; max-width: 720px"><h1 class="h1" style="font-size: 38px; letter-spacing: -.035em">Deploy a container to your own AWS account.</h1><p class="sub" style="margin: 0; font-size: 16px">${browser ? 'Upload a Dockerfile project' : 'Pick a Dockerfile or Compose project'}, press Deploy, and get a public link anyone can open. ${browser ? 'Builds and deployments run on the companion server using your AWS session.' : 'Everything runs on this computer with your own AWS credentials.'}</p></div>
       <div class="card rise" style="--i:2; flex-direction: row; gap: 14px; background: var(--warn-c)">${ic('payments', 'fill')}<span class="stack"><span style="font-weight: 650">${T('charges')}</span><span class="sub">${T('charges_sub')}</span></span></div>
       <div class="cols" style="align-items: stretch">
         <div class="wide"><div class="card rise" style="--i:3"><div class="row"><span class="tile ac">${ic('badge', 'fill')}</span><span class="stack grow"><span class="h2">Use an AWS CLI profile</span><span class="small">${T('profiles')}</span></span><button class="btn text" data-act="reload-profiles">${ic('refresh')}</button></div>${list}
@@ -182,23 +185,36 @@
         <div class="side">${prereqCard()}</div>
       </div></div>`;
   }
+  function safeAwsUrl(value) {
+    try { const url = new URL(value); return url.protocol === 'https:' && !url.username && !url.password && !url.port && /(^|\.)signin\.aws\.amazon\.com$/.test(url.hostname) && url.pathname === '/v1/authorize' ? url.href : null; } catch { return null; }
+  }
+  function browserError(code) {
+    return ({ TIMEOUT: 'AWS sign-in expired. Start sign-in again.', AWS_LOGIN_FAILED: 'AWS did not authorize this session. The request may have been denied or the code expired. Start sign-in again.', UNAVAILABLE: 'AWS CLI is unavailable on the companion server.', LOGIN_IN_PROGRESS: 'A sign-in is already running. Cancel it before starting again.', BROWSER_COMPOSE_UNSUPPORTED: 'Compose uploads are not supported yet. Choose a Dockerfile project.', DOCKERFILE_REQUIRED: 'Choose a project folder containing a Dockerfile. Compose uploads are not supported yet.', AUTH_REQUIRED: 'Companion access expired. Reopen your protected access link.', NETWORK_ERROR: 'The companion server is unavailable. Try again.', AWS_LOGIN_EXPIRED: 'AWS authorization expired. Start sign-in again.', AWS_LOGIN_DENIED: 'AWS authorization was denied. Start sign-in again when ready.', CANCELLED: 'Sign-in cancelled. You can start again.', INVALID_UPLOAD: 'Choose a valid project folder without unsafe paths.', UPLOAD_INVALID: 'Choose a valid project folder without unsafe paths.', UPLOAD_TOO_LARGE: 'The folder exceeds 500 files or 16 MiB.' })[code] || Lib.errorText(code);
+  }
+  function browserLoginPanel(L) {
+    return `<div class="card raise" style="padding: 28px; gap: 20px; border: 1px solid var(--line)"><span class="h2">Sign in with AWS console</span><p class="sub">Open AWS, choose your account and approve access. Copy the authorization code from AWS and paste it below. Your AWS password stays on AWS.</p>
+      ${L.authorizationUrl ? `<a class="btn fillb" style="align-self:flex-start" href="${esc(L.authorizationUrl)}" target="_blank" rel="noopener noreferrer">${ic('open_in_new')}Open AWS sign-in</a>` : '<span class="small" role="status">Preparing the AWS authorization link…</span>'}
+      <form id="aws-code-form" class="stack" style="gap:16px" autocomplete="off"><div class="field"><label for="aws-code">AWS authorization code</label><input id="aws-code" type="password" autocomplete="off" spellcheck="false" placeholder="Paste code from AWS" ${L.submitting ? 'disabled' : ''}><span class="help">The code is sent once to the companion server and is not saved.</span></div>
+      <div class="row" style="gap:8px"><button class="btn fillb" type="submit" data-act="submit-code" ${!L.authorizationUrl || L.submitting ? 'disabled' : ''}>${L.submitting ? 'Verifying…' : 'Verify account'}</button><button class="btn out" data-act="cancel-op" type="button" data-op="${esc(L.op)}">Cancel sign-in</button></div></form><span class="small">If the code expires or access is denied, start sign-in again.</span></div>`;
+  }
   function viewAccounts() {
     const s = S.selection, L = S.login, id = S.identity;
     let main;
     if (!s) main = `<div class="empty"><span class="tile">${ic('key_off')}</span><span class="h2">Choose a profile first</span><button class="btn fillb" data-go="setup">${T('setup')}</button></div>`;
+    else if (browser && L && !L.done) main = browserLoginPanel(L);
     else if (L && !L.done) main = `<div class="card raise" style="padding: 32px; gap: 24px; border: 1px solid var(--line)"><div class="row" style="gap: 18px"><span class="tile ac" style="width: 56px; height: 56px; border-radius: 18px">${ic('open_in_browser', 'lg fill')}</span><span class="stack"><span style="font-size: 20px; font-weight: 650">${T('waiting_browser')}</span><span class="sub">Approve the request in your browser. AWS CLI handles the sign-in; this window comes back by itself.</span></span></div>
       <div class="steps" aria-live="polite"><div class="step done"><span class="n">${ic('check', 'sm')}</span><span class="t">Browser opened</span></div><div class="step now"><span class="n">2</span><span class="stack"><span class="t">Waiting for approval</span><span class="m">Times out after 5 minutes</span></span></div><div class="step off"><span class="n">3</span><span class="t">Verify account</span></div></div>
       <button class="btn out" data-act="cancel-op" data-op="${L.op}" style="align-self: flex-start">Cancel sign-in</button></div>`;
     else if (id) main = `<div class="card raise rise" style="padding: 28px; gap: 20px; border: 1px solid var(--line)"><div class="row" style="gap: 16px"><span class="tile ok pop" style="width: 56px; height: 56px; border-radius: 18px"><svg class="check" width="28" height="28" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 12.5l4.2 4.2L19 7" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"></path></svg></span><span class="stack"><span style="font-size: 20px; font-weight: 650">${T('verified')}</span><span class="sub">Deployments from this profile go to this account only.</span></span></div>
       <dl class="kv" style="margin: 0; grid-template-columns: 140px minmax(0, 1fr)"><dt>Account ID</dt><dd class="mono">${esc(id.accountId.replace(/(\d{4})(?=\d)/g, '$1 '))}</dd><dt>Role</dt><dd>${esc(roleOf(id.arn))}</dd><dt>Signed-in ARN</dt><dd class="mono" style="overflow-wrap: anywhere; color: var(--tx2)">${esc(id.arn)}</dd><dt>Profile</dt><dd class="mono">${esc(id.profile)}</dd><dt>Region</dt><dd class="mono">${esc(id.region)}</dd></dl>
       <div class="row" style="flex-wrap: wrap"><button class="btn fillb" data-go="wizard">${ic('rocket_launch')}Start a deployment</button><button class="btn out" data-act="verify">Re-verify</button></div></div>`;
-    else main = `<div class="card raise" style="padding: 28px; gap: 18px; border: 1px solid var(--line)"><div class="row" style="gap: 16px"><span class="tile ${S.loginExpired ? 'warn' : 'ac'}" style="width: 56px; height: 56px; border-radius: 18px">${ic(S.loginExpired ? 'lock_clock' : 'login', 'lg fill')}</span><span class="stack"><span style="font-size: 20px; font-weight: 650">${S.loginExpired ? 'Your AWS sign-in expired' : 'Sign in to ' + esc(s.profile)}</span><span class="sub">${S.loginExpired ? 'Nothing was changed in AWS. Sign in again to read status or deploy.' : 'Your browser opens the AWS access portal. This is not your AWS console password.'}</span></span></div>
-      ${!s.region ? `<div class="field"><label for="reg">Region for this profile</label><input id="reg" class="mono" placeholder="us-east-1" data-input="region"></div>` : ''}
-      ${L?.error ? `<div class="card" style="background: var(--err-c); flex-direction: row; gap: 10px">${ic('error', 'fill')}<span>${esc(Lib.errorText(L.error))}</span></div>` : ''}
+    else main = `<div class="card raise" style="padding: 28px; gap: 18px; border: 1px solid var(--line)"><div class="row" style="gap: 16px"><span class="tile ${S.loginExpired ? 'warn' : 'ac'}" style="width: 56px; height: 56px; border-radius: 18px">${ic(S.loginExpired ? 'lock_clock' : 'login', 'lg fill')}</span><span class="stack"><span style="font-size: 20px; font-weight: 650">${S.loginExpired ? 'Your AWS sign-in expired' : 'Sign in to ' + esc(s.profile)}</span><span class="sub">${S.loginExpired ? 'Nothing was changed in AWS. Sign in again to read status or deploy.' : browser ? 'Sign in with your AWS console account in a separate AWS tab, then paste the authorization code here.' : 'Your browser opens the AWS access portal. This is not your AWS console password.'}</span></span></div>
+      ${browser || !s.region ? `<div class="field"><label for="reg">AWS region</label><input id="reg" class="mono" placeholder="us-east-1" value="${esc(s.region)}" data-input="region"></div>` : ''}
+      ${L?.error ? `<div class="card" style="background: var(--err-c); flex-direction: row; gap: 10px">${ic('error', 'fill')}<span>${esc(browser ? browserError(L.error) : Lib.errorText(L.error))}</span></div>` : ''}
       <button class="btn fillb" data-act="login" style="align-self: flex-start">${ic('open_in_browser')}${T('sign_in')}</button></div>`;
     const list = (S.profiles || []).map(p => `<button class="li ${s?.profile === p.name ? 'sel' : ''}" data-act="pick-profile" data-profile="${esc(p.name)}" data-region="${esc(p.region || '')}"><span class="tile ${s?.profile === p.name && id ? 'ok' : ''}">${ic(s?.profile === p.name && id ? 'verified_user' : 'key', 'fill')}</span><span class="stack grow"><span class="t mono">${esc(p.name)}</span><span class="m">${esc(p.region || 'region needed')}</span></span></button>`).join('');
-    return page(T('nav_accounts'), `<button class="btn out" data-act="reload-profiles">${ic('refresh')}${T('refresh')}</button>`, `<div class="cols"><div class="side extra" style="flex: 1 1 340px"><span class="label">${T('profiles').toUpperCase()}</span><div class="list">${list || `<span class="small" style="padding: 12px">${T('no_profiles')}</span>`}</div>
-      <div class="card outline" style="flex-direction: row; gap: 12px">${ic('group')}<span class="small">Each Windows user keeps their own profiles and AWS credentials. Signing in to AWS gives this app permission to deploy; it never adds a sign-in to your deployed site.</span></div></div><div class="wide">${main}</div></div>`);
+    return page(T('nav_accounts'), `<button class="btn out" data-act="reload-profiles">${ic('refresh')}${T('refresh')}</button>`, `<div class="cols"><div class="side extra" style="flex: 1 1 340px"><span class="label">${browser ? 'Profiles in this browser session' : T('profiles').toUpperCase()}</span><div class="list">${list || `<span class="small" style="padding: 12px">${T('no_profiles')}</span>`}</div>
+      <div class="card outline" style="flex-direction: row; gap: 12px">${ic('group')}<span class="small">${browser ? 'Your AWS session is isolated on the companion server and expires with this browser access session.' : 'Each Windows user keeps their own profiles and AWS credentials.'} Signing in to AWS gives this app permission to deploy; it never adds a sign-in to your deployed site.</span></div></div><div class="wide">${main}</div></div>`);
   }
   function viewDeploys() {
     const d = [...S.history.deployments].reverse();
@@ -223,7 +239,7 @@
     if (W.step === 2) {
       const I = W.inspect;
       const reasons = I && !I.ok && I.reasons ? `<div class="list">${I.reasons.map(r => `<div class="li static"><span class="stack grow"><span class="t">${esc(r.service || 'project')}</span><span class="m mono">${esc(r.feature)}</span></span><span class="badge warn">${ic('block', 'sm')}Not supported yet</span></div>`).join('')}</div>` : '';
-      body = `<div class="drop ${W.file ? 'idle' : ''}" style="flex-wrap: wrap"><span class="tile ac" style="width: 56px; height: 56px; border-radius: 18px">${ic('folder_open', 'lg fill')}</span><span class="stack grow" style="flex: 1"><span style="font-weight: 650; overflow-wrap: anywhere">${W.file ? esc(W.file) : T('choose_file')}</span><span class="sub">${W.inspecting ? 'Inspecting…' : I?.ok ? 'Inspected: ' + esc(I.source.kind) + (I.source.containerPort ? ' · port ' + I.source.containerPort : ' · no single exposed port') : I ? esc(Lib.errorText(I.error)) : 'Nothing is created in AWS until you press Deploy.'}</span></span><button class="btn out" data-act="pick">${W.file ? 'Choose another' : 'Choose file'}</button></div>${reasons}
+      body = `<div class="drop ${W.file ? 'idle' : ''}" style="flex-wrap: wrap"><span class="tile ac" style="width: 56px; height: 56px; border-radius: 18px">${ic('folder_open', 'lg fill')}</span><span class="stack grow" style="flex: 1"><span style="font-weight: 650; overflow-wrap: anywhere">${W.file ? esc(W.file) : T('choose_file')}</span><span class="sub">${W.inspecting ? 'Inspecting…' : I?.ok ? 'Inspected: ' + esc(I.source.kind) + (I.source.containerPort ? ' · port ' + I.source.containerPort : ' · no single exposed port') : I ? esc(Lib.errorText(I.error)) : 'Nothing is created in AWS until you press Deploy.'}</span></span><button class="btn out" data-act="pick">${W.file ? 'Choose another' : browser ? 'Upload project folder' : 'Choose file'}</button>${browser ? '<button class="btn tonal" data-act="sample">Use sample project</button><span class="small" style="flex-basis:100%">Upload a folder containing a Dockerfile. Maximum 500 files and 16 MiB. Review files first; exclude credentials and secrets.</span>' : ''}</div>${reasons}
         ${I?.ok && I.source.kind === 'image' ? `<div class="card" style="background: var(--warn-c)">This Compose service uses a prebuilt image. Choose a Compose service with a build context, or a Dockerfile.</div>` : ''}
         <div class="row" style="justify-content: flex-end; gap: 8px"><button class="btn out" data-act="wiz" data-step="1">${T('back')}</button><button class="btn fillb" data-act="wiz" data-step="3" ${I?.ok && I.source.kind !== 'image' ? '' : 'disabled'}>${T('next')}${ic('arrow_forward')}</button></div>`;
     }
@@ -305,14 +321,14 @@
   function updatesCard() {
     const u = S.update || { status: 'idle' };
     const label = { idle: ['mute', 'Waiting for first check'], checking: ['mute', 'Checking'], 'up-to-date': ['ok', 'Up to date'], downloading: ['ac', 'Downloading'], ready: ['ac', 'Ready to install ' + (u.next || '')], failed: ['err', 'Failed'], 'not-installed': ['mute', 'Not installed'] }[u.status] || ['mute', u.status];
-    const detail = u.status === 'failed' ? esc(u.error) : u.status === 'not-installed' ? 'Running from source or an unpacked build; updates come from a new installer or your checkout.' : u.checkedAt ? 'Last checked ' + esc(stamp(u.checkedAt)) : 'Checks at start and every 4 hours';
+    const detail = u.status === 'failed' ? esc(u.error) : u.status === 'not-installed' ? (browser ? 'Updates are managed on the companion server.' : 'Running from source or an unpacked build; updates come from a new installer or your checkout.') : u.checkedAt ? 'Last checked ' + esc(stamp(u.checkedAt)) : 'Checks at start and every 4 hours';
     return `<div class="card"><div class="row"><span class="tile ac">${ic('update', 'fill')}</span><span class="stack grow"><span class="h2">Updates</span><span class="small">${detail}</span></span></div><span class="badge ${label[0]}" style="align-self: flex-start">${esc(label[1])}</span><button class="btn tonal" data-act="update-check" style="align-self: flex-start" ${u.status === 'not-installed' ? 'disabled' : ''}>${ic('refresh')}Check for updates</button></div>`;
   }
   function aboutBody() {
     const p = S.prov; if (!p) return '';
     const cn = p.codeName;
     return `${cn?.available ? `<div class="row">${cn.photo ? `<img src="${esc(cn.photo)}" alt="${esc(cn.alt || cn.en)}" style="width: 72px; height: 72px; border-radius: 16px; object-fit: cover; background: var(--s4)">` : ''}<span class="stack"><span class="label">CODE NAME</span><span style="font-weight: 650">${esc(cn.en)} · ${esc(cn.zh)}</span></span></div>` : ''}
-      <dl class="kv" style="margin: 0"><dt>Version</dt><dd class="mono">${esc(p.version)}</dd><dt>Built</dt><dd class="mono">${p.ok ? esc(stamp(p.builtAt)) : 'Unavailable: not a release build'}</dd>${p.ok ? `<dt>Commit</dt><dd class="mono"><button class="btn text mono" style="padding: 0; height: auto" data-act="open-url" data-url="https://github.com/Ding-Ding-Projects/aws-app-deployer/commit/${esc(p.commit)}">${esc(p.commit.slice(0, 7))}</button></dd>` : ''}<dt>Installer</dt><dd>Squirrel, unsigned</dd></dl>`;
+      <dl class="kv" style="margin: 0"><dt>Version</dt><dd class="mono">${esc(p.version)}</dd><dt>Built</dt><dd class="mono">${p.ok ? esc(stamp(p.builtAt)) : 'Unavailable: not a release build'}</dd>${p.ok ? `<dt>Commit</dt><dd class="mono"><button class="btn text mono" style="padding: 0; height: auto" data-act="open-url" data-url="https://github.com/Ding-Ding-Projects/aws-app-deployer/commit/${esc(p.commit)}">${esc(p.commit.slice(0, 7))}</button></dd>` : ''}<dt>${browser ? 'Runtime' : 'Installer'}</dt><dd>${browser ? 'Browser companion' : 'Squirrel, unsigned'}</dd></dl>`;
   }
   function viewHelp() {
     return page(T('nav_help'), '', `<div class="cols"><div class="wide"><div class="card"><span class="h2">Keyboard</span><dl class="kv" style="margin: 0"><dt><span class="kbd">Ctrl+Shift+F</span></dt><dd>Command palette with regex search</dd><dt><span class="kbd">Ctrl+N</span></dt><dd>New deployment</dd><dt><span class="kbd">Ctrl+,</span></dt><dd>Settings</dd><dt><span class="kbd">Esc</span></dt><dd>Close palette or panel</dd></dl></div>
@@ -454,7 +470,7 @@
     for (let n; (n = walker.nextNode());) { const next = Lib.applyVocabulary(n.nodeValue, v); if (next !== n.nodeValue) n.nodeValue = next; }
   }
   function render() {
-    if (!S.settings) return;
+    if (!S.settings || (browser && !api.authenticated)) return;
     const focusId = document.activeElement?.id, caret = document.activeElement?.selectionStart;
     const views = { setup: viewSetup, accounts: viewAccounts, deploys: viewDeploys, wizard: viewWizard, run: viewRun, result: viewResult, settings: viewSettings, help: viewHelp };
     root.innerHTML = shell((views[S.view] || viewDeploys)(), { rail: S.view !== 'setup' }) + paletteHtml() + panelHtml() + dimsumHtml();
@@ -491,8 +507,10 @@
     if (t.dataset.set) return set(t.dataset.set, t.dataset.val);
     if (t.dataset.cmd) { const c = COMMANDS.find(x => x.id === t.dataset.cmd); S.palette = null; render(); return c?.run(); }
     const a = t.dataset.act;
+    if (a === 'submit-code') e.preventDefault();
     if (a === 'close-palette' && e.target.closest('[data-stop]')) return;
     switch (a) {
+      case 'sign-out': if (browser) await api.signOut(); break;
       case 'palette': S.palette = S.palette ? null : { q: '', regex: false, sel: 0 }; render(); document.getElementById('pq')?.focus(); break;
       case 'close-palette': S.palette = null; render(); break;
       case 'regex': S.palette.regex = !S.palette.regex; render(); document.getElementById('pq')?.focus(); break;
@@ -502,14 +520,16 @@
       case 'install': { const tools = t.dataset.tools.split(','); const r = await api.install(tools); if (r.ok) { S.install = { op: r.op, requested: Object.fromEntries(tools.map(x => [x, 1])), tools: {}, log: [[time(), 'Started one-click install']], done: false }; cue('start'); } render(); break; }
       case 'cancel-op': await api.cancel(t.dataset.op); break;
       case 'reload-profiles': loadProfiles(); break;
-      case 'pick-profile': S.selection = { profile: t.dataset.profile, region: t.dataset.region || '' }; S.identity = null; S.login = null; S.loginExpired = false; if (S.selection.region) api.setSetting('selection', S.selection); render(); if (S.selection.region) verify(); break;
+      case 'pick-profile': if (browser && S.login && !S.login.done) await api.cancel(S.login.op); S.selection = { profile: t.dataset.profile, region: t.dataset.region || '' }; S.identity = null; S.login = null; S.loginExpired = false; if (S.selection.region) api.setSetting('selection', S.selection); render(); if (S.selection.region) verify(); break;
       case 'skip-setup': await set('setupComplete', true); go('deploys'); break;
       case 'go-connect': await set('setupComplete', true); go('accounts'); break;
-      case 'login': { if (!/^[a-z]{2}(-[a-z]+)+-\d$/.test(S.selection.region || '')) { toast('Enter a region such as us-east-1', 'err'); break; } api.setSetting('selection', S.selection); const r = await api.login(S.selection); S.login = r.ok ? { op: r.op } : { done: true, error: r.error }; render(); break; }
+      case 'login': { if (!/^[a-z]{2}(-[a-z]+)+-\d$/.test(S.selection.region || '')) { toast('Enter a region such as us-east-1', 'err'); break; } api.setSetting('selection', S.selection); const r = await api.login(S.selection); S.login = r.ok ? { op: r.op, authorizationUrl: safeAwsUrl(r.authorizationUrl) } : { done: true, error: r.error }; render(); break; }
+      case 'submit-code': { const input = document.getElementById('aws-code'); const code = input?.value.trim(); if (!code) { input?.focus(); break; } input.value = ''; S.login.submitting = true; render(); const r = await api.submitLoginCode(S.login.op, code); if (!r.ok) { if (S.login?.op) await api.cancel(S.login.op); S.login = { ...S.login, done: true, error: r.error }; } render(); break; }
       case 'verify': verify(); break;
       case 'wiz': S.wizard.step = +t.dataset.step; saveDraft(); render(); break;
       case 'wiz-restart': S.wizard.step = 3; go('wizard'); break;
-      case 'pick': { const r = await api.pickSource(); if (!r.ok) break; S.wizard.file = r.path; S.wizard.inspecting = true; S.wizard.inspect = null; render(); const i = await api.inspectSource(r.path); S.wizard.inspecting = false; S.wizard.inspect = i;
+      case 'sample':
+      case 'pick': { const r = await (a === 'sample' ? api.sampleProject() : api.pickSource()); if (!r.ok) { if (r.error !== 'CANCELLED') toast(browserError(r.error), 'err'); break; } S.wizard.file = r.path; S.wizard.inspecting = true; S.wizard.inspect = null; render(); const i = await api.inspectSource(r.path); S.wizard.inspecting = false; S.wizard.inspect = i;
         if (i.ok) { const src = i.source; S.wizard.port = src.containerPort ? String(src.containerPort) : ''; if (!S.wizard.name) S.wizard.name = (src.service || 'app').toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/^-+|-+$/g, '').padEnd(3, 'x').slice(0, 32); S.wizard.env = Object.entries(src.environment || {}).map(([k, v]) => ({ k, v })); } saveDraft(); render(); break; }
       case 'env-add': S.wizard.env.push({ k: '', v: '' }); render(); break;
       case 'env-del': S.wizard.env.splice(+t.dataset.i, 1); render(); break;
@@ -559,6 +579,7 @@
     cue('start'); say('Deployment started'); go('run');
   }
   function saveDraft() { const W = S.wizard; api.setSetting('draft', { step: W.step, file: W.file, name: W.name, port: W.port, health: W.health, env: W.env.map(e => ({ k: e.k, v: '' })) }); }
+  root.addEventListener('submit', e => { if (e.target.id === 'aws-code-form') { e.preventDefault(); root.querySelector('[data-act="submit-code"]')?.click(); } });
   root.addEventListener('input', e => {
     const el = e.target;
     if (el.dataset.input === 'paletteQ') { S.palette.q = el.value; S.palette.sel = 0; render(); return; }
@@ -613,10 +634,14 @@
 
   // ---------- start ----------
   (async () => {
+    if (browser && !(await api.ready()).ok) return;
     VERSION = await api.version();
     S.prov = await api.provenance(); S.update = await api.updateState();
     api.onUpdate(u => { if (u.status !== S.update?.status) S.updateLater = false; S.update = u; render(); });
-    { const r = await api.settings(); S.settings = r.settings; S.sources = r.sources || {}; S.defaults = r.defaults || {}; }
+    const settingsResult = await api.settings();
+    if (!settingsResult.ok || !settingsResult.settings) return;
+    S.settings = settingsResult.settings;
+    S.sources = settingsResult.sources || {}; S.defaults = settingsResult.defaults || {};
     applyAppearance();
     const d = S.settings.draft;
     if (d) Object.assign(S.wizard, { step: Math.min(d.step || 1, 3), file: d.file || null, name: d.name || '', port: d.port || '', health: d.health || '/', env: d.env || [] });

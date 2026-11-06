@@ -2,11 +2,11 @@
 const { spawn } = require('node:child_process');
 
 function createRunner(spawnProcess = spawn) {
-  return function run(command, args, { signal, timeoutMs = 30000, maxBytes = 1024 * 1024, stdin, cwd } = {}) {
+  return function run(command, args, { signal, timeoutMs = 30000, maxBytes = 1024 * 1024, stdin, cwd, env } = {}) {
     return new Promise((resolve) => {
       if (signal?.aborted) return resolve({ ok: false, error: 'CANCELLED' });
       let child;
-      try { child = spawnProcess(command, args, { shell: false, windowsHide: true, cwd, stdio: [stdin === undefined ? 'ignore' : 'pipe', 'pipe', 'pipe'] }); }
+      try { child = spawnProcess(command, args, { shell: false, windowsHide: true, cwd, env, stdio: [stdin === undefined ? 'ignore' : 'pipe', 'pipe', 'pipe'] }); }
       catch { return resolve({ ok: false, error: 'UNAVAILABLE' }); }
       let settled = false, bytes = 0, stdout = '', stderr = '', timer, killTimer;
       const finish = (result) => {

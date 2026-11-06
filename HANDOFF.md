@@ -2,9 +2,9 @@
 
 ## Product and current state
 
-Build a local desktop application that lets people deploy containerized web applications into their own AWS accounts. The application itself runs locally; it is not a hosted deployment service. The repository is public: https://github.com/Ding-Ding-Projects/aws-app-deployer.
+Build a local desktop application that lets people deploy containerized web applications into their own AWS accounts. The primary application runs locally. An explicitly requested protected browser companion supports remote interactive testing. The repository is public: https://github.com/Ding-Ding-Projects/aws-app-deployer.
 
-The user explicitly requested a local desktop runtime, multiple users connecting their own AWS accounts, one-click public deployment from a Dockerfile or Docker Compose file, automatic AWS infrastructure setup and recovery, and AWS browser sign-in that returns to the application. Windows is the initial packaging target; keep layouts and code portable. There is currently no shipped desktop interface, AWS-connected environment, or verified deployment. Do not present illustrations or sample statuses as live infrastructure.
+The user explicitly requested a local desktop runtime, multiple users connecting their own AWS accounts, one-click public deployment from a Dockerfile or Docker Compose file, automatic AWS infrastructure setup and recovery, and AWS browser sign-in that returns to the application. Windows is the initial packaging target; keep layouts and code portable. A desktop interface and browser test companion now exist. There is no verified live AWS deployment. Do not present illustrations or sample statuses as live infrastructure.
 
 ## Ownership and parallel work
 
@@ -96,9 +96,9 @@ Real AWS sign-in and deployment require a user-connected AWS profile and access 
 
 - Canonical repository and this handoff are published; the collaborating designer owns the desktop design and renderer work.
 - Backend profile discovery, AWS CLI 2.22+ browser SSO invocation, identity verification, bounded command execution, infrastructure generation, and deployment orchestration are implemented. All 24 local backend tests pass. They mock AWS and Docker and do not prove a live deployment. Stack and image-repository ownership tags are checked before reusing resources; unrelated resources with the same names are rejected.
-- The backend supports source build, ECR publication, automatic network provisioning, CloudFormation deployment, public-URL verification, and strict single-service Compose intake. The UI still needs to invoke these operations through the desktop bridge. Unknown or unsupported Compose features are rejected before provisioning; this is not full Compose compatibility.
+- The backend supports source build, ECR publication, automatic network provisioning, CloudFormation deployment, public-URL verification, and strict single-service Compose intake. The desktop UI invokes these operations through its named bridge. Unknown or unsupported Compose features are rejected before provisioning; this is not full Compose compatibility.
 - The design handoff is in `design/` (artboards, tokens, prototype renders, review record).
-- Desktop integration now exists: `src/main/` exposes the backend through a named preload bridge with operation IDs and scoped events, adds a one-click Windows dependency installer and a local settings store, and `src/renderer/` implements the designed screens. Every push to `main` builds a Windows installer, captures screenshots of the built app on a Windows runner, and publishes a tagged release. See `ROADMAP.md` for the exact shipped, partial and not-started list.
+- Desktop integration now exists: `src/main/` exposes the backend through a named preload bridge with operation IDs and scoped events, adds a one-click Windows dependency installer and a local settings store, and `src/renderer/` implements the designed screens. Every push to `main` builds a Windows installer, captures source-launched Electron screenshots on a Windows runner, and publishes a tagged release. See `ROADMAP.md` for the exact shipped, partial and not-started list.
 - Full multi-service Compose support, comprehensive automatic repair, cloud update pipelines, code signing, and live AWS evidence remain unfinished. The installer has been tested with stand-in commands, not yet on a clean Windows machine.
 
 
@@ -109,3 +109,18 @@ The current default creates two private Fargate tasks behind a public ALB, with 
 Current Compose support accepts exactly one application service with a simple local build or image, one TCP port, and resolved ordinary environment values. Volumes, secrets, databases, dependency orchestration, command overrides, custom networks, privileged settings, and multi-service deployment remain unsupported and must be shown as such. Private-registry base-image authentication is not inherited into the isolated build credential context.
 
 The backend's automatic repair currently covers bounded retries of classified transient read-only AWS failures and ECS deployment circuit-breaker rollback. It does not yet install prerequisites, fix source code, change IAM permissions, repair billing, or implement general self-healing. Custom-domain HTTPS needs an existing matching ACM certificate and DNS directed to the ALB; the normal HTTP path needs neither. Do not claim a working endpoint or native desktop release without live evidence.
+
+## Browser companion handoff — 2026-11-06
+
+The approved test route is the existing renderer served by `src/web/server.js`, with `src/renderer/browser.js` adapting the named desktop API to authenticated HTTP. Coordinate against the actual filenames and API below; preserve Electron behavior. The browser uses AWS console `aws login --remote`, not the desktop SSO callback.
+
+- `POST /api/session` exchanges a private access key for an HttpOnly session cookie. `DELETE /api/session` ends the session. Sessions and AWS caches are independent.
+- `POST /api/rpc` takes `{method,args}`; `GET /api/events?after=N` returns scoped operation events and a cursor. Only named operations are available.
+- Login emits an AWS authorization URL and an operation ID. `submitLoginCode(op, code)` submits the one-time code. Render waiting, verifying, denied, cancelled, timed out, and connected states; discard code inputs immediately and never persist them.
+- `POST /api/upload` receives bounded `{files:[{path,content}]}` with base64 content and returns server-owned paths. Directory upload avoids archive extraction. `sampleSource` creates a session-owned demo project. Browser Compose remains explicitly unsupported pending safe reference resolution; desktop support is unchanged.
+- Preserve the designer's desktop typography, layouts and theme controls. Adapt titlebar actions for browsers and keep the access gate distinct from AWS account login.
+- Deployments are paid AWS operations initiated by the user's Deploy action. Session termination cancels local work but must not claim AWS deletion or rollback.
+
+The complete 115-entry baseline gap reconciliation is in [docs/FEATURE-AUDIT.md](docs/FEATURE-AUDIT.md). Fixing the preview does not close those broader requirements. See [docs/BROWSER-PREVIEW.md](docs/BROWSER-PREVIEW.md) for launch, login, tunnel and teardown steps. Cloudflare connectivity is currently blocked; no public preview URL or real AWS authentication is verified. Never substitute a landing-page link for the functional companion.
+
+Local browser acceptance now covers key entry, real AWS authorization-link generation, cancellation, sample/upload inspection and sign-out without browser page errors. Automated coverage includes expiry/late-write cleanup and concurrent-login protection. AWS account completion, AWS deployment, the nested Docker engine on this managed host, and the public tunnel remain blocked or unverified.

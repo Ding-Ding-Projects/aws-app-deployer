@@ -36,3 +36,7 @@ A VPC across two availability zones, a public Application Load Balancer, one NAT
 | `design/` | Design | Artboards, tokens, prototype renders, review record |
 
 Read the [handoff](HANDOFF.md) for product flows, ownership and the integration contract. Do not include credentials, account-specific configuration, or private instructions in this repository.
+
+## Browser preview and feature audit
+
+A protected browser companion supports remote AWS console sign-in and Dockerfile project intake. See [setup and current limits](docs/BROWSER-PREVIEW.md), [the complete feature audit](docs/FEATURE-AUDIT.md), and [the latest designer handoff](HANDOFF.md). Live AWS authentication, deployment and the temporary public tunnel remain unverified.
