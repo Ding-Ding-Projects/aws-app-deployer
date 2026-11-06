@@ -58,6 +58,8 @@ Honest inventory of the desktop app and its landing page. **Shipped** means impl
 
 ## Release and site
 
+- [x] Shipped: landing page Ctrl+Shift+F palette with regex builder, live setting controls and jump-to-element; English, Cantonese or both; funny level; accessibility tools; right-click menu; the in-app docs bundled and searchable; one-click installer download from the latest release with its SHA-256; dim sum surprise switch that cannot be turned off; same lib.js as the app
+
 - [x] Shipped: every push to main tests, builds the Windows installer, captures screenshots on a Windows runner, and publishes a tagged release with workflow time and line count
 - [x] Shipped: landing page with vendored fonts and a link preview image, published by GitHub Pages at https://ding-ding-projects.github.io/aws-app-deployer/
 - [x] Shipped: original app icon from `assets/icon.svg`, generated into a multi-size `.ico` and wired into the window, executable and installer

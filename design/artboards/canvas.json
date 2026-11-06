@@ -189,6 +189,15 @@
       "expand": "fill",
       "is_interactive": true,
       "title": "20 · Live charts, logo, Base64 toolkit, file converter, voices and wording celebration"
+    },
+    "SiteTools.dc.html": {
+      "x": 0,
+      "y": 10100,
+      "w": 1440,
+      "h": 900,
+      "expand": "fill",
+      "is_interactive": true,
+      "title": "21 · Landing page tools: palette, language, accessibility, docs, direct download, dim sum switch"
     }
   },
   "order": [

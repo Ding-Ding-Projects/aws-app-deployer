@@ -11,6 +11,7 @@
 <meta property="og:image" content="https://ding-ding-projects.github.io/aws-app-deployer/og.png">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="site.css">
 <style>
 @font-face{font-family:Inter;src:url(fonts/inter.woff2) format('woff2');font-weight:100 900;font-display:swap}
 @font-face{font-family:"JetBrains Mono";src:url(fonts/jetbrains-mono-400.woff2) format('woff2');font-weight:400;font-display:swap}
@@ -70,22 +71,25 @@ details p{margin:10px 0 0;color:var(--tx2)}
 <body style="margin:0">
 
 
-<div class="app " style="overflow: visible; min-height: 0">
+<div class="app" id="app" style="overflow: visible; min-height: 0">
+<div id="live" class="sr" aria-live="polite"></div>
   <div class="wrap">
     <nav class="nav" aria-label="Site">
       <span style="font-weight: 700; letter-spacing: -.02em; font-size: 17px">AWS App Deployer</span>
       <span style="flex: 1"></span>
-      <a class="l" href="#how">How it works</a><a class="l" href="#aws">What it creates</a><a class="l" href="#features">Features</a><a class="l" href="#faq">FAQ</a>
-      <a class="btn out" href="https://github.com/Ding-Ding-Projects/aws-app-deployer"><i class="ms" aria-hidden="true">code</i>GitHub</a>
+      <a class="l" href="#how" data-i18n="nav_how">How it works</a><a class="l" href="#aws" data-i18n="nav_aws">What it creates</a><a class="l" href="#features" data-i18n="nav_features">Features</a><a class="l" href="#docs" data-i18n="nav_docs">Docs</a><a class="l" href="#faq" data-i18n="nav_faq">FAQ</a>
+      <span class="tools"><button class="chip" data-act="palette" aria-label="Search and settings" aria-keyshortcuts="Control+Shift+F"><i class="ms sm" aria-hidden="true">search</i><span class="kbd">Ctrl+Shift+F</span></button><span class="seg" role="group" aria-label="Language"><button data-set-lang="en">English</button><button data-set-lang="yue" lang="zh-HK">廣東話</button><button data-set-lang="both">Both</button></span><button class="chip" data-act="a11y" aria-label="Accessibility tools"><i class="ms sm" aria-hidden="true">accessibility_new</i></button><button class="chip" data-act="theme" aria-label="Theme"><i class="ms sm" aria-hidden="true">dark_mode</i></button></span>
+      <a class="chip" style="height: 36px" href="https://github.com/Ding-Ding-Projects/aws-app-deployer" aria-label="Source on GitHub"><i class="ms sm" aria-hidden="true">code</i></a>
     </nav>
     <section class="hero">
       <div class="copy">
-        <span class="badge warn rise" style="align-self: flex-start">Early development · not yet released</span>
-        <h1 class="big rise" style="--i:1">From Dockerfile to a <em>public link</em>. One click.</h1>
-        <p class="sub rise" style="--i:2; margin: 0; font-size: 18px; max-width: 520px">A free Windows app that builds your container, sets up AWS networking and a load balancer, runs it on Fargate, checks it is healthy, and hands you a link anyone can open. All in your own AWS account.</p>
+        <span class="badge warn rise" style="align-self: flex-start">Early development · unsigned Windows builds</span>
+        <h1 class="big rise" style="--i:1" data-i18n="hero">From Dockerfile to a <em>public link</em>. One click.</h1>
+        <p class="small rise" style="--i:1; margin: 0" data-funny></p>
+        <p class="sub rise" style="--i:2; margin: 0; font-size: 18px; max-width: 520px" data-i18n="hero_sub">A free Windows app that builds your container, sets up AWS networking and a load balancer, runs it on Fargate, checks it is healthy, and hands you a link anyone can open. All in your own AWS account.</p>
         <div class="row rise" style="--i:3; flex-wrap: wrap">
-          <a class="btn fillb big" href="https://github.com/Ding-Ding-Projects/aws-app-deployer/releases/latest"><i class="ms fill" aria-hidden="true">download</i>Download for Windows</a>
-          <a class="btn out big" href="#how">See how it works</a>
+          <a class="btn fillb big" href="https://github.com/Ding-Ding-Projects/aws-app-deployer/releases/latest" data-download="1" data-teleport-el="Download button"><i class="ms fill" aria-hidden="true">download</i><span data-i18n="download">Download for Windows</span></a>
+          <a class="btn out big" href="#how" data-i18n="how_btn">See how it works</a>
         </div>
         <div class="row small rise" style="--i:4; gap: 16px; flex-wrap: wrap"><span class="row" style="gap: 6px"><i class="ms sm" aria-hidden="true">check</i>Free, source on GitHub</span><span class="row" style="gap: 6px"><i class="ms sm" aria-hidden="true">check</i>No account with us</span><span class="row" style="gap: 6px"><i class="ms sm" aria-hidden="true">check</i>No telemetry</span></div>
       </div>
@@ -128,7 +132,7 @@ details p{margin:10px 0 0;color:var(--tx2)}
       <span class="chip"><i class="ms sm" aria-hidden="true">inventory_2</i>Amazon ECR</span>
     </div>
     <section class="sec" id="how">
-      <div class="stack" style="gap: 10px"><span class="eyebrow">HOW IT WORKS</span><h2 class="h3">Three steps. No console, no YAML.</h2></div>
+      <div class="stack" style="gap: 10px"><span class="eyebrow">HOW IT WORKS</span><h2 class="h3" data-i18n="how_title">Three steps. No console, no YAML.</h2></div>
       <div class="grid3">
         <div class="card" style="min-height: 300px"><div class="row"><span class="num">1</span><span class="h2">Connect AWS</span></div><span class="sub">Sign in with IAM Identity Center in your browser. The app comes back to the front when AWS confirms who you are.</span>
           <div class="mini"><span class="row small" style="gap: 8px"><span class="spin" style="width: 14px; height: 14px; border-width: 2px"></span>Waiting for browser sign-in</span><span class="row small" style="gap: 8px; color: var(--ok)"><i class="ms sm" aria-hidden="true">verified_user</i><span class="mono">1234 5678 9012</span> verified</span></div></div>
@@ -139,7 +143,7 @@ details p{margin:10px 0 0;color:var(--tx2)}
       </div>
     </section>
     <section class="sec" id="aws">
-      <div class="stack" style="gap: 10px"><span class="eyebrow">WHAT IT CREATES</span><h2 class="h3">Production-shaped from the first deploy.</h2><p class="sub" style="margin: 0; max-width: 720px; font-size: 16px">One load balancer across two availability zones, two Fargate tasks, private subnets, immutable images, and automatic rollback when a release fails its health check.</p></div>
+      <div class="stack" style="gap: 10px"><span class="eyebrow">WHAT IT CREATES</span><h2 class="h3" data-i18n="aws_title">Production-shaped from the first deploy.</h2><p class="sub" style="margin: 0; max-width: 720px; font-size: 16px">One load balancer across two availability zones, two Fargate tasks, private subnets, immutable images, and automatic rollback when a release fails its health check.</p></div>
       <div class="arch">
         <div class="stack" style="gap: 12px">
           <div class="node"><span class="tile"><i class="ms" aria-hidden="true">groups</i></span><span class="stack"><span style="font-weight: 620">Visitors</span><span class="small">Anyone with the link</span></span></div>
@@ -158,7 +162,7 @@ details p{margin:10px 0 0;color:var(--tx2)}
       </div>
     </section>
     <section class="sec" id="features">
-      <div class="stack" style="gap: 10px"><span class="eyebrow">FEATURES</span><h2 class="h3">Built to finish the job, honestly.</h2></div>
+      <div class="stack" style="gap: 10px"><span class="eyebrow">FEATURES</span><h2 class="h3" data-i18n="features_title">Built to finish the job, honestly.</h2></div>
       <div class="bento">
         <div class="card wide2" style="padding: 28px"><i class="ms lg fill" style="color: var(--ac)" aria-hidden="true">download</i><span class="h2" style="font-size: 20px">One-click setup, problems fixed for you</span><span class="sub">Missing AWS CLI or Docker? One button downloads each publisher's signed installer, checks the signature, installs it silently and repairs the usual snags: missing package manager, interrupted downloads, WSL not ready, PATH not refreshed, Docker not started.</span>
           <div class="mini" style="flex-direction: row; flex-wrap: wrap; gap: 8px"><span class="badge ok"><i class="ms sm" aria-hidden="true">check</i>AWS CLI v2</span><span class="badge ac"><span class="spin" style="width: 12px; height: 12px; border-width: 2px"></span>Docker Desktop 64%</span><span class="badge mute">Windows permission next</span></div></div>
@@ -172,15 +176,28 @@ details p{margin:10px 0 0;color:var(--tx2)}
       </div>
     </section>
     <section class="sec">
-      <div class="stack" style="gap: 10px"><span class="eyebrow">SCREENS</span><h2 class="h3">Every state drawn, nothing faked.</h2><p class="small" style="margin: 0">Design previews. Screenshots of the built app replace these once a release is verified.</p></div>
+      <div class="stack" style="gap: 10px"><span class="eyebrow" id="screens">SCREENS</span><h2 class="h3" data-i18n="screens_title">Every state drawn, nothing faked.</h2><p class="small" style="margin: 0">Design previews. Screenshots of the built app replace these once a release is verified.</p></div>
       <div class="shots">
         <div class="win"><div class="tb">Sign-in</div><div class="bd" style="padding: 18px"><div class="step done"><span class="n"><i class="ms sm" aria-hidden="true">check</i></span><span class="t">Browser opened</span></div><div class="step now"><span class="n">3</span><span class="t">Waiting for approval</span></div><div class="step off"><span class="n">4</span><span class="t">Verify account</span></div></div></div>
         <div class="win"><div class="tb">Rollback</div><div class="bd" style="padding: 18px"><div class="row"><span class="tile warn"><i class="ms fill" aria-hidden="true">history</i></span><span class="stack"><span class="t" style="font-weight: 650">Previous release kept live</span><span class="small">New tasks returned HTTP 500</span></span></div><span class="badge err" style="align-self: flex-start">Needs you: add DATABASE_URL</span><div class="step done"><span class="n"><i class="ms sm" aria-hidden="true">check</i></span><span class="t">Load balancer and link unchanged</span></div></div></div>
         <div class="win"><div class="tb">Settings</div><div class="bd" style="padding: 18px"><div class="row"><span class="grow">Language</span><span class="seg"><button class="on">English</button><button>廣東話</button><button>Both</button></span></div><div class="row"><span class="grow">Reduce motion</span><span class="toggle on"></span></div><div class="row"><span class="grow">Dim sum surprise</span><span class="toggle on"></span></div></div></div>
       </div>
     </section>
+    <section class="sec" id="download">
+      <div class="stack" style="gap: 10px"><span class="eyebrow">DOWNLOAD</span><h2 class="h3" data-i18n="dl_title">Straight to the installer.</h2><p class="sub" style="margin: 0; max-width: 720px; font-size: 16px">One click downloads the Windows installer from the latest GitHub release. No download page in between. The app then installs missing tools for you, also in one click.</p></div>
+      <div class="dl-grid">
+        <div class="dl" id="dl-card" aria-live="polite"><span class="label" style="color: inherit">DOWNLOAD FOR WINDOWS</span><span class="h2">Checking the latest release…</span></div>
+        <div class="card" data-teleport-el="Dim sum surprise switch"><div class="row"><span class="h2" style="flex: 1" data-i18n="dimsum_title">Dim sum surprise</span><button class="toggle on" role="switch" aria-checked="true" aria-label="Dim sum surprise" data-act="troll"></button></div><span class="small" id="troll-note" aria-live="polite">A rare treat from the public dim sum catalog.</span><div class="dimsum-dish" id="dimsum-dish"><span class="small">Loading today's dish…</span></div></div>
+      </div>
+    </section>
+    <section class="sec" id="docs">
+      <div class="stack" style="gap: 10px"><span class="eyebrow">DOCS</span><h2 class="h3" data-i18n="docs_title">The same docs that ship in the app.</h2></div>
+      <div class="row docs-search" style="gap: 8px; flex-wrap: wrap"><label class="sr" for="docq">Search the docs</label><input id="docq" class="mono" placeholder="Search the docs"><button class="badge mute mono" style="border: 0; cursor: pointer" data-act="doc-regex" aria-pressed="false">.* Regex</button></div>
+      <div class="row" id="docs-list" style="gap: 8px; flex-wrap: wrap"><span class="small">Loading articles…</span></div>
+      <div class="card" id="docs-reader" hidden></div>
+    </section>
     <section class="sec" id="faq">
-      <div class="stack" style="gap: 10px"><span class="eyebrow">QUESTIONS</span><h2 class="h3">Before you deploy.</h2></div>
+      <div class="stack" style="gap: 10px"><span class="eyebrow">QUESTIONS</span><h2 class="h3" data-i18n="faq_title">Before you deploy.</h2></div>
       <div class="faq">
         <details open><summary>Does it cost money?</summary><p>The app is free. AWS charges for the load balancer, Fargate tasks, image storage, logs and data transfer until you delete the deployment.</p></details>
         <details><summary>Will closing the app delete my site?</summary><p>No. Infrastructure is only removed through a separate, explicit delete flow.</p></details>
@@ -191,13 +208,14 @@ details p{margin:10px 0 0;color:var(--tx2)}
       </div>
     </section>
     <section class="cta">
-      <div class="stack grow" style="flex: 1 1 380px; gap: 8px"><span class="h3" style="color: var(--on-ac-c)">Ship your container today.</span><span style="color: var(--on-ac-c); opacity: .85">Windows 10 or 11 and an AWS account. The app installs the rest.</span></div>
-      <a class="btn fillb big" href="https://github.com/Ding-Ding-Projects/aws-app-deployer/releases/latest"><i class="ms fill" aria-hidden="true">download</i>Download for Windows</a>
+      <div class="stack grow" style="flex: 1 1 380px; gap: 8px"><span class="h3" style="color: var(--on-ac-c)" data-i18n="cta">Ship your container today.</span><span style="color: var(--on-ac-c); opacity: .85">Windows 10 or 11 and an AWS account. The app installs the rest.</span></div>
+      <a class="btn fillb big" href="https://github.com/Ding-Ding-Projects/aws-app-deployer/releases/latest" data-download="1" data-teleport-el="Download button"><i class="ms fill" aria-hidden="true">download</i><span data-i18n="download">Download for Windows</span></a>
     </section>
     <footer class="row small" style="padding: 48px 0 56px; flex-wrap: wrap; gap: 20px"><span>AWS App Deployer is an independent project, not affiliated with Amazon Web Services.</span><span style="flex: 1"></span><a href="https://github.com/Ding-Ding-Projects/aws-app-deployer/releases">Changelog</a><a href="https://github.com/Ding-Ding-Projects/aws-app-deployer">Source</a></footer>
   </div>
 </div>
 
-<script>if(matchMedia('(prefers-color-scheme: light)').matches)document.querySelector('.app').classList.add('light')</script>
+<script src="lib.js"></script>
+<script src="site.js"></script>
 </body>
 </html>
