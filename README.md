@@ -17,3 +17,14 @@ Read the [designer handoff](HANDOFF.md) for the complete product flows, ownershi
 ## Parallel design work
 
 Design proposals and handoffs belong in `design/`. The desktop interface belongs in `src/renderer/`; AWS operations belong in `src/backend/`. Coordinate the preload API before integrating UI work. Do not include credentials, account-specific configuration, or private instructions in this repository.
+
+
+## Backend development
+
+Run the dependency-free backend checks with Node.js 24:
+
+```sh
+node --test tests/backend/*.test.js
+```
+
+The initial backend is exported from `src/backend/index.js`. Actual account connection requires AWS CLI v2 and an existing IAM Identity Center profile. Tests use isolated subprocess doubles and do not create AWS resources. Pushes and pull requests run these checks automatically.
