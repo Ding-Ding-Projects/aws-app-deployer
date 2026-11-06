@@ -174,3 +174,23 @@ select { height: 40px; border-radius: var(--r2); border: 1px solid var(--line2);
 .hue-range { background: linear-gradient(90deg, red, #ff0, lime, cyan, blue, #f0f, red); }
 .alpha-range { background: linear-gradient(90deg, transparent, var(--c)), repeating-conic-gradient(#888 0 25%, #ccc 0 50%) 0 0 / 10px 10px; }
 .hue-range::-webkit-slider-thumb, .alpha-range::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 18px; border-radius: 9px; background: #fff; border: 2px solid #000; }
+
+/* Game servers, local AI, sketch */
+.mc-console { height: 220px; overflow: auto; background: var(--bg); border-radius: 12px; padding: 10px 12px; font-size: 12px; display: flex; flex-direction: column; gap: 2px; color: var(--tx2); }
+.mc-console span { white-space: pre-wrap; overflow-wrap: anywhere; }
+.mc-area { position: relative; width: 240px; height: 240px; border-radius: 12px; background-color: var(--s1); background-image: linear-gradient(var(--line) 1px, transparent 1px), linear-gradient(90deg, var(--line) 1px, transparent 1px); background-size: 24px 24px; overflow: hidden; touch-action: none; cursor: move; }
+.mc-rect { position: absolute; border: 2px solid var(--ac); background: color-mix(in srgb, var(--ac) 25%, transparent); border-radius: 4px; pointer-events: none; }
+.mc-origin { position: absolute; width: 8px; height: 8px; margin: -4px 0 0 -4px; border-radius: 4px; background: var(--warn); pointer-events: none; }
+.card select, .card input[type=number] { height: 36px; border-radius: 10px; border: 1px solid var(--line2); background: var(--s1); color: var(--tx); padding: 0 8px; font: inherit; }
+.ai-log { display: flex; flex-direction: column; gap: 8px; max-height: 420px; min-height: 160px; overflow: auto; padding: 4px; }
+.bubble { padding: 10px 14px; border-radius: 16px; max-width: 88%; font-size: 14px; line-height: 1.5; overflow-wrap: anywhere; }
+.bubble.me { align-self: flex-end; background: var(--ac-c); color: var(--on-ac-c); white-space: pre-wrap; }
+.bubble.ai { background: var(--s1); }
+.caret { display: inline-block; width: 8px; height: 1em; background: var(--ac); margin-left: 2px; vertical-align: text-bottom; animation: blink 1s steps(2) infinite; }
+@keyframes blink { 50% { opacity: 0; } }
+.sk-bar { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; transition: all var(--d2) var(--ease); }
+.sk-bar .chip { height: 32px; cursor: pointer; }
+.sk-bar .chip.on { background: var(--ac-c); color: var(--on-ac-c); }
+.sk-stage { border-radius: 14px; background: #fff center / cover no-repeat; overflow: hidden; }
+#sk-canvas { display: block; width: 100%; height: auto; aspect-ratio: 1200 / 750; touch-action: none; cursor: crosshair; }
+.tabs { scrollbar-width: thin; } .tabs::-webkit-scrollbar { height: 4px; }

@@ -60,6 +60,9 @@ Honest inventory of the desktop app and its landing page. **Shipped** means impl
 - [x] Shipped: Tools tab with a Base64 toolkit and a bounded local file converter (JSON, CSV, YAML output, Markdown, PNG, JPEG, WebP); missing tools are named on disabled rows
 - [x] Shipped: open results in VS Code (when installed) or the default app
 - [x] Shipped: per-language voices with pitch and speed, and a wording-drop celebration with a quiet path
+- [x] Shipped: Minecraft Java server creator and manager on four targets (local process, local Docker, SSH process in tmux, SSH Docker) with versions from Mojang, PaperMC and Fabric catalogs, checksum-verified downloads, in-app EULA, console, players, typed settings, per-version game rules, backups and world-area generation to a folder or ZIP. Not yet run end to end on a real Windows computer; Bedrock not offered yet
+- [x] Shipped: Local AI with a one-click Ollama install, start and stop, installed models, the ollama.com library with fit verdicts, pulls with progress, and saved streaming chats
+- [x] Shipped: Sketch with seven pens, partial erase, Shift-locked strokes, undo and redo, drawing on images, and SVG and PNG export
 - [x] Shipped: YAML to JSON, video and audio conversion through FFmpeg with a one-click install, .7z creation and archive extraction with the bundled 7-Zip engine, and RAR through a one-click full 7-Zip install
 
 ## Release and site

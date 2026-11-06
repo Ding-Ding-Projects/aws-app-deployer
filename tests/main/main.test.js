@@ -266,3 +266,37 @@ test('optional tools without a publisher download need winget and say so', async
   const inst = createInstaller({ platform: 'win32', run: async cmd => (cmd === 'winget' ? { ok: false, error: 'UNAVAILABLE' } : { ok: true, stdout: '' }) });
   assert.equal((await inst.installOne('ffmpeg')).error, 'WINGET_REQUIRED');
 });
+
+test('Minecraft: properties keep unknown keys, typed validation, batches and game rules', async () => {
+  const M = require('../../src/main/minecraft');
+  const text = '#comment\nmotd=Hi\nserver-port=25565\nweird-key=keep me\npvp=true\n';
+  const out = M.writeProperties(M.parseProperties(text), { pvp: false, 'max-players': 5 });
+  assert.equal(out, '#comment\nmotd=Hi\nserver-port=25565\nweird-key=keep me\npvp=false\nmax-players=5\n');
+  const t = M.toTyped(M.parseProperties(out)); assert.equal(t.values.pvp, false); assert.equal(t.unknown['weird-key'], 'keep me');
+  assert.equal(M.validProp('difficulty', 'hard'), true); assert.equal(M.validProp('difficulty', 'nightmare'), false);
+  assert.equal(M.validProp('max-players', 0), false); assert.equal(M.validProp('motd', 'a\nb'), false); assert.equal(M.validProp('level-name', '../x'), false);
+  const b = M.forceloadBatches(-50, -50, 100, 100); assert.equal(b.length, 49);
+  const covered = new Set(); for (const [x1, z1, x2, z2] of b) for (let x = x1 / 16; x <= x2 / 16; x++) for (let z = z1 / 16; z <= z2 / 16; z++) covered.add(x + ',' + z);
+  assert.equal(covered.size, 10000);
+  assert.ok(b.every(([x1, z1, x2, z2]) => ((x2 - x1) / 16 + 1) * ((z2 - z1) / 16 + 1) <= 256));
+  const rules = M.gameRulesFromReport({ children: { gamerule: { children: { keepInventory: { children: { value: { parser: 'brigadier:bool' } } }, randomTickSpeed: { children: { value: { parser: 'brigadier:integer', properties: { min: 0 } } } } } } } });
+  assert.deepEqual(rules.map(r => [r.name, r.type]), [['keepInventory', 'bool'], ['randomTickSpeed', 'int']]);
+  const os = require('node:os'); const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'mc-'));
+  const mojang = { versions: [{ id: '1.21.4', type: 'release', url: 'u1' }, { id: 'a1.0.4', type: 'old_alpha', url: 'u2' }] };
+  const mc = M.createMinecraft({ dir, fetchJson: async u => (u.includes('manifest') ? mojang : u === 'u2' ? { downloads: {} } : {}) });
+  assert.equal((await mc.catalog('vanilla')).versions.length, 2);
+  assert.equal((await mc.resolveDownload('vanilla', 'a1.0.4')).error, 'NO_SERVER_DISTRIBUTION');
+  assert.equal((await mc.create({ name: 'x', flavour: 'vanilla', version: '1.21.4' })).error, 'EULA_REQUIRED');
+  assert.equal((await mc.create({ name: 'x', flavour: 'vanilla', version: '1.21.4', eula: true, target: { kind: 'ssh', host: 'bad host;rm' } })).error, 'INVALID_TARGET');
+});
+
+test('Ollama: fit verdicts are conservative and library parsing is bounded', () => {
+  const O = require('../../src/main/ollama');
+  const G = 2 ** 30;
+  assert.equal(O.fitVerdict({ sizeBytes: 2 * G, ramBytes: 16 * G, vramBytes: 8 * G }).verdict, 'Runs well');
+  assert.equal(O.fitVerdict({ sizeBytes: 5 * G, ramBytes: 16 * G, vramBytes: 4 * G }).verdict, 'Runs with limits');
+  assert.equal(O.fitVerdict({ sizeBytes: 40 * G, ramBytes: 16 * G }).verdict, 'Unlikely');
+  assert.equal(O.fitVerdict({ sizeBytes: 0, ramBytes: 16 * G }).verdict, 'Unknown');
+  assert.deepEqual(O.parseLibrary('<a href="/library/llama3.2">x</a><a href="/library/qwen2.5">y</a><a href="/library/llama3.2">z</a><a href="/evil">'), ['llama3.2', 'qwen2.5']);
+  assert.deepEqual(O.parseTags('<a href="/library/llama3.2:3b">3b</a><a href="/library/llama3.2:1b">1b</a><a href="/library/other:1b">', 'llama3.2').map(t => t.tag), ['3b', '1b']);
+});

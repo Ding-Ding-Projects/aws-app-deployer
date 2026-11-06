@@ -113,7 +113,7 @@
     return j.result.ok ? `<span class="row small" style="gap: 8px; flex-wrap: wrap"><span class="badge ok">Done</span>${j.result.path ? `<span class="mono" style="overflow-wrap: anywhere">${esc(j.result.path)}</span><button class="btn text" data-act="show-file" data-p="${esc(j.result.path)}">Show in folder</button>` : esc(j.label)}</span>` : `<span class="badge err" role="alert">${esc(jobError(j.result))}</span>`;
   }
   api.onOperation(ev => {
-    if (S.jobs[ev.op]) { const j = S.jobs[ev.op]; if (ev.type === 'progress') j.progress = ev; else if (ev.type !== 'started') { j.result = ev.result || { ok: false, error: ev.type.toUpperCase() }; cue(j.result.ok ? 'ok' : 'err'); if (j.slot.startsWith('install-')) { S.mediaStatus = null; loadMedia(); } toast(j.result.ok ? `${j.label}: done` : `${j.label}: ${jobError(j.result)}`, j.result.ok ? 'ok' : 'err'); } render(); return; }
+    if (S.jobs[ev.op]) { const j = S.jobs[ev.op]; if (ev.type === 'progress') { if (ev.step === 'token') { j.onToken?.(ev.delta); return; } j.progress = ev; } else if (ev.type !== 'started') { j.result = ev.result || { ok: false, error: ev.type.toUpperCase() }; j.onDone?.(j.result); if (j.slot === 'mc-create' && j.result.ok) { S.mc.sel = j.result.server.id; mcLoad().then(() => mcSelect(j.result.server.id)); } if (j.slot.startsWith('install-')) { S.mediaStatus = null; S.mc.java = null; S.ai.status = null; } if (j.quiet) { render(); return; } cue(j.result.ok ? 'ok' : 'err'); toast(j.result.ok ? `${j.label}: done` : `${j.label}: ${jobError(j.result)}`, j.result.ok ? 'ok' : 'err'); } render(); return; }
     if (ev.kind === 'login' && S.login?.op === ev.op) {
       if (browser && ev.type === 'progress' && (ev.authorizationUrl || ev.url)) { S.login.authorizationUrl = safeAwsUrl(ev.authorizationUrl || ev.url); }
       if (ev.type === 'succeeded') { S.identity = ev.result.identity; S.login = null; S.loginExpired = false; api.window('focus'); toast('Connected to ' + ev.result.identity.accountId + ' as ' + roleOf(ev.result.identity.arn)); cue('ok'); }
@@ -521,6 +521,9 @@
     { view: 'docs', label: 'Docs', icon: 'menu_book', keywords: 'help articles offline' },
     { view: 'changelog', label: 'Changelog', icon: 'new_releases', keywords: 'versions releases' },
     { view: 'tools', label: 'Tools: Base64 and file converter', icon: 'construction', keywords: 'base64 encode decode convert csv json yaml markdown image png jpeg webp editor vs code' },
+    { view: 'servers', label: 'Game servers', icon: 'dns', keywords: 'minecraft server paper fabric world generate ssh docker' },
+    { view: 'ai', label: 'Local AI', icon: 'smart_toy', keywords: 'ollama model chat llm llama' },
+    { view: 'sketch', label: 'Sketch', icon: 'draw', keywords: 'draw annotate pen highlighter drawing' },
     { view: 'settings', label: 'Settings', icon: 'tune' }, { view: 'help', label: 'Help and about', icon: 'help' },
     { view: 'support', label: 'Support Tickets', icon: 'support_agent', keywords: 'locked out forgot pin password' },
     { view: 'accounts', label: 'Accounts', icon: 'key' }, { view: 'deploys', label: 'Deployments', icon: 'rocket_launch' },
@@ -1001,6 +1004,243 @@
     clearTimeout(S.partyTimer); S.partyTimer = setTimeout(() => { S.party = null; render(); }, 2600);
   }
 
+
+  // ---------- Minecraft servers ----------
+  S.mc = { list: null, sel: null, form: { name: 'survival', flavour: 'paper', version: '', channel: 'release', vq: '', kind: 'local', host: '', port: 25565, memoryMb: 2048, eula: false }, catalog: {}, logs: null, props: null, cmd: '', rules: null, area: { x: -50, z: -50, w: 100, h: 100 }, format: 'folder', dest: '' };
+  const MC_TARGETS = { local: 'This computer (process)', docker: 'This computer (Docker)', ssh: 'SSH host (process in tmux)', 'ssh-docker': 'SSH host (Docker)' };
+  const MC_ERR = { EULA_REQUIRED: 'Accept the Minecraft EULA first', NO_SERVER_DISTRIBUTION: 'Mojang published no server for this version', CATALOG_OFFLINE: 'The version catalog could not be reached', CHECKSUM_MISMATCH: 'The download did not match its published checksum and was deleted', JAVA_MISSING: 'Java is not installed', SSH_AUTH_FAILED: 'SSH refused the key. Set up key-based sign-in for this host first', SSH_UNREACHABLE: 'The SSH host could not be reached', REMOTE_NEEDS_TMUX: 'The SSH host needs tmux installed', REMOTE_NEEDS_JAVA: 'The SSH host needs Java installed', START_SERVER_FIRST: 'Start the server and wait until it says Done', PORT_IN_USE_BY_ANOTHER_SERVER: 'Another server here already uses that port', NOT_RUNNING: 'The server is not running', NO_WORLD_YET: 'There is no world yet. Start the server once', EDIT_ON_TARGET_UNSUPPORTED: 'Typed settings are edited for servers on this computer; use the console for other targets', UNAVAILABLE: 'The tool is not installed or not on PATH' };
+  const mcErr = r => (MC_ERR[r?.error] || String(r?.error || 'Failed').toLowerCase().replace(/_/g, ' ')) + (r?.detail ? ` (${r.detail})` : '');
+  async function mcLoad() { S.mc.list = (await api.mc.list()).servers || []; if (!S.mc.java && !browser) S.mc.java = await api.javaStatus(); render(); }
+  async function mcCatalog(f) { if (S.mc.catalog[f]) return; S.mc.catalog[f] = { loading: true }; render(); S.mc.catalog[f] = await api.mc.catalog(f); const v = (S.mc.catalog[f].versions || []).find(x => x.type === 'release'); if (v && !S.mc.form.version) S.mc.form.version = v.id; render(); }
+  let mcTimer; function mcPoll() { clearInterval(mcTimer); mcTimer = setInterval(async () => { const tab = S.tabs.find(t => t.id === S.active); if (tab?.view !== 'servers' || !S.mc.sel) return clearInterval(mcTimer); S.mc.logs = await api.mc.logs(S.mc.sel); const box = document.getElementById('mc-console'); if (box) { const atEnd = box.scrollTop + box.clientHeight >= box.scrollHeight - 8; box.innerHTML = (S.mc.logs.lines || []).map(l => `<span>${esc(l)}</span>`).join(''); if (atEnd) box.scrollTop = box.scrollHeight; const st = document.getElementById('mc-state'); if (st) st.outerHTML = mcState(); } }, 2000); }
+  const mcState = () => { const L = S.mc.logs; return `<span id="mc-state" class="badge ${L?.running ? (L.ready === false ? 'warn' : 'ok') : 'mute'}">${L?.connection === 'lost' ? 'Connection lost' : L?.running ? (L.ready === false ? 'Starting' : 'Running') : L?.running === false ? 'Stopped' : 'Unknown'}</span>`; };
+  function propControl(k, d, v) {
+    const id = 'mp-' + k;
+    if (d.type === 'bool') return `<button class="toggle ${v ? 'on' : ''}" role="switch" aria-checked="${!!v}" aria-label="${esc(d.label)}" data-act="mc-prop-bool" data-k="${k}"></button>`;
+    if (d.type === 'enum') return `<select id="${id}" data-mcprop="${k}" aria-label="${esc(d.label)}">${d.values.map(x => `<option ${x === v ? 'selected' : ''}>${esc(x)}</option>`).join('')}</select>`;
+    if (d.type === 'int') return `<span class="row" style="gap: 4px"><input id="${id}" type="number" min="${d.min}" max="${d.max}" value="${v ?? d.default}" data-mcprop="${k}" aria-label="${esc(d.label)}" style="width: 96px"><span class="small">${d.min} to ${d.max}</span></span>`;
+    return `<input id="${id}" value="${esc(v ?? d.default)}" maxlength="${d.max}" data-mcprop="${k}" aria-label="${esc(d.label)}" style="width: 200px">`;
+  }
+  function mcAreaCanvas() {
+    const A = S.mc.area, span = Math.max(200, A.w + 40, A.h + 40), cell = 240 / span;
+    const left = (A.x + span / 2) * cell, top = (A.z + span / 2) * cell;
+    return `<div class="mc-area" data-mcarea="1" role="application" aria-label="Area to generate: ${A.w} by ${A.h} chunks starting at chunk ${A.x}, ${A.z}. Arrow keys move it, Shift with arrows resizes it." tabindex="0" style="--cell: ${cell}px"><i class="mc-rect" style="left: ${left}px; top: ${top}px; width: ${A.w * cell}px; height: ${A.h * cell}px"></i><span class="mc-origin" style="left: ${span / 2 * cell}px; top: ${span / 2 * cell}px" title="Spawn (chunk 0, 0)"></span></div>`;
+  }
+  function viewServers() {
+    const M = S.mc; if (!M.list) { mcLoad(); return page('Game servers', '', '<span class="small">Loading…</span>'); }
+    const F = M.form, cat = M.catalog[F.flavour]; if (!cat) mcCatalog(F.flavour);
+    const vlist = (cat?.versions || []).filter(v => F.channel === 'all' || (F.channel === 'release' ? v.type === 'release' : F.channel === 'snapshot' ? v.type === 'snapshot' : /old/.test(v.type)));
+    const vr = Lib.search(vlist.map(v => ({ ...v, label: v.id })), F.vq, { regex: !!F.vregex }); const shown = vr.ok ? vr.items.slice(0, 400) : [];
+    const sel = M.sel && M.list.find(s => s.id === M.sel);
+    const inp = 'height: 38px; border-radius: 10px; border: 1px solid var(--line2); background: var(--s1); color: var(--tx); padding: 0 10px';
+    const create = `<div class="card"><span class="h2">New server</span>
+      <div class="field"><label for="mc-name">Name</label><input id="mc-name" data-mcf="name" value="${esc(F.name)}" maxlength="40"></div>
+      <div class="row" style="gap: 8px; flex-wrap: wrap"><span class="seg" role="radiogroup" aria-label="Server type">${[['vanilla', 'Vanilla'], ['paper', 'Paper'], ['fabric', 'Fabric']].map(([k, l]) => `<button role="radio" aria-checked="${F.flavour === k}" class="${F.flavour === k ? 'on' : ''}" data-act="mc-flavour" data-v="${k}">${l}</button>`).join('')}</span></div>
+      <div class="row" style="gap: 6px; flex-wrap: wrap"><span class="seg">${[['release', 'Releases'], ['snapshot', 'Snapshots'], ['old', 'Old'], ['all', 'All']].map(([k, l]) => `<button class="${F.channel === k ? 'on' : ''}" aria-pressed="${F.channel === k}" data-act="mc-channel" data-v="${k}">${l}</button>`).join('')}</span></div>
+      <div class="row" style="gap: 6px"><label class="sr" for="mc-vq">Search versions</label><input id="mc-vq" class="mono" data-input="mcVq" value="${esc(F.vq)}" placeholder="Search ${vlist.length} versions" style="flex: 1; ${inp}"><button class="badge ${F.vregex ? 'ac' : 'mute'} mono" style="border: 0; cursor: pointer" data-act="mc-vregex" aria-pressed="${!!F.vregex}">.*</button></div>
+      ${cat?.loading ? '<span class="small">Reading the official version list…</span>' : cat?.ok ? `<select data-mcf="version" aria-label="Version" size="6" style="border-radius: 12px; border: 1px solid var(--line2); background: var(--s1); color: var(--tx); padding: 4px">${shown.map(v => `<option value="${esc(v.id)}" ${v.id === F.version ? 'selected' : ''}>${esc(v.id)} · ${esc(v.type.replace('_', ' '))}</option>`).join('')}</select><span class="small">${vlist.length} versions from the ${F.flavour === 'vanilla' ? 'Mojang' : F.flavour === 'paper' ? 'PaperMC' : 'Fabric'} catalog${cat.stale ? ', last good copy (offline now)' : ''}, read ${new Date(cat.at).toLocaleTimeString()}. Versions without a published server say so when you create.</span>` : `<span class="badge err">${esc(mcErr(cat))}</span><button class="btn text" data-act="mc-catalog-retry">Try again</button>`}
+      <div class="field"><label for="mc-target">Runs on</label><select id="mc-target" data-mcf="kind">${Object.entries(MC_TARGETS).map(([k, l]) => `<option value="${k}" ${F.kind === k ? 'selected' : ''}>${l}</option>`).join('')}</select></div>
+      ${F.kind.startsWith('ssh') ? `<div class="field"><label for="mc-host">SSH host (user@host, key sign-in)</label><input id="mc-host" data-mcf="host" value="${esc(F.host)}" placeholder="me@server.example"></div>` : ''}
+      <div class="row" style="gap: 12px; flex-wrap: wrap"><div class="field" style="flex: 1 1 120px"><label for="mc-port">Port</label><input id="mc-port" type="number" min="1024" max="65535" data-mcf="port" value="${F.port}"></div><div class="field" style="flex: 2 1 180px"><label for="mc-mem">Memory: ${F.memoryMb} MB</label><input id="mc-mem" type="range" min="512" max="16384" step="256" data-mcf="memoryMb" value="${F.memoryMb}"></div></div>
+      ${F.kind === 'local' && M.java && !M.java.java ? `<span class="small">Servers on this computer need Java.</span>${installBtn('java', 'Java 21')}${jobHtml('install-java')}` : ''}
+      <label class="row" style="gap: 8px"><input type="checkbox" class="check" data-mcf="eula" ${F.eula ? 'checked' : ''}><span class="small">I accept the Minecraft End User License Agreement (minecraft.net/eula). The app writes eula=true only after this.</span></label>
+      <button class="btn fillb" data-act="mc-create" style="align-self: flex-start" ${F.eula && F.version ? '' : 'disabled'}>${ic('add')}Create server</button>${jobHtml('mc-create')}</div>`;
+    const list = M.list.map(s => `<button class="li" data-act="mc-select" data-id="${esc(s.id)}" aria-current="${s.id === M.sel}"><span class="tile ${s.running ? 'ok' : ''}">${ic('dns', 'fill')}</span><span class="stack grow"><span class="t">${esc(s.name)}</span><span class="m">${esc(s.flavour)} ${esc(s.version)} · ${esc(MC_TARGETS[s.target.kind])}${s.target.host ? ' ' + esc(s.target.host) : ''} · port ${s.port}</span></span></button>`).join('') || '<span class="small">No servers yet.</span>';
+    let detail = '';
+    if (sel) {
+      const P = M.props, local = sel.target.kind === 'local';
+      detail = `<div class="card"><div class="row" style="gap: 8px; flex-wrap: wrap"><span class="h2" style="flex: 1">${esc(sel.name)}</span>${mcState()}<button class="btn tonal" data-act="mc-start">${ic('play_arrow')}Start</button><button class="btn text" data-act="mc-stop">${ic('stop')}Stop</button><button class="btn text" data-act="mc-restart">${ic('restart_alt')}Restart</button></div>
+        <span class="small">${esc(sel.flavour)} ${esc(sel.version)} · ${esc(MC_TARGETS[sel.target.kind])}${sel.verified ? ' · download checksum verified' : ''}${sel.path ? ` · <span class="mono">${esc(sel.path)}</span>` : ''}</span>
+        <div class="mc-console mono" id="mc-console" role="log" aria-live="off">${(M.logs?.lines || []).map(l => `<span>${esc(l)}</span>`).join('')}</div>
+        <div class="row" style="gap: 6px"><label class="sr" for="mc-cmd">Console command</label><input id="mc-cmd" class="mono" data-input="mcCmd" value="${esc(M.cmd)}" placeholder="say hello" style="flex: 1; ${inp}"><button class="btn tonal" data-act="mc-send">Send</button></div>
+        <div class="row" style="gap: 6px; flex-wrap: wrap">${[['list', 'Who is online'], ['save-all', 'Save now'], ['weather clear', 'Clear weather'], ['time set day', 'Make it day']].map(([c, l]) => `<button class="chip" data-act="mc-quick" data-c="${c}">${l}</button>`).join('')}</div>
+        <div class="row" style="gap: 6px; flex-wrap: wrap"><label class="sr" for="mc-player">Player name</label><input id="mc-player" data-input="mcPlayer" value="${esc(M.player || '')}" placeholder="Player name" maxlength="16" style="width: 160px; ${inp}">${[['whitelist add', 'Allowlist'], ['whitelist remove', 'Remove from allowlist'], ['op', 'Make operator'], ['deop', 'Remove operator'], ['kick', 'Kick'], ['ban', 'Ban'], ['pardon', 'Unban']].map(([c, l]) => `<button class="chip" data-act="mc-player" data-c="${c}">${l}</button>`).join('')}</div></div>
+        ${local ? `<div class="card"><span class="h2">Server settings</span>${P?.ok ? Object.entries(P.descriptors).map(([k, d]) => `<div class="set"><label class="grow" for="mp-${k}">${esc(d.label)}${d.restart ? ' <span class="badge mute">restart</span>' : ''}</label>${propControl(k, d, (M.propEdits || {})[k] ?? P.values[k])}</div>`).join('') + (Object.keys(P.unknown).length ? `<span class="small">${Object.keys(P.unknown).length} other settings in the file are kept exactly as they are: ${esc(Object.keys(P.unknown).slice(0, 12).join(', '))}${Object.keys(P.unknown).length > 12 ? '…' : ''}</span>` : '') + `<button class="btn fillb" data-act="mc-save-props" style="align-self: flex-start" ${M.propEdits && Object.keys(M.propEdits).length ? '' : 'disabled'}>Save settings</button>` : '<span class="small">Loading…</span>'}</div>
+        <div class="card"><span class="h2">Game rules for ${esc(sel.version)}</span><span class="small">Read from this version's own data generator, so the list matches the version exactly. Changes are sent to the running server.</span>${M.rules?.ok ? M.rules.rules.map(r => `<div class="set"><span class="grow mono small">${esc(r.name)}</span>${r.type === 'bool' ? `<button class="chip" data-act="mc-rule" data-n="${esc(r.name)}" data-v="true">true</button><button class="chip" data-act="mc-rule" data-n="${esc(r.name)}" data-v="false">false</button>` : r.type === 'int' ? `<input type="number" data-mcrule="${esc(r.name)}" ${r.min !== undefined ? `min="${r.min}"` : ''} ${r.max !== undefined ? `max="${r.max}"` : ''} aria-label="${esc(r.name)}" style="width: 90px"><button class="chip" data-act="mc-rule-int" data-n="${esc(r.name)}">Set</button>` : '<span class="badge mute">unknown type</span>'}</div>`).join('') : `<button class="btn tonal" data-act="mc-rules" style="align-self: flex-start">${ic('rule')}Read game rules</button>${M.rules && !M.rules.ok ? `<span class="badge err">${esc(mcErr(M.rules))}</span>` : ''}${jobHtml('mc-rules')}`}</div>
+        <div class="card"><span class="h2">Generate world area</span><span class="small">Default 100 × 100 chunks around spawn. Drag the rectangle, or focus it and use the arrow keys (Shift resizes). The running server generates the chunks in batches with forceload, then the world is copied to a folder or a ZIP. Nothing is overwritten.</span>
+          ${mcAreaCanvas()}
+          <div class="row" style="gap: 8px; flex-wrap: wrap">${[['x', 'Start chunk X'], ['z', 'Start chunk Z'], ['w', 'Width (chunks)'], ['h', 'Height (chunks)']].map(([k, l]) => `<label class="small stack" style="gap: 2px">${l}<input type="number" data-mcarea-n="${k}" value="${M.area[k]}" ${k === 'w' || k === 'h' ? 'min="1" max="1000"' : ''} style="width: 100px; ${inp}"></label>`).join('')}</div>
+          <div class="row" style="gap: 8px; flex-wrap: wrap"><span class="seg">${[['folder', 'Folder'], ['zip', 'ZIP']].map(([k, l]) => `<button class="${M.format === k ? 'on' : ''}" aria-pressed="${M.format === k}" data-act="mc-format" data-v="${k}">${l}</button>`).join('')}</span><button class="btn text" data-act="mc-browse">${ic('folder_open')}Browse…</button><span class="small mono" style="overflow-wrap: anywhere">${esc(M.dest || 'No destination chosen')}</span></div>
+          <button class="btn fillb" data-act="mc-pregen" style="align-self: flex-start" ${M.dest ? '' : 'disabled'}>Generate ${M.area.w * M.area.h} chunks</button>${jobHtml('mc-pregen')}</div>
+        <div class="card"><div class="row" style="gap: 6px; flex-wrap: wrap"><button class="btn tonal" data-act="mc-backup">${ic('backup')}Back up the world</button><button class="btn text" style="color: var(--err)" data-act="mc-remove">${ic('delete')}Remove server…</button></div>${jobHtml('mc-backup')}</div>` : `<div class="card"><span class="small">This server runs on ${esc(MC_TARGETS[sel.target.kind])}. Use the console and player controls; typed settings, game rules, backups and area generation run for servers on this computer.</span><button class="btn text" style="color: var(--err); align-self: flex-start" data-act="mc-remove">${ic('delete')}Remove server…</button></div>`}`;
+    }
+    return page('Game servers', '', `<div class="cols"><div class="side" style="flex: 1 1 360px">${create}<div class="card"><span class="h2">Servers</span><div class="list">${list}</div></div></div><div class="wide">${detail || '<div class="card"><span class="small">Create a server or pick one to manage it.</span></div>'}</div></div>`);
+  }
+  async function mcSelect(id) { S.mc.sel = id; S.mc.props = null; S.mc.propEdits = {}; S.mc.rules = null; S.mc.logs = await api.mc.logs(id); render(); const s = S.mc.list.find(x => x.id === id); if (s?.target.kind === 'local') { S.mc.props = await api.mc.properties(id); render(); } mcPoll(); }
+  async function mcAct(a, t) {
+    const M = S.mc, id = M.sel;
+    switch (a) {
+      case 'mc-flavour': M.form.flavour = t.dataset.v; M.form.version = ''; mcCatalog(t.dataset.v); break;
+      case 'mc-channel': M.form.channel = t.dataset.v; break;
+      case 'mc-vregex': M.form.vregex = !M.form.vregex; break;
+      case 'mc-catalog-retry': delete M.catalog[M.form.flavour]; break;
+      case 'mc-create': { const F = M.form; await startJob('mc-create', api.mc.create({ name: F.name, flavour: F.flavour, version: F.version, target: F.kind.startsWith('ssh') ? { kind: F.kind, host: F.host.trim() } : { kind: F.kind }, port: +F.port, memoryMb: +F.memoryMb, eula: F.eula }), `Creating ${F.name}`); return; }
+      case 'mc-select': return mcSelect(t.dataset.id);
+      case 'mc-start': { const r = await api.mc.start(id); if (!r.ok) toast(`Could not start: ${mcErr(r)}`, 'err'); else toast('Starting the server'); M.logs = await api.mc.logs(id); break; }
+      case 'mc-stop': { const r = await api.mc.stop(id); toast(r.ok ? (r.forced ? 'The server did not stop in 30 seconds and was ended' : 'Server stopped') : `Could not stop: ${mcErr(r)}`, r.ok ? 'ok' : 'err'); break; }
+      case 'mc-restart': { await api.mc.stop(id); const r = await api.mc.start(id); toast(r.ok ? 'Restarting' : `Could not restart: ${mcErr(r)}`, r.ok ? 'ok' : 'err'); break; }
+      case 'mc-send': { const r = await api.mc.command(id, M.cmd); if (!r.ok) toast(mcErr(r), 'err'); else M.cmd = ''; break; }
+      case 'mc-quick': { const r = await api.mc.command(id, t.dataset.c); if (!r.ok) toast(mcErr(r), 'err'); break; }
+      case 'mc-player': { const p = (M.player || '').trim(); if (!/^[A-Za-z0-9_]{3,16}$/.test(p)) { toast('Player names are 3 to 16 letters, digits or underscores', 'err'); break; } const r = await api.mc.command(id, `${t.dataset.c} ${p}`); toast(r.ok ? `Sent: ${t.dataset.c} ${p}` : mcErr(r), r.ok ? 'ok' : 'err'); break; }
+      case 'mc-prop-bool': { const k = t.dataset.k; M.propEdits[k] = !((M.propEdits[k] ?? M.props.values[k]) ?? M.props.descriptors[k].default); break; }
+      case 'mc-save-props': { const r = await api.mc.setProperties(id, M.propEdits); if (!r.ok) { toast(`Not saved: ${r.key || ''} ${mcErr(r)}`, 'err'); break; } M.propEdits = {}; M.props = await api.mc.properties(id); toast(r.restartNeeded ? 'Saved. Restart the server for some changes to apply.' : 'Saved'); break; }
+      case 'mc-rules': { const r = await api.mc.gameRules(id); if (r.ok) { S.jobs[r.op] = { slot: 'mc-rules', label: 'Reading game rules', result: null, onDone: res => { M.rules = res; } }; } break; }
+      case 'mc-rule': { const r = await api.mc.command(id, `gamerule ${t.dataset.n} ${t.dataset.v}`); toast(r.ok ? `${t.dataset.n} set to ${t.dataset.v}` : mcErr(r), r.ok ? 'ok' : 'err'); break; }
+      case 'mc-rule-int': { const v = root.querySelector(`[data-mcrule="${t.dataset.n}"]`).value; if (!/^-?\d+$/.test(v)) { toast('Enter a whole number', 'err'); break; } const r = await api.mc.command(id, `gamerule ${t.dataset.n} ${v}`); toast(r.ok ? `${t.dataset.n} set to ${v}` : mcErr(r), r.ok ? 'ok' : 'err'); break; }
+      case 'mc-format': M.format = t.dataset.v; break;
+      case 'mc-browse': { const r = await api.mc.pickFolder(); if (r.ok) M.dest = r.path; break; }
+      case 'mc-pregen': await startJob('mc-pregen', api.mc.pregenerate(id, { ...M.area, destination: M.dest, format: M.format }), `Generating ${M.area.w * M.area.h} chunks`); return;
+      case 'mc-backup': await startJob('mc-backup', api.mc.backup(id), 'Backing up the world'); return;
+      case 'mc-remove': { const s = M.list.find(x => x.id === id); Kit.superConfirm({ title: `Remove the server "${s.name}"`, detail: s.target.kind === 'local' ? `Deletes its folder, worlds and backups: ${s.path}` : s.target.kind.endsWith('docker') ? `Removes the container ${s.container}. Its data volume ${s.container}-data is kept.` : `Forgets it here. The files stay on ${s.target.host} in ${s.path}.`, opener: t, onConfirm: async () => { const r = await api.mc.remove(id); if (r.ok) { M.sel = null; await mcLoad(); toast('Server removed'); } else toast(mcErr(r), 'err'); } }); return; }
+    }
+    render();
+  }
+  root.addEventListener('pointerdown', e => {
+    const box = e.target.closest('[data-mcarea]'); if (!box) return;
+    const A = S.mc.area, cell = parseFloat(getComputedStyle(box).getPropertyValue('--cell')), r = box.getBoundingClientRect(), span = 240 / cell;
+    const start = { x: e.clientX, y: e.clientY, ax: A.x, az: A.z };
+    const mv = ev => { A.x = Math.round(start.ax + (ev.clientX - start.x) / cell); A.z = Math.round(start.az + (ev.clientY - start.y) / cell); const rect = document.querySelector('.mc-rect'); if (rect) { rect.style.left = (A.x + span / 2) * cell + 'px'; rect.style.top = (A.z + span / 2) * cell + 'px'; } };
+    const up = () => { removeEventListener('pointermove', mv); removeEventListener('pointerup', up); render(); };
+    addEventListener('pointermove', mv); addEventListener('pointerup', up); e.preventDefault(); void r;
+  });
+  root.addEventListener('keydown', e => {
+    if (!e.target.matches?.('[data-mcarea]')) return; const d = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }[e.key]; if (!d) return; e.preventDefault();
+    const A = S.mc.area; if (e.shiftKey) { A.w = Math.max(1, Math.min(1000, A.w + d[0] * 5)); A.h = Math.max(1, Math.min(1000, A.h + d[1] * 5)); } else { A.x += d[0] * 5; A.z += d[1] * 5; } render(); document.querySelector('[data-mcarea]')?.focus();
+  });
+
+  // ---------- Local AI (Ollama) ----------
+  S.ai = { status: null, catalog: null, q: '', regex: false, tags: {}, chats: null, cur: 0, input: '', model: '', system: '', temperature: 0.7, streaming: null };
+  const AI_ERR = { OLLAMA_NOT_RUNNING: 'Ollama is not running. Start it here', OLLAMA_MISSING: 'Ollama is not installed', CATALOG_OFFLINE: 'The ollama.com library could not be reached; installed models still work', NOT_OWNED: 'This Ollama was started outside the app, so the app does not stop it', NOT_HEALTHY: 'Ollama started but did not answer in 20 seconds' };
+  const aiErr = r => (AI_ERR[r?.error] || String(r?.error || 'Failed').toLowerCase().replace(/_/g, ' ')) + (r?.detail ? ` (${r.detail})` : '');
+  async function aiLoad() { S.ai.status = await api.ollama.status(); if (!S.ai.chats) { const c = await api.ollama.chats(); S.ai.chats = c.sessions?.length ? c.sessions : [{ title: 'New chat', messages: [] }]; } if (!S.ai.model && S.ai.status.models?.length) S.ai.model = S.ai.status.models[0].name; render(); }
+  const fit = (size, hw) => { if (!size || !hw) return { verdict: 'Unknown', why: 'Size or hardware not known' }; const need = size * 1.2; if (hw.vram && need <= hw.vram) return { verdict: 'Runs well', why: `Needs about ${(need / 2 ** 30).toFixed(1)} GB; graphics memory ${(hw.vram / 2 ** 30).toFixed(1)} GB` }; if (need <= hw.ram * 0.6) return { verdict: 'Runs with limits', why: `Needs about ${(need / 2 ** 30).toFixed(1)} GB; fits in system memory, slower without graphics memory` }; return { verdict: 'Unlikely', why: `Needs about ${(need / 2 ** 30).toFixed(1)} GB; this computer has ${(hw.ram / 2 ** 30).toFixed(1)} GB memory` }; };
+  const fitBadge = f => `<span class="badge ${{ 'Runs well': 'ok', 'Runs with limits': 'warn', Unlikely: 'err' }[f.verdict] || 'mute'}" title="${esc(f.why)}">${f.verdict}</span>`;
+  async function aiSaveChats() { await api.ollama.saveChats({ sessions: S.ai.chats }); }
+  function viewAi() {
+    const A = S.ai; if (!A.status) { aiLoad(); return page('Local AI', '', '<span class="small">Checking for Ollama…</span>'); }
+    const st = A.status, hw = st.hardware;
+    const head = !st.installed ? `<div class="card"><span class="h2">Ollama is not installed</span><span class="small">Local AI runs models on this computer with Ollama. One click installs it; Windows may ask for permission, and the app never answers that prompt for you.</span>${installBtn('ollama', 'Ollama')}${jobHtml('install-ollama')}</div>`
+      : !st.running ? `<div class="card"><span class="h2">Ollama is installed but not running</span><span class="small">Start it here. The app runs it on 127.0.0.1:11434 only and stops it when you press Stop.</span><button class="btn fillb" data-act="ai-start" style="align-self: flex-start">${ic('play_arrow')}Start Ollama</button></div>`
+      : `<div class="card"><div class="row" style="gap: 8px; flex-wrap: wrap"><span class="h2" style="flex: 1">Ollama ${esc(st.version)}</span><span class="badge ok">Running</span>${st.owned ? `<button class="btn text" data-act="ai-stop">Stop</button>` : ''}<button class="btn text" data-act="ai-refresh">${ic('refresh')}Refresh</button></div><span class="small">${hw ? `This computer: ${(hw.ram / 2 ** 30).toFixed(1)} GB memory${hw.gpu ? `, ${esc(hw.gpu)} with ${(hw.vram / 2 ** 30).toFixed(1)} GB` : ', no NVIDIA graphics card detected'}${hw.disk ? `, ${(hw.disk / 2 ** 30).toFixed(0)} GB free disk` : ''}.` : ''} Fit verdicts are estimates from real sizes, never promises.</span></div>`;
+    const installed = (st.models || []).map(m => { const f = fit(m.size, hw); return `<div class="set"><span class="stack grow"><span class="t mono">${esc(m.name)}</span><span class="small">${(m.size / 2 ** 30).toFixed(1)} GB${m.details?.parameter_size ? ' · ' + esc(m.details.parameter_size) : ''}${m.details?.quantization_level ? ' · ' + esc(m.details.quantization_level) : ''}${(st.loaded || []).some(l => l.name === m.name) ? ' · loaded' : ''}</span></span>${fitBadge(f)}<button class="btn text" style="color: var(--err)" data-act="ai-remove" data-m="${esc(m.name)}">Remove…</button></div>`; }).join('') || '<span class="small">No models installed yet. Pick one from the library.</span>';
+    const C = A.catalog, cr = C?.ok ? Lib.search(C.models.map(m => ({ ...m, label: m.name })), A.q, { regex: A.regex }) : null;
+    const lib = !C ? `<button class="btn tonal" data-act="ai-catalog">${ic('travel_explore')}Load the model library</button>` : !C.ok ? `<span class="badge err">${esc(aiErr(C))}</span><button class="btn text" data-act="ai-catalog">Try again</button>` : `<div class="row" style="gap: 6px"><label class="sr" for="aiq">Search models</label><input id="aiq" class="mono" data-input="aiQ" value="${esc(A.q)}" placeholder="Search ${C.models.length} models" style="flex: 1; height: 36px; border-radius: 10px; border: 1px solid var(--line2); background: var(--s1); color: var(--tx); padding: 0 10px"><button class="badge ${A.regex ? 'ac' : 'mute'} mono" style="border: 0; cursor: pointer" data-act="ai-regex" aria-pressed="${A.regex}">.*</button></div><span class="small">${C.models.length} models from ollama.com/library, read ${new Date(C.at).toLocaleTimeString()}${C.stale ? ' (offline now, last good copy)' : ''}. Page layout changes on ollama.com can hide entries; installed models always show.</span>
+      <div class="list" style="max-height: 320px; overflow: auto">${(cr.ok ? cr.items : []).slice(0, 200).map(m => { const T2 = A.tags[m.name]; return `<div class="li static" style="flex-wrap: wrap"><span class="t mono grow" style="flex: 1">${esc(m.name)}</span><button class="btn text" data-act="ai-tags" data-m="${esc(m.name)}">${T2 ? 'Hide' : 'Variants'}</button>${T2 ? `<div class="stack" style="flex: 1 1 100%; gap: 4px">${T2.ok ? T2.tags.slice(0, 40).map(tg => { const f = fit(tg.size, hw); return `<span class="row" style="gap: 8px"><span class="mono small grow" style="flex: 1">${esc(m.name)}:${esc(tg.tag)}</span><span class="small">${tg.size ? (tg.size / 2 ** 30).toFixed(1) + ' GB' : 'size unknown'}</span>${fitBadge(f)}<button class="chip" data-act="ai-pull" data-m="${esc(m.name + ':' + tg.tag)}" ${st.running ? '' : 'disabled title="Start Ollama first"'}>Pull</button></span>`; }).join('') : `<span class="badge err">${esc(aiErr(T2))}</span>`}</div>` : ''}</div>`; }).join('')}</div>`;
+    const chat = A.chats[A.cur] || A.chats[0];
+    const chatCard = `<div class="card"><div class="row" style="gap: 6px; flex-wrap: wrap"><span class="h2" style="flex: 1">Chat</span><select data-input="aiModel" aria-label="Model" style="height: 34px; border-radius: 10px; border: 1px solid var(--line2); background: var(--s1); color: var(--tx)">${(st.models || []).map(m => `<option ${m.name === A.model ? 'selected' : ''}>${esc(m.name)}</option>`).join('') || '<option value="">No models</option>'}</select><button class="btn text" data-act="ai-new">${ic('add')}New</button><button class="btn text" data-act="ai-export">${ic('download')}Export</button></div>
+      <div class="row" style="gap: 6px; flex-wrap: wrap">${A.chats.map((c, i) => `<button class="badge ${i === A.cur ? 'ac' : 'mute'}" style="border: 0; cursor: pointer" data-act="ai-session" data-i="${i}">${esc(c.title)}</button>`).join('')}${A.chats.length > 1 ? `<button class="btn text" style="color: var(--err)" data-act="ai-del-session">Delete this chat…</button>` : ''}</div>
+      <details><summary class="small">System prompt and temperature</summary><textarea data-input="aiSystem" rows="2" maxlength="8000" style="width: 100%; margin-top: 6px; border-radius: 10px; border: 1px solid var(--line2); background: var(--s1); color: var(--tx); padding: 8px">${esc(A.system)}</textarea><label class="small">Temperature ${A.temperature} (0 precise, 2 creative)<input type="range" min="0" max="2" step="0.1" value="${A.temperature}" data-input="aiTemp" style="width: 100%"></label></details>
+      <div class="ai-log" id="ai-log" role="log">${chat.messages.map(m => `<div class="bubble ${m.role === 'user' ? 'me' : 'ai'}">${m.role === 'user' ? esc(m.content) : Lib.markdown(m.content)}</div>`).join('')}${A.streaming ? `<div class="bubble ai"><span id="ai-stream">${esc(A.streaming.text)}</span><span class="caret"></span></div>` : ''}</div>
+      <div class="row" style="gap: 6px"><label class="sr" for="ai-in">Message</label><textarea id="ai-in" data-input="aiInput" rows="2" maxlength="32000" placeholder="${st.running && A.model ? 'Ask the local model' : 'Start Ollama and pull a model first'}" style="flex: 1; border-radius: 12px; border: 1px solid var(--line2); background: var(--s1); color: var(--tx); padding: 8px 10px; font: inherit">${esc(A.input)}</textarea>${A.streaming ? `<button class="btn tonal" data-act="cancel-op" data-op="${A.streaming.op}">${ic('stop')}Stop</button>` : `<button class="btn fillb" data-act="ai-send" ${st.running && A.model ? '' : 'disabled'}>${ic('send')}Send</button>`}</div>
+      <span class="small">Everything stays on this computer.</span></div>`;
+    return page('Local AI', '', `${head}<div class="cols"><div class="wide">${chatCard}</div><div class="side"><div class="card"><span class="h2">Installed models</span>${installed}${jobHtml('ai-pull')}</div><div class="card"><span class="h2">Model library</span>${lib}</div></div></div>`);
+  }
+  async function aiAct(a, t) {
+    const A = S.ai;
+    switch (a) {
+      case 'ai-start': { const r = await api.ollama.start(); if (!r.ok) toast(aiErr(r), 'err'); A.status = await api.ollama.status(); break; }
+      case 'ai-stop': { const r = await api.ollama.stop(); if (!r.ok) toast(aiErr(r), 'err'); A.status = await api.ollama.status(); break; }
+      case 'ai-refresh': A.status = await api.ollama.status(); break;
+      case 'ai-catalog': A.catalog = { ok: true, models: [], at: Date.now() }; render(); A.catalog = await api.ollama.catalog(true); break;
+      case 'ai-regex': A.regex = !A.regex; break;
+      case 'ai-tags': { const m = t.dataset.m; if (A.tags[m]) delete A.tags[m]; else A.tags[m] = await api.ollama.tags(m); break; }
+      case 'ai-pull': await startJob('ai-pull', api.ollama.pull(t.dataset.m), `Pulling ${t.dataset.m}`); return;
+      case 'ai-remove': { const m = t.dataset.m; Kit.superConfirm({ title: `Remove the model ${m}`, detail: 'Deletes it from this computer. You can pull it again later.', opener: t, onConfirm: async () => { const r = await api.ollama.remove(m); toast(r.ok ? `Removed ${m}` : aiErr(r), r.ok ? 'ok' : 'err'); A.status = await api.ollama.status(); render(); } }); return; }
+      case 'ai-new': A.chats.push({ title: 'New chat', messages: [] }); A.cur = A.chats.length - 1; aiSaveChats(); break;
+      case 'ai-session': A.cur = +t.dataset.i; break;
+      case 'ai-del-session': Kit.superConfirm({ title: `Delete the chat "${A.chats[A.cur].title}"`, detail: 'Only on this computer.', opener: t, onConfirm: () => { A.chats.splice(A.cur, 1); A.cur = 0; aiSaveChats(); render(); } }); return;
+      case 'ai-export': { const c = A.chats[A.cur]; const md = `# ${c.title}\n\n` + c.messages.map(m => `**${m.role === 'user' ? 'You' : A.model || 'Model'}:**\n\n${m.content}\n`).join('\n'); const r = await api.saveFile('chat.md', md); if (r.ok) toast('Chat saved'); return; }
+      case 'ai-send': {
+        const text = A.input.trim(); if (!text) break; const c = A.chats[A.cur]; c.messages.push({ role: 'user', content: text }); if (c.title === 'New chat') c.title = text.slice(0, 32); A.input = '';
+        const r = await api.ollama.chat({ model: A.model, messages: c.messages, system: A.system, options: { temperature: A.temperature } });
+        if (!r.ok) { toast(aiErr(r), 'err'); break; }
+        A.streaming = { op: r.op, text: '' }; S.jobs[r.op] = { slot: 'ai-chat', label: 'Answering', result: null, onToken: d => { A.streaming.text += d; const el = document.getElementById('ai-stream'); if (el) { el.textContent = A.streaming.text; const log = document.getElementById('ai-log'); if (log) log.scrollTop = log.scrollHeight; } }, onDone: res => { const msg = res?.text || A.streaming?.text; if (msg) c.messages.push({ role: 'assistant', content: msg + (res?.ok && !res.partial ? '' : '\n\n_(stopped early)_') }); A.streaming = null; aiSaveChats(); }, quiet: true };
+        break;
+      }
+    }
+    render();
+  }
+
+  // ---------- Sketch (drawing and annotation) ----------
+  const PENS = { pencil: ['Pencil', 2, 'speed', '1'], pen: ['Pen', 3, 'speed', '2'], fineliner: ['Fineliner', 2, 'const', '3'], marker: ['Marker', 8, 'const', '4'], highlighter: ['Highlighter', 18, 'const', '5'], brush: ['Brush', 10, 'speed', '6'], fountain: ['Fountain pen', 6, 'angle', '7'], eraser: ['Eraser', 24, 'const', 'E'] };
+  S.sk = { tool: 'pen', color: '#6ea8ff', size: 1, strokes: null, redo: [], bg: null, min: false };
+  function skLoad() { if (S.sk.strokes) return; try { S.sk.strokes = (S.settings.sketch?.strokes || []).slice(); S.sk.bg = S.settings.sketch?.bg || null; } catch { S.sk.strokes = []; } }
+  let skSaveT; function skSave() { clearTimeout(skSaveT); skSaveT = setTimeout(() => api.setSetting('sketch', { strokes: S.sk.strokes.slice(-400), bg: S.sk.bg }).then(r => { if (!r.ok) toast('The drawing is too large to save; export it instead.', 'err'); }), 600); }
+  function skDraw(ctx, strokes, scale = 1) {
+    for (const s of strokes) {
+      ctx.globalCompositeOperation = s.tool === 'eraser' ? 'destination-out' : s.tool === 'highlighter' ? 'multiply' : 'source-over';
+      ctx.strokeStyle = s.tool === 'eraser' ? '#000' : s.color; ctx.globalAlpha = s.tool === 'highlighter' ? 0.35 : s.tool === 'pencil' ? 0.85 : 1; ctx.lineCap = s.tool === 'marker' ? 'square' : 'round'; ctx.lineJoin = 'round';
+      for (let i = 1; i < s.p.length; i++) { const [x0, y0] = s.p[i - 1], [x1, y1, w] = s.p[i]; ctx.lineWidth = w * scale; ctx.beginPath(); ctx.moveTo(x0 * scale, y0 * scale); ctx.lineTo(x1 * scale, y1 * scale); ctx.stroke(); }
+      if (s.p.length === 1) { ctx.lineWidth = s.p[0][2] * scale; ctx.beginPath(); ctx.moveTo(s.p[0][0] * scale, s.p[0][1] * scale); ctx.lineTo(s.p[0][0] * scale + 0.1, s.p[0][1] * scale); ctx.stroke(); }
+    }
+    ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
+  }
+  function skRepaint() { const c = document.getElementById('sk-canvas'); if (!c) return; const ctx = c.getContext('2d'); ctx.clearRect(0, 0, c.width, c.height); skDraw(ctx, S.sk.strokes, c.width / 1200); }
+  function viewSketch() {
+    skLoad(); const K = S.sk;
+    const tools = Object.entries(PENS).map(([k, [l, , , key]]) => `<button class="chip ${K.tool === k ? 'on' : ''}" aria-pressed="${K.tool === k}" data-act="sk-tool" data-t="${k}" title="${l} (${key})" aria-keyshortcuts="${key}">${l}</button>`).join('');
+    setTimeout(skRepaint, 0);
+    return page('Sketch', '', `<div class="card sk-card"><div class="sk-bar ${K.min ? 'min' : ''}" role="toolbar" aria-label="Drawing tools">${K.min ? `<button class="chip on" data-act="sk-min" aria-label="Show tools">${esc(PENS[K.tool][0])}</button>` : `${tools}<label class="chip" title="Colour">${ic('palette', 'sm')}<input type="color" value="${K.color}" data-input="skColor" aria-label="Pen colour" style="width: 28px; height: 22px; border: 0; background: none"></label><label class="chip" title="Size">Size<input type="range" min="0.5" max="4" step="0.25" value="${K.size}" data-input="skSize" aria-label="Pen size" style="width: 90px"></label><button class="chip" data-act="sk-undo" title="Undo (Ctrl+Z)" ${K.strokes.length ? '' : 'disabled'}>Undo</button><button class="chip" data-act="sk-redo" title="Redo (Ctrl+Y)" ${K.redo.length ? '' : 'disabled'}>Redo</button><button class="chip" data-act="sk-clear" ${K.strokes.length ? '' : 'disabled'}>Clear…</button><label class="chip" title="Draw on an image">${ic('image', 'sm')}Image<input type="file" accept="image/png,image/jpeg,image/webp" data-file="skbg" class="sr"></label><button class="chip" data-act="sk-svg">SVG</button>${[1, 2, 3].map(x => `<button class="chip" data-act="sk-png" data-x="${x}">PNG ${x}x</button>`).join('')}<button class="chip" data-act="sk-min" aria-label="Minimise tools">${ic('expand_less', 'sm')}</button>`}</div>
+      <div class="sk-stage" style="${K.bg ? `background-image: url(${K.bg})` : ''}"><canvas id="sk-canvas" width="1200" height="750" aria-label="Drawing surface. ${K.strokes.length} strokes." role="img" tabindex="0"></canvas></div>
+      <span class="small">Hold Shift to lock a stroke to eight directions. Pencil, pen and brush thin as you move faster; the fountain pen changes with direction. Saved on this computer only.</span></div>`);
+  }
+  root.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && e.target.id === 'mc-cmd') { e.preventDefault(); mcAct('mc-send', e.target); }
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey) && e.target.id === 'ai-in') { e.preventDefault(); aiAct('ai-send', e.target); }
+  });
+  let skCur = null;
+  root.addEventListener('pointerdown', e => {
+    const c = e.target.closest('#sk-canvas'); if (!c) return; e.preventDefault(); c.setPointerCapture(e.pointerId);
+    const r = c.getBoundingClientRect(), k = 1200 / r.width, x = (e.clientX - r.left) * k, y = (e.clientY - r.top) * k;
+    const [, base] = PENS[S.sk.tool]; skCur = { s: { tool: S.sk.tool, color: S.sk.color, p: [[Math.round(x), Math.round(y), base * S.sk.size]] }, last: { x, y, t: performance.now() }, origin: { x, y } }; S.sk.redo = [];
+  });
+  root.addEventListener('pointermove', e => {
+    if (!skCur) return; const c = document.getElementById('sk-canvas'); if (!c) return;
+    const r = c.getBoundingClientRect(), k = 1200 / r.width; let x = (e.clientX - r.left) * k, y = (e.clientY - r.top) * k;
+    if (e.shiftKey) { const dx = x - skCur.origin.x, dy = y - skCur.origin.y, a = Math.round(Math.atan2(dy, dx) / (Math.PI / 4)) * (Math.PI / 4), d = Math.hypot(dx, dy); x = skCur.origin.x + Math.cos(a) * d; y = skCur.origin.y + Math.sin(a) * d; }
+    const L = skCur.last, dt = Math.max(1, performance.now() - L.t), dist = Math.hypot(x - L.x, y - L.y); if (dist < 1.5) return;
+    const [, base, mode] = PENS[skCur.s.tool], speed = dist / dt; let w = base * S.sk.size;
+    if (mode === 'speed') w *= Math.max(0.35, 1 - speed * 0.35);
+    if (mode === 'angle') w *= 0.3 + 0.7 * Math.abs(Math.sin(Math.atan2(y - L.y, x - L.x) - Math.PI / 4));
+    skCur.s.p.push([Math.round(x), Math.round(y), Math.round(w * 10) / 10]); skCur.last = { x, y, t: performance.now() };
+    const ctx = c.getContext('2d'); skDraw(ctx, [{ ...skCur.s, p: skCur.s.p.slice(-2) }], c.width / 1200);
+  });
+  addEventListener('pointerup', () => { if (!skCur) return; S.sk.strokes.push(skCur.s); skCur = null; skRepaint(); skSave(); });
+  function skSvg() {
+    const segs = s => s.p.length === 1 ? `<circle cx="${s.p[0][0]}" cy="${s.p[0][1]}" r="${s.p[0][2] / 2}" fill="${s.tool === 'eraser' ? '#000' : s.color}"/>` : s.p.slice(1).map((p, i) => `<line x1="${s.p[i][0]}" y1="${s.p[i][1]}" x2="${p[0]}" y2="${p[1]}" stroke-width="${p[2]}"/>`).join('');
+    let body = '', n = 0;
+    for (const s of S.sk.strokes) {
+      if (s.tool === 'eraser') { body = `<mask id="m${n}"><rect width="1200" height="750" fill="#fff"/><g stroke="#000" stroke-linecap="round">${segs(s)}</g></mask><g mask="url(#m${n})">${body}</g>`; n++; continue; }
+      body += `<g stroke="${esc(s.color)}" stroke-linecap="${s.tool === 'marker' ? 'square' : 'round'}" opacity="${s.tool === 'highlighter' ? 0.35 : s.tool === 'pencil' ? 0.85 : 1}"${s.tool === 'highlighter' ? ' style="mix-blend-mode: multiply"' : ''}>${segs(s)}</g>`;
+    }
+    return `<?xml version="1.0" encoding="UTF-8"?>\n<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="750" viewBox="0 0 1200 750">${S.sk.bg ? `<image href="${S.sk.bg}" width="1200" height="750" preserveAspectRatio="xMidYMid slice"/>` : ''}${body}</svg>\n`;
+  }
+  async function skAct(a, t) {
+    const K = S.sk;
+    switch (a) {
+      case 'sk-tool': K.tool = t.dataset.t; break;
+      case 'sk-min': K.min = !K.min; break;
+      case 'sk-undo': if (K.strokes.length) { K.redo.push(K.strokes.pop()); skSave(); } break;
+      case 'sk-redo': if (K.redo.length) { K.strokes.push(K.redo.pop()); skSave(); } break;
+      case 'sk-clear': Kit.superConfirm({ title: `Clear ${K.strokes.length} strokes`, detail: 'Undo can bring them back while this window is open.', opener: t, onConfirm: () => { K.redo = K.strokes.reverse(); K.strokes = []; skSave(); render(); } }); return;
+      case 'sk-svg': { const r = await api.saveFile('sketch.svg', skSvg()); if (r.ok) toast('Saved SVG'); return; }
+      case 'sk-png': { const x = +t.dataset.x, c = document.createElement('canvas'); c.width = 1200 * x; c.height = 750 * x; const ctx = c.getContext('2d'); if (K.bg) { const img = new Image(); img.src = K.bg; await img.decode().catch(() => {}); const s = Math.max(c.width / img.width, c.height / img.height); ctx.drawImage(img, (c.width - img.width * s) / 2, (c.height - img.height * s) / 2, img.width * s, img.height * s); } const layer = document.createElement('canvas'); layer.width = c.width; layer.height = c.height; skDraw(layer.getContext('2d'), K.strokes, x); ctx.drawImage(layer, 0, 0); const blob = await new Promise(r => c.toBlob(r, 'image/png')); const r = await api.saveFile(`sketch-${x}x.png`, new Uint8Array(await blob.arrayBuffer())); if (r.ok) toast(`Saved PNG at ${x}x`); return; }
+    }
+    render();
+  }
+  async function skBackground(file) {
+    if (file.size > 1500000) { toast('Images up to 1.5 MB can be drawn on. Nothing changed.', 'err'); return; }
+    const bytes = new Uint8Array(await file.arrayBuffer()), kind = Lib.imageKind(bytes); if (!kind) { toast('Only PNG, JPEG or WebP images. Nothing changed.', 'err'); return; }
+    S.sk.bg = `data:image/${kind};base64,${Lib.b64encode(bytes)}`; skSave(); render();
+  }
+  document.addEventListener('keydown', e => {
+    const tab = S.tabs.find(t => t.id === S.active); if (tab?.view !== 'sketch' || e.target.matches?.('input, textarea, select')) return;
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') { e.preventDefault(); skAct(e.shiftKey ? 'sk-redo' : 'sk-undo'); return; }
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'y') { e.preventDefault(); skAct('sk-redo'); return; }
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    const hit = Object.entries(PENS).find(([, v]) => v[3].toLowerCase() === e.key.toLowerCase()); if (hit) { S.sk.tool = hit[0]; render(); }
+  });
+
   // ---------- Support Tickets ----------
   const SEVERITY = ['Mild inconvenience', 'Moderately dramatic', 'Catastrophic (ignored)', 'Existential'];
   const STATUSES = ['Received', 'Triaged by the Desk', 'Escalated to a drawer', 'Resolved: delete the app data folder'];
@@ -1030,7 +1270,7 @@
   function render() {
     if (!S.settings || (browser && !api.authenticated)) return;
     const focusId = document.activeElement?.id, caret = document.activeElement?.selectionStart;
-    const views = { setup: viewSetup, accounts: viewAccounts, deploys: viewDeploys, wizard: viewWizard, run: viewRun, result: viewResult, settings: viewSettings, help: viewHelp, history: viewHistory, changelog: viewChangelog, docs: viewDocs, support: viewSupport, tools: viewTools };
+    const views = { setup: viewSetup, accounts: viewAccounts, deploys: viewDeploys, wizard: viewWizard, run: viewRun, result: viewResult, settings: viewSettings, help: viewHelp, history: viewHistory, changelog: viewChangelog, docs: viewDocs, support: viewSupport, tools: viewTools, servers: viewServers, ai: viewAi, sketch: viewSketch };
     const tab = S.tabs.find(t => t.id === S.active) || S.tabs[0];
     const v = tab.id === 'ws' ? S.view : tab.view;
     root.innerHTML = shell((views[v] || viewDeploys)(), { rail: v !== 'setup' }) + paletteHtml() + panelHtml() + dimsumHtml() + partyHtml();
@@ -1053,6 +1293,9 @@
     if (v === 'school') { go('settings'); S.schoolForm = null; openPanel('school'); return; }
     if (v === 'colour') { go('settings'); openColour(); S.colour.a = 0.8; S.colour.text = pickerHex(); render(); return; }
     if (v === 'schedules') { go('settings'); S.settings.schedules = [{ key: 'theme', value: 'dark', at: '19:00', days: [0, 1, 2, 3, 4, 5, 6] }, { key: 'calm', value: true, at: '22:00', days: [1, 2, 3, 4, 5] }]; applyOverlays(); applyAppearance(); render(); setTimeout(() => scrollToEl('schedules'), 50); return; }
+    if (v === 'servers') { go('deploys'); openTab('servers'); return; }
+    if (v === 'ai') { go('deploys'); openTab('ai'); return; }
+    if (v === 'sketch') { go('deploys'); skLoad(); S.sk.strokes = [{ tool: 'pen', color: '#6ea8ff', p: Array.from({ length: 60 }, (_, i) => [100 + i * 15, 400 + Math.round(Math.sin(i / 6) * 160), 3 + (i % 10) / 4]) }, { tool: 'highlighter', color: '#f5b451', p: [[200, 200, 18], [700, 200, 18]] }, { tool: 'fountain', color: '#4ade9a', p: Array.from({ length: 40 }, (_, i) => [300 + Math.cos(i / 6) * 200, 380 + Math.sin(i / 6) * 200, 2 + 5 * Math.abs(Math.sin(i / 6 - 0.8))]) }, { tool: 'eraser', color: '#000', p: [[500, 380, 40], [620, 380, 40]] }]; openTab('sketch'); return; }
     if (v === 'tools') { go('deploys'); ensureData('tools'); openTab('tools'); S.tools.b64in = 'hello, har gow'; S.tools.b64out = { ok: true, text: Lib.b64encode('hello, har gow') }; S.tools.conv = { name: 'menu.yaml', text: 'x', note: '' }; render(); return; }
     if (v === 'party') { S.active = 'ws'; go('deploys'); celebrate('42 words applied'); return; }
     if (v === 'appearance') { go('deploys'); openAppearance({ key: 'go:accounts', label: 'Accounts' }); apSet('weight', 750); apSet('color', '#4ade9a'); apSet('glow', 12); apSet('radius', 18); apSet('underline', true); render(); return; }
@@ -1083,6 +1326,9 @@
     if (t.dataset.cmd) { const c = COMMANDS.find(x => x.id === t.dataset.cmd); S.palette = null; render(); return c?.run(); }
     const a = t.dataset.act;
     if (a?.startsWith('ap-')) return apAction(a, t);
+    if (a?.startsWith('mc-')) return mcAct(a, t);
+    if (a?.startsWith('ai-')) return aiAct(a, t);
+    if (a?.startsWith('sk-')) return skAct(a, t);
     if (a === 'submit-code') e.preventDefault();
     if (a === 'close-palette' && e.target.closest('[data-stop]')) return;
     switch (a) {
@@ -1244,6 +1490,11 @@
     if (el.dataset.sf) { const m = { 'sf-value': 'value', 'sf-value2': 'value2', 'sf-name': 'name' }[el.dataset.sf]; S.schoolForm[m] = el.value; return; }
     if (el.dataset.cp) { const C = S.colour; if (el.dataset.cp === 'text') { C.text = el.value; const hx = Lib.parseColor(el.value); if (hx) { Object.assign(C, Lib.hexToHsv(hx), { a: Lib.rgba(hx).a }); } } else { if (el.dataset.cp === 'h') C.h = +el.value; else C.a = +el.value / 100; C.text = pickerHex(); } render(); return; }
     if (el.dataset.input === 'mediaPreset') { S.mediaPreset = el.value; return; }
+    if (el.dataset.mcf && el.type !== 'checkbox' && el.tagName !== 'SELECT') { const k = el.dataset.mcf; S.mc.form[k] = ['port', 'memoryMb'].includes(k) ? +el.value : el.value; if (k === 'memoryMb') { const lb = el.previousElementSibling; if (lb) lb.textContent = `Memory: ${el.value} MB`; } return; }
+    const mi = { mcVq: v => { S.mc.form.vq = v; render(); }, mcCmd: v => (S.mc.cmd = v), mcPlayer: v => (S.mc.player = v), aiQ: v => { S.ai.q = v; render(); }, aiSystem: v => (S.ai.system = v), aiInput: v => (S.ai.input = v), aiTemp: v => { S.ai.temperature = +v; }, skColor: v => (S.sk.color = v), skSize: v => (S.sk.size = +v) }[el.dataset.input];
+    if (mi) { mi(el.value); return; }
+    if (el.dataset.mcprop) { const d = S.mc.props.descriptors[el.dataset.mcprop]; S.mc.propEdits[el.dataset.mcprop] = d.type === 'int' ? parseInt(el.value, 10) : el.value; const b = root.querySelector('[data-act="mc-save-props"]'); if (b) b.disabled = false; return; }
+    if (el.dataset.mcareaN) { const v = parseInt(el.value, 10); if (Number.isInteger(v)) { S.mc.area[el.dataset.mcareaN] = ['w', 'h'].includes(el.dataset.mcareaN) ? Math.max(1, Math.min(1000, v)) : v; } return; }
     if (el.dataset.input === 'nextDraft') { S.nextDraft = el.value; return; }
     if (el.dataset.funny) { set('funnyLevels', { ...S.settings.funnyLevels, [el.dataset.funny]: +el.value }); return; }
     if (el.dataset.input === 'apPreset') { S.ap.preset = el.value; return; }
@@ -1273,6 +1524,10 @@
     if (el.dataset.note) { el.checked ? S.noteSel.add(el.dataset.note) : S.noteSel.delete(el.dataset.note); render(); }
     if (el.dataset.file === 'vocab' && el.files[0]) applyVocabFile(el.files[0]);
     if (el.dataset.file === 'style' && el.files[0]) apImport(el.files[0]);
+    if (el.dataset.file === 'skbg' && el.files[0]) skBackground(el.files[0]);
+    if (el.dataset.mcf && (el.type === 'checkbox' || el.tagName === 'SELECT')) { const k = el.dataset.mcf; S.mc.form[k] = el.type === 'checkbox' ? el.checked : el.value; render(); }
+    if (el.dataset.input === 'aiModel') { S.ai.model = el.value; }
+    if (el.dataset.mcareaN) render();
     if (el.dataset.ap === 'font') { apSet('font', el.value || undefined); render(); }
     else if (el.dataset.ap && el.type === 'color') { apSet(el.dataset.ap, el.value); render(); }
     else if (el.dataset.ap && el.type === 'range') { S.apDrag = false; render(); }

@@ -10,6 +10,8 @@ const { createUpdater, handleSquirrelEvent } = require('./updater');
 const { createLocks } = require('./locks');
 const { createSchool } = require('./school');
 const { createMedia } = require('./media');
+const { createMinecraft } = require('./minecraft');
+const { createOllama } = require('./ollama');
 
 const squirrelEvent = handleSquirrelEvent(app);
 function provenance() {
@@ -43,7 +45,7 @@ function createWindow() {
 
 async function captureScreenshots(dir) {
   fs.mkdirSync(dir, { recursive: true });
-  const routes = ['setup', 'deploys', 'accounts', 'wizard', 'settings', 'help', 'palette', 'a11y', 'info', 'menu', 'confirm', 'history', 'docs', 'changelog', 'tabs', 'export', 'lockwiz', 'unlock', 'support', 'appearance', 'tools', 'party', 'school', 'colour', 'schedules'];
+  const routes = ['setup', 'deploys', 'accounts', 'wizard', 'settings', 'help', 'palette', 'a11y', 'info', 'menu', 'confirm', 'history', 'docs', 'changelog', 'tabs', 'export', 'lockwiz', 'unlock', 'support', 'appearance', 'tools', 'party', 'school', 'colour', 'schedules', 'servers', 'ai', 'sketch'];
   for (let i = 0; i < 90 && !(await win.webContents.executeJavaScript('!!(window.__ready && window.__ready())')); i++) await new Promise(res => setTimeout(res, 1000));
   for (const [w, tag] of [[1320, 'desktop'], [420, 'narrow']]) {
     win.setSize(w, 860);
@@ -163,6 +165,36 @@ if (!squirrelEvent) app.whenReady().then(() => {
   handle('archive-create', files => bridge.start('archive', null, ({ signal, progress }) => media.archive(files, { signal, onProgress: progress })));
   handle('archive-extract', file => bridge.start('extract', null, ({ signal, progress }) => media.extract(file, { signal, onProgress: progress })));
   handle('yaml-to-json', text => media.yamlToJson(text));
+  // Minecraft servers: four targets, versions from the official catalogs.
+  const findJava = () => { const base = path.join(process.env.ProgramFiles || 'C:\\Program Files', 'Microsoft'); try { const jdk = fs.readdirSync(base).filter(n => /^jdk-/.test(n)).sort().pop(); if (jdk) return path.join(base, jdk, 'bin', 'java.exe'); } catch { } return 'java'; };
+  const mc = createMinecraft({ dir: path.join(app.getPath('userData'), 'minecraft'), sevenZip: bundled7za });
+  handle('mc-catalog', f => mc.catalog(f));
+  handle('mc-list', () => mc.list());
+  handle('mc-create', spec => bridge.start('mc-create', null, ({ signal, progress }) => mc.create(spec, { signal, onProgress: progress })));
+  handle('mc-start', id => mc.start(id, { javaPath: findJava() }));
+  handle('mc-stop', id => mc.stop(id));
+  handle('mc-command', (id, c) => mc.command(id, c));
+  handle('mc-logs', id => mc.logs(id));
+  handle('mc-properties', id => mc.properties(id));
+  handle('mc-set-properties', (id, ch) => mc.setProperties(id, ch));
+  handle('mc-backup', id => bridge.start('mc-backup', null, ({ signal, progress }) => mc.backup(id, { signal, onProgress: progress })));
+  handle('mc-remove', id => mc.remove(id));
+  handle('mc-gamerules', id => bridge.start('mc-gamerules', null, ({ signal }) => mc.gameRules(id, { javaPath: findJava(), signal })));
+  handle('mc-pick-folder', async () => { const r = await dialog.showOpenDialog(win, { properties: ['openDirectory', 'createDirectory'] }); return r.canceled ? { ok: false, error: 'CANCELLED' } : { ok: true, path: r.filePaths[0] }; });
+  handle('mc-pregenerate', (id, area) => bridge.start('mc-pregen', null, ({ signal, progress }) => mc.pregenerate(id, area, { signal, onProgress: progress })));
+  handle('java-status', async () => ({ ok: true, java: (await run(findJava(), ['-version'], { timeoutMs: 10000 })).ok }));
+  // Local Ollama.
+  const ollama = createOllama({ dir: app.getPath('userData'), run });
+  handle('ollama-status', () => ollama.status().catch(() => ({ ok: false, error: 'STATUS_FAILED' })));
+  handle('ollama-start', () => ollama.start());
+  handle('ollama-stop', () => ollama.stop());
+  handle('ollama-catalog', refresh => ollama.catalog({ refresh: !!refresh }));
+  handle('ollama-tags', m => ollama.tags(m));
+  handle('ollama-pull', m => bridge.start('ollama-pull', null, ({ signal, progress }) => ollama.pull(m, { signal, onProgress: progress })));
+  handle('ollama-remove', m => ollama.remove(m));
+  handle('ollama-chat', req => bridge.start('ollama-chat', null, ({ signal, progress }) => ollama.chat(req, { signal, onProgress: progress })));
+  handle('ollama-chats', () => ollama.chats());
+  handle('ollama-save-chats', d => ollama.saveChats(d));
   handle('show-file', p => { if (typeof p === 'string' && path.isAbsolute(p) && fs.existsSync(p)) { shell.showItemInFolder(p); return { ok: true }; } return { ok: false, error: 'INVALID_INPUT' }; });
   handle('dim-sum', () => bridge.dimSum());
   handle('version', () => app.getVersion());
