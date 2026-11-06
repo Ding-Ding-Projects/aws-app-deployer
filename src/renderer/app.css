@@ -123,3 +123,8 @@ select { height: 40px; border-radius: var(--r2); border: 1px solid var(--line2);
 .is-locked { position: relative; opacity: .55; cursor: not-allowed !important; }
 .is-locked::after { content: "lock"; font-family: "Material Symbols Rounded"; font-size: 14px; position: absolute; top: 2px; right: 2px; color: var(--warn); line-height: 1; }
 .field textarea, .field select { min-height: 44px; }
+
+/* Per-element appearance editor */
+.prop { display: grid; grid-template-columns: 112px minmax(0, 1fr) auto; gap: 8px; align-items: center; font-size: 13px; }
+.prop select { height: 34px; border-radius: 10px; border: 1px solid var(--line2); background: var(--s1); color: var(--tx); padding: 0 8px; font: inherit; }
+.app .ap-target { outline: 2px dashed var(--ac); outline-offset: 3px; }

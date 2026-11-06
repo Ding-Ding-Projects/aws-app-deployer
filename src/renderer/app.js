@@ -68,6 +68,7 @@
     if (s.rainbow && !reduce) { let h = 210; rainbowTimer = setInterval(() => { h = (h + 2) % 360; root.style.setProperty('--ac', `hsl(${h} 90% 70%)`); }, 120); }
     else root.style.setProperty('--ac', s.rainbow ? 'hsl(210 90% 70%)' : s.accent);
     document.title = s.displayName || 'AWS App Deployer';
+    applyElementStyles();
   }
   async function set(key, value) {
     const r = await api.setSetting(key, value);
@@ -388,7 +389,7 @@
 
 
   // ---------- anchored panels: accessibility, notifications, info, keyboard help ----------
-  function openPanel(id, anchor) { if (!['unlock', 'lockwiz'].includes(id) && guard('panel:' + id.split(':')[0])) return; S.panel = { id, anchor: anchor || null }; S.infoStep = 0; render(); setTimeout(() => document.querySelector(`[data-panel="${id.split(':')[0]}"] [data-autofocus]`)?.focus(), 30); }
+  function openPanel(id, anchor) { if (!['unlock', 'lockwiz', 'appearance'].includes(id) && guard('panel:' + id.split(':')[0])) return; S.panel = { id, anchor: anchor || null }; S.infoStep = 0; render(); setTimeout(() => document.querySelector(`[data-panel="${id.split(':')[0]}"] [data-autofocus]`)?.focus(), 30); }
   function closePanel() { const a = S.panel?.anchor; S.panel = null; render(); if (a) document.querySelector(a)?.focus(); }
   async function setA11y(patch) { await set('a11y', { ...S.settings.a11y, ...patch }); }
   function panelFrame(id, title, body, anchorStyle) {
@@ -419,6 +420,7 @@
     }
     if (P.id === 'newtab') return newTabPanel();
     if (P.id === 'lockwiz') return lockWizPanel();
+    if (P.id === 'appearance') return appearancePanel();
     if (P.id === 'unlock') return unlockPanel();
     if (P.id.startsWith('export:')) return exportPanel(P.id.slice(7));
     if (P.id.startsWith('info:')) {
@@ -455,6 +457,7 @@
     const k = elKey(el);
     if (k) {
       const has = lockSet().has(k.key);
+      items.push({ label: 'Edit appearance…', icon: 'format_paint', run: () => openAppearance(k) });
       if (!has) items.push({ label: 'Lock this element…', icon: 'lock', run: () => openLockWizard(k) });
       else { items.push({ label: isLocked(k.key) ? 'Unlock…' : 'Lock again', icon: isLocked(k.key) ? 'lock_open' : 'lock', run: () => { if (isLocked(k.key)) openUnlock(k); else { delete S.unlocked[k.key]; render(); } } }); items.push({ label: 'Remove this lock…', icon: 'no_encryption', run: () => { S.unlock = { key: k.key, label: k.label, pin: '', password: '', totp: '', duration: 'once', remove: true }; openPanel('unlock'); } }); }
     }
@@ -584,7 +587,7 @@
   // ---------- element keys (shared by locks and the appearance editor) ----------
   const KEYED = '[data-go],[data-act],[data-toggle],[data-set],[data-info],[data-tab-go],[data-panel-open],[data-cmd],[data-menu],[data-win],button,a,input,select,textarea,h1,.h2,.card,.li';
   function elKey(node) {
-    const t = node?.closest?.(KEYED); if (!t || t.closest('.panel[data-panel="unlock"], .panel[data-panel="lockwiz"]')) return null;
+    const t = node?.closest?.(KEYED); if (!t || t.closest('.panel[data-panel="unlock"], .panel[data-panel="lockwiz"], .panel[data-panel="appearance"]')) return null;
     const d = t.dataset;
     const k = d.go ? 'go:' + d.go : d.tabGo ? 'tab:' + (S.tabs.find(x => x.id === d.tabGo)?.view || 'workspace') : d.toggle ? 'toggle:' + d.toggle : d.set ? `set:${d.set}=${d.val}` : d.act ? 'act:' + d.act + (d.key ? ':' + d.key : '') + (d.view ? ':' + d.view : '') : d.panelOpen ? 'panel:' + d.panelOpen : d.info ? 'info:' + d.info : d.cmd ? 'cmd:' + d.cmd : d.win ? 'win:' + d.win : d.menu ? `menu:${d.menu}:${d.key || d.at || d.tab || ''}` : t.id ? 'id:' + t.id : 'text:' + (t.tagName.toLowerCase()) + ':' + (t.innerText || '').trim().slice(0, 40).replace(/[^\w.\-]+/g, '-');
     return { key: k.slice(0, 160), el: t, label: (t.getAttribute('aria-label') || t.innerText || k).trim().split('\n')[0].slice(0, 60) };
@@ -607,6 +610,8 @@
   }, true);
   document.addEventListener('focusin', e => { if (!e.target.matches?.('input, select, textarea')) return; const k = elKey(e.target); if (k && isLocked(k.key)) { e.target.blur(); openUnlock(k); } });
   function decorateLocks() {
+    const styled = S.settings.appearance?.elements || {}, editing = S.ap?.key;
+    if (Object.keys(styled).length || editing) root.querySelectorAll(KEYED).forEach(el => { const k = elKey(el); if (k && k.el === el && (styled[k.key] || k.key === editing)) { el.dataset.ak = k.key; el.classList.toggle('ap-target', k.key === editing); } });
     const set = lockSet(); if (!set.size) return;
     root.querySelectorAll(KEYED).forEach(el => { const k = elKey(el); if (k && k.el === el && set.has(k.key)) { const locked = isLocked(k.key); el.classList.toggle('is-locked', locked); el.classList.toggle('was-locked', !locked); if (locked) { el.setAttribute('aria-disabled', 'true'); el.setAttribute('title', 'Locked for fun. Activate to unlock.'); } } });
   }
@@ -674,6 +679,78 @@
     cue(r.passed ? 'ok' : 'err'); render();
   }
 
+
+  // ---------- per-element appearance editor ----------
+  const apStyleEl = document.head.appendChild(document.createElement('style')); apStyleEl.id = 'element-appearance';
+  function applyElementStyles() { apStyleEl.textContent = Lib.appearanceCss(S.settings.appearance); }
+  const apUndo = [], apRedo = []; let apSaveTimer;
+  const apData = () => Lib.cleanAppearance(S.settings.appearance);
+  function apCommit(next, { record = true } = {}) {
+    if (record) { apUndo.push(JSON.stringify(apData())); if (apUndo.length > 100) apUndo.shift(); apRedo.length = 0; }
+    S.settings.appearance = Lib.cleanAppearance(next); applyElementStyles();
+    clearTimeout(apSaveTimer); apSaveTimer = setTimeout(async () => { const r = await api.setSetting('appearance', S.settings.appearance); if (r.ok) { S.sources.appearance = 'file'; } else toast('Appearance could not be saved: ' + r.error, 'err'); }, 300);
+  }
+  function apSet(prop, value, record = true) {
+    const a = apData(), st = S.ap.state, el = { ...(a.elements[S.ap.key] || {}) }, props = { ...(el[st] || {}) };
+    if (value === undefined) delete props[prop]; else props[prop] = value;
+    el[st] = props; a.elements[S.ap.key] = el; apCommit(a, { record });
+  }
+  function apHistory(from, to) { if (!from.length) return; to.push(JSON.stringify(apData())); apCommit(JSON.parse(from.pop()), { record: false }); render(); }
+  function openAppearance(k) { S.ap = { key: k.key, label: k.label, state: 'rest', preset: '' }; openPanel('appearance'); }
+  function appearancePanel() {
+    const A = S.ap, a = apData(), cur = a.elements[A.key]?.[A.state] || {}, P = Lib.AP_PROPS;
+    const reset = k => `<button class="btn text" data-act="ap-reset" data-p="${k}" ${cur[k] === undefined ? 'disabled' : ''} aria-label="Reset ${P[k].label}">Reset</button>`;
+    const row = (k, ctl) => `<div class="prop"><label for="ap-${k}">${P[k].label}</label>${ctl}${reset(k)}</div>`;
+    const range = k => row(k, `<span class="row" style="gap: 6px"><input id="ap-${k}" type="range" min="${P[k].min}" max="${P[k].max}" step="${P[k].step}" value="${cur[k] ?? P[k].min}" data-ap="${k}" style="flex: 1; min-width: 0"><span class="badge ${cur[k] === undefined ? 'mute' : 'ac'} mono" style="min-width: 44px; justify-content: center">${cur[k] ?? 'auto'}</span></span>`);
+    const col = k => row(k, `<span class="row" style="gap: 6px"><input id="ap-${k}" type="color" value="${cur[k] || '#6ea8ff'}" data-ap="${k}" style="width: 36px; height: 30px; border: 0; background: none; padding: 0"><span class="mono small">${cur[k] || 'auto'}</span></span>`);
+    const style = ['italic', 'underline', 'strike', 'caps'].map(k => `<button class="badge ${cur[k] ? 'ac' : 'mute'}" style="border: 0; cursor: pointer; min-width: 34px; justify-content: center" aria-pressed="${!!cur[k]}" aria-label="${P[k].label}" data-act="ap-flag" data-p="${k}">${{ italic: '<i>I</i>', underline: '<u>U</u>', strike: '<s>S</s>', caps: 'AA' }[k]}</button>`).join('');
+    const presets = Object.keys(a.presets);
+    return panelFrame('appearance', `Edit appearance: "${A.label}"`, `<span class="small">Element <span class="mono">${esc(A.key)}</span>. Changes apply live and are saved to your settings.</span>
+      <div class="seg" role="radiogroup" aria-label="State">${Object.keys(Lib.AP_STATES).map(st => `<button role="radio" aria-checked="${A.state === st}" class="${A.state === st ? 'on' : ''}" data-act="ap-state" data-s="${st}">${{ rest: 'Rest', hover: 'Hover', focus: 'Focus', pressed: 'Pressed' }[st]}${a.elements[A.key]?.[st] ? ' •' : ''}</button>`).join('')}</div>
+      ${row('font', `<select id="ap-font" data-ap="font"><option value="">Default</option>${Object.entries(Lib.AP_FONT_LABELS).map(([v, l]) => `<option value="${v}" ${cur.font === v ? 'selected' : ''}>${l}</option>`).join('')}</select>`)}
+      ${range('size')}${range('weight')}
+      <div class="prop"><span>Style</span><span class="row" style="gap: 4px">${style}</span><button class="btn text" data-act="ap-reset-flags" ${['italic', 'underline', 'strike', 'caps'].some(k => cur[k]) ? '' : 'disabled'}>Reset</button></div>
+      ${range('spacing')}${col('color')}${col('background')}${col('border')}${range('radius')}${range('glow')}${range('opacity')}
+      <div class="row" style="flex-wrap: wrap; gap: 4px"><button class="btn text" data-act="ap-undo" ${apUndo.length ? '' : 'disabled'} aria-keyshortcuts="Control+Z">${ic('undo')}Undo</button><button class="btn text" data-act="ap-redo" ${apRedo.length ? '' : 'disabled'} aria-keyshortcuts="Control+Y">${ic('redo')}Redo</button><button class="btn text" data-act="ap-copy" ${a.elements[A.key] ? '' : 'disabled'}>${ic('content_copy')}Copy style</button><button class="btn text" data-act="ap-paste" ${S.apClip ? '' : 'disabled'}>${ic('content_paste')}Paste style</button><button class="btn text" data-act="ap-reset-el" ${a.elements[A.key] ? '' : 'disabled'}>Reset element</button></div>
+      <span class="label">PRESETS</span>
+      <div class="row" style="gap: 6px; flex-wrap: wrap"><label class="sr" for="ap-pname">Preset name</label><input id="ap-pname" data-input="apPreset" value="${esc(A.preset)}" maxlength="40" placeholder="Preset name" style="flex: 1 1 140px; height: 36px; border-radius: 10px; border: 1px solid var(--line2); background: var(--s1); color: var(--tx); padding: 0 10px"><button class="btn tonal" data-act="ap-preset-save" ${a.elements[A.key] ? '' : 'disabled'}>Save preset</button></div>
+      ${presets.length ? `<div class="row" style="gap: 6px; flex-wrap: wrap">${presets.map(n => `<span class="row" style="gap: 2px"><button class="btn out" data-act="ap-preset-apply" data-n="${esc(n)}">${esc(n)}</button><button class="btn text" data-act="ap-preset-del" data-n="${esc(n)}" aria-label="Delete preset ${esc(n)}">${ic('close', 'sm')}</button></span>`).join('')}</div>` : '<span class="small">No presets yet. Style an element, name it and save.</span>'}
+      <div class="divider"></div>
+      <div class="row" style="gap: 6px; flex-wrap: wrap"><button class="btn text" data-act="ap-export">${ic('download')}Export styles</button><label class="btn text" style="cursor: pointer">${ic('upload')}Import styles<input type="file" accept="application/json,.json" data-file="style" class="sr"></label><span class="grow"></span><button class="btn text" style="color: var(--err)" data-act="ap-reset-all" ${Object.keys(a.elements).length ? '' : 'disabled'}>Reset every element…</button></div>`, 'top: 60px; right: 12px; width: 420px; height: 680px;');
+  }
+  document.addEventListener('keydown', e => {
+    if (S.panel?.id !== 'appearance' || !(e.ctrlKey || e.metaKey) || e.target.matches?.('input[type=text], input:not([type]), textarea')) return;
+    const k = e.key.toLowerCase();
+    if (k === 'z' && !e.shiftKey) { e.preventDefault(); apHistory(apUndo, apRedo); } else if (k === 'y' || (k === 'z' && e.shiftKey)) { e.preventDefault(); apHistory(apRedo, apUndo); }
+  });
+  async function apImport(file) {
+    if (file.size > 200000) { toast('That style file is too large. Nothing changed.', 'err'); return; }
+    const r = Lib.parseStyleFile(await file.text());
+    if (!r.ok) { toast('Style file refused (' + r.error.toLowerCase().replace(/_/g, ' ') + '). Nothing changed.', 'err'); cue('err'); return; }
+    const a = apData(); apCommit({ elements: { ...a.elements, ...r.appearance.elements }, presets: { ...a.presets, ...r.appearance.presets } });
+    toast(`Imported ${Object.keys(r.appearance.elements).length} element styles and ${Object.keys(r.appearance.presets).length} presets`); cue('ok'); render();
+  }
+  async function apAction(a, t) {
+    const d = apData();
+    switch (a) {
+      case 'ap-state': S.ap.state = t.dataset.s; break;
+      case 'ap-flag': apSet(t.dataset.p, (d.elements[S.ap.key]?.[S.ap.state] || {})[t.dataset.p] ? undefined : true); break;
+      case 'ap-reset': apSet(t.dataset.p, undefined); break;
+      case 'ap-reset-flags': ['italic', 'underline', 'strike', 'caps'].forEach(k => apSet(k, undefined)); break;
+      case 'ap-undo': return apHistory(apUndo, apRedo);
+      case 'ap-redo': return apHistory(apRedo, apUndo);
+      case 'ap-copy': S.apClip = JSON.stringify(d.elements[S.ap.key]); toast('Style copied. Paste it onto any element from its Edit appearance panel.'); break;
+      case 'ap-paste': d.elements[S.ap.key] = JSON.parse(S.apClip); apCommit(d); toast('Style pasted'); break;
+      case 'ap-reset-el': delete d.elements[S.ap.key]; apCommit(d); toast('Element back to the default look'); break;
+      case 'ap-reset-all': Kit.superConfirm({ title: `Reset ${Object.keys(d.elements).length} styled elements`, detail: 'Presets stay. Undo can bring the styles back while this window is open.', opener: t, onConfirm: () => { apCommit({ elements: {}, presets: d.presets }); render(); toast('Every element is back to the default look'); } }); return;
+      case 'ap-preset-save': { const n = (S.ap.preset || '').trim(); if (!n || /[<>]/.test(n)) { toast('Name the preset first (no angle brackets)', 'err'); break; } d.presets[n.slice(0, 40)] = d.elements[S.ap.key]; apCommit(d); S.ap.preset = ''; toast(`Preset "${n}" saved`); break; }
+      case 'ap-preset-apply': d.elements[S.ap.key] = d.presets[t.dataset.n]; apCommit(d); toast(`Applied "${t.dataset.n}"`); break;
+      case 'ap-preset-del': delete d.presets[t.dataset.n]; apCommit(d); break;
+      case 'ap-export': { const r = await api.saveFile('aws-app-deployer-styles.json', JSON.stringify({ schema: 'aws-app-deployer.appearance/1', exportedAt: new Date().toISOString(), ...d }, null, 2) + '\n'); if (r.ok) toast('Saved styles as UTF-8 JSON'); return; }
+    }
+    render();
+  }
+
   // ---------- Support Tickets ----------
   const SEVERITY = ['Mild inconvenience', 'Moderately dramatic', 'Catastrophic (ignored)', 'Existential'];
   const STATUSES = ['Received', 'Triaged by the Desk', 'Escalated to a drawer', 'Resolved: delete the app data folder'];
@@ -723,6 +800,7 @@
     if (v === 'export') { go('history'); openPanel('export:history'); return; }
     if (v === 'lockwiz') { go('deploys'); openLockWizard({ key: 'go:settings', label: 'Settings' }); S.lockWiz.policy = 'pin+totp'; api.lockTotp('Settings').then(x => { S.lockWiz.totp = x; S.lockWiz.pin = '2468'; render(); }); return; }
     if (v === 'unlock') { go('deploys'); api.lockCreate('go:settings', { label: 'Settings', policy: 'pin', pin: '2468' }).then(async () => { await refreshLocks(); render(); openUnlock({ key: 'go:settings', label: 'Settings' }); S.unlock.pin = '24'; render(); }); return; }
+    if (v === 'appearance') { go('deploys'); openAppearance({ key: 'go:accounts', label: 'Accounts' }); apSet('weight', 750); apSet('color', '#4ade9a'); apSet('glow', 12); apSet('radius', 18); apSet('underline', true); render(); return; }
     if (v === 'support') { go('support'); S.ticketDraft = 'I locked Settings with a PIN and forgot it.'; render(); return; }
     const row = () => document.querySelector('[data-menu="deploy"]');
     if (v === 'menu') { go('deploys'); const r = row(); if (r) { const b = r.getBoundingClientRect(); Kit.openMenu(menuFor(r), { x: b.left + 240, y: b.top + 20, opener: r }); } return; }
@@ -749,6 +827,7 @@
     if (t.dataset.set) return set(t.dataset.set, t.dataset.val);
     if (t.dataset.cmd) { const c = COMMANDS.find(x => x.id === t.dataset.cmd); S.palette = null; render(); return c?.run(); }
     const a = t.dataset.act;
+    if (a?.startsWith('ap-')) return apAction(a, t);
     if (a === 'submit-code') e.preventDefault();
     if (a === 'close-palette' && e.target.closest('[data-stop]')) return;
     switch (a) {
@@ -787,7 +866,7 @@
       case 'update-check': S.update = await api.checkUpdates(); render(); break;
       case 'update-later': S.updateLater = true; render(); break;
       case 'update-install': if (S.run) { toast('A deployment is running. Restart after it finishes.', 'err'); break; } saveDraft(); await api.installUpdate(); break;
-      case 'panel-close': closePanel(); break;
+      case 'panel-close': if (S.panel?.id === 'appearance') { S.ap = null; } closePanel(); break;
       case 'pk': { const fld = t.dataset.f === 'upin' ? 'unlock' : 'lockWiz'; const key = t.dataset.f === 'upin' ? 'pin' : 'pin'; const obj = S[fld]; if (obj[key].length < 12) obj[key] += t.dataset.n; render(); break; }
       case 'pk-back': { const obj = t.dataset.f === 'upin' ? S.unlock : S.lockWiz; obj.pin = obj.pin.slice(0, -1); render(); break; }
       case 'pk-clear': { const obj = t.dataset.f === 'upin' ? S.unlock : S.lockWiz; obj.pin = ''; render(); break; }
@@ -873,6 +952,8 @@
     if (el.dataset.tk === 'description') { S.ticketDraft = el.value; return; }
     if (el.dataset.lw) { const m = { 'lw-pin': 'pin', 'lw-pin2': 'pin2', 'lw-password': 'password', 'lw-password2': 'password2', 'lw-code': 'code' }[el.dataset.lw]; S.lockWiz[m] = el.value; if (m === 'pin') render(); return; }
     if (el.dataset.ul) { S.unlock[el.dataset.ul] = el.value; if (el.dataset.ul === 'pin') render(); return; }
+    if (el.dataset.input === 'apPreset') { S.ap.preset = el.value; return; }
+    if (el.dataset.ap && el.type === 'range') { apSet(el.dataset.ap, +el.value, !S.apDrag); S.apDrag = true; const b = el.nextElementSibling; if (b) { b.textContent = el.value; b.className = 'badge ac mono'; } return; }
     if (el.dataset.sum !== undefined) { S.unlock.ladder.sums[+el.dataset.sum] = el.value; return; }
     const F = { tabQ: v => (S.tabQ = v), histQ: v => (S.hist.q = v), histFrom: v => (S.hist.from = v), histTo: v => (S.hist.to = v), clogQ: v => (S.clog.q = v), clogFrom: v => (S.clog.from = v), clogTo: v => (S.clog.to = v), docQ: v => (S.docF.q = v) }[el.dataset.input];
     if (F) { F(el.value); render(); return; }
@@ -890,6 +971,10 @@
     if (el.dataset.dep) { el.checked ? S.depSel.add(el.dataset.dep) : S.depSel.delete(el.dataset.dep); render(); }
     if (el.dataset.note) { el.checked ? S.noteSel.add(el.dataset.note) : S.noteSel.delete(el.dataset.note); render(); }
     if (el.dataset.file === 'vocab' && el.files[0]) applyVocabFile(el.files[0]);
+    if (el.dataset.file === 'style' && el.files[0]) apImport(el.files[0]);
+    if (el.dataset.ap === 'font') { apSet('font', el.value || undefined); render(); }
+    else if (el.dataset.ap && el.type === 'color') { apSet(el.dataset.ap, el.value); render(); }
+    else if (el.dataset.ap && el.type === 'range') { S.apDrag = false; render(); }
   });
   async function applyVocabFile(file) {
     const r = Lib.parseVocabulary(await file.text());

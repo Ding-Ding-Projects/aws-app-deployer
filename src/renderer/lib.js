@@ -265,7 +265,7 @@
   }
 
   // ---- Local history labels and categories ----
-  const CATEGORY = { theme: 'Appearance', accent: 'Appearance', rainbow: 'Appearance', reduceMotion: 'Appearance', schedule: 'Appearance', a11y: 'Accessibility', ui: 'Layout', displayName: 'Appearance', language: 'Language', funnyLevel: 'Language', emoji: 'Language', narration: 'Voice', voice: 'Voice', rate: 'Voice', sounds: 'Voice', focus: 'Comfort', calm: 'Comfort', school: 'Comfort', vocabulary: 'Language', setupComplete: 'Setup', 'deployments.removed': 'Records', restore: 'Restores' };
+  const CATEGORY = { theme: 'Appearance', accent: 'Appearance', rainbow: 'Appearance', reduceMotion: 'Appearance', schedule: 'Appearance', a11y: 'Accessibility', ui: 'Layout', displayName: 'Appearance', language: 'Language', funnyLevel: 'Language', emoji: 'Language', narration: 'Voice', voice: 'Voice', rate: 'Voice', sounds: 'Voice', focus: 'Comfort', calm: 'Comfort', school: 'Comfort', vocabulary: 'Language', setupComplete: 'Setup', 'deployments.removed': 'Records', restore: 'Restores', appearance: 'Appearance', tickets: 'Support' };
   const short = v => { const t = typeof v === 'string' ? v : JSON.stringify(v); return t === undefined ? 'nothing' : t.length > 40 ? t.slice(0, 37) + '…' : t; };
   function historyLabel(h) {
     if (h.key === 'deployments.removed') return `Removed ${h.before?.length || 0} deployment record${h.before?.length === 1 ? '' : 's'}`;
@@ -273,7 +273,72 @@
     if (h.restoredFrom !== undefined) return `Restored revision ${h.restoredFrom + 1}: ${h.key} ${short(h.after)}`;
     return `${h.key} changed: ${short(h.before)} → ${short(h.after)}`;
   }
+
+  // ---- Per-element appearance editor ----
+  // Every value is validated here before it becomes CSS, so a hand-edited settings file
+  // or an imported style file can never inject anything except these properties.
+  const AP_STATES = { rest: '', hover: ':hover', focus: ':focus-visible', pressed: ':active' };
+  const AP_FONTS = { inter: '"Inter", system-ui, sans-serif', system: 'system-ui, sans-serif', segoe: '"Segoe UI Variable", "Segoe UI", system-ui, sans-serif', mono: '"JetBrains Mono", ui-monospace, monospace', serif: 'Georgia, "Times New Roman", serif', rounded: '"Arial Rounded MT Bold", "Nunito", system-ui, sans-serif' };
+  const AP_FONT_LABELS = { inter: 'Inter', system: 'System', segoe: 'Segoe UI Variable', mono: 'JetBrains Mono', serif: 'Serif', rounded: 'Rounded' };
+  const num = (min, max) => v => (typeof v === 'number' && Number.isFinite(v) && v >= min && v <= max ? Math.round(v * 10) / 10 : undefined);
+  const bool = v => (v === true ? true : undefined);
+  const colour = v => (typeof v === 'string' ? parseColor(v) || undefined : undefined);
+  const AP_PROPS = {
+    font: { label: 'Font', check: v => (AP_FONTS[v] ? v : undefined), css: v => `font-family: ${AP_FONTS[v]}` },
+    size: { label: 'Size (px)', min: 8, max: 72, step: 1, check: num(8, 72), css: v => `font-size: ${v}px` },
+    weight: { label: 'Weight', min: 100, max: 900, step: 50, check: v => { const n = num(100, 900)(v); return n === undefined ? undefined : Math.round(n / 50) * 50; }, css: v => `font-weight: ${v}` },
+    italic: { label: 'Italic', check: bool, css: () => 'font-style: italic' },
+    underline: { label: 'Underline', check: bool },
+    strike: { label: 'Strikethrough', check: bool },
+    caps: { label: 'All capitals', check: bool, css: () => 'text-transform: uppercase' },
+    spacing: { label: 'Letter spacing (px)', min: -2, max: 10, step: 0.5, check: num(-2, 10), css: v => `letter-spacing: ${v}px` },
+    color: { label: 'Text colour', check: colour, css: v => `color: ${v}` },
+    background: { label: 'Background', check: colour, css: v => `background: ${v}` },
+    border: { label: 'Border colour', check: colour, css: v => `border-color: ${v}; border-style: solid; border-width: 1px` },
+    radius: { label: 'Corner radius (px)', min: 0, max: 48, step: 1, check: num(0, 48), css: v => `border-radius: ${v}px` },
+    glow: { label: 'Glow (px)', min: 0, max: 40, step: 1, check: num(0, 40), css: v => `box-shadow: 0 0 ${v}px var(--ac)` },
+    opacity: { label: 'Opacity (%)', min: 20, max: 100, step: 5, check: num(20, 100), css: v => `opacity: ${v / 100}` },
+  };
+  const AP_KEY = /^[\w:.\-=#]{1,160}$/;
+  function cleanStyle(style) {
+    const out = {};
+    if (!style || typeof style !== 'object' || Array.isArray(style)) return out;
+    for (const st of Object.keys(AP_STATES)) {
+      const props = style[st]; if (!props || typeof props !== 'object') continue;
+      const clean = {};
+      for (const [k, def] of Object.entries(AP_PROPS)) { const v = def.check(props[k]); if (v !== undefined) clean[k] = v; }
+      if (Object.keys(clean).length) out[st] = clean;
+    }
+    return out;
+  }
+  function cleanAppearance(a) {
+    const elements = {}, presets = {};
+    for (const [k, v] of Object.entries(a?.elements || {})) { if (!AP_KEY.test(k)) continue; const c = cleanStyle(v); if (Object.keys(c).length) elements[k] = c; }
+    for (const [name, v] of Object.entries(a?.presets || {})) { const n = String(name).trim().slice(0, 40); if (!n || /[<>]/.test(n)) continue; const c = cleanStyle(v); if (Object.keys(c).length) presets[n] = c; }
+    return { elements, presets };
+  }
+  function appearanceCss(a) {
+    const { elements } = cleanAppearance(a);
+    const rules = [];
+    for (const [key, style] of Object.entries(elements)) {
+      for (const [st, props] of Object.entries(style)) {
+        const decl = Object.entries(props).filter(([k]) => AP_PROPS[k].css).map(([k, v]) => AP_PROPS[k].css(v) + ' !important');
+        const lines = [props.underline && 'underline', props.strike && 'line-through'].filter(Boolean);
+        if (lines.length) decl.push(`text-decoration: ${lines.join(' ')} !important`);
+        if (decl.length) rules.push(`.app [data-ak="${key}"]${AP_STATES[st]} { ${decl.join('; ')}; }`);
+      }
+    }
+    return rules.join('\n');
+  }
+  function parseStyleFile(text) {
+    let data; try { data = JSON.parse(text); } catch { return { ok: false, error: 'MALFORMED_JSON' }; }
+    if (!data || data.schema !== 'aws-app-deployer.appearance/1') return { ok: false, error: 'SCHEMA' };
+    const clean = cleanAppearance(data);
+    if (!Object.keys(clean.elements).length && !Object.keys(clean.presets).length) return { ok: false, error: 'NOTHING_USABLE' };
+    return { ok: true, appearance: clean };
+  }
+
   const historyCategory = h => (h.restoredFrom !== undefined ? 'Restores' : CATEGORY[h.key] || (h.key.startsWith('deployments') ? 'Records' : 'Other'));
 
-  return { FORMATS, exportAs, zip, crc32, markdown, historyLabel, historyCategory, EXPLAIN, SETTINGS_ON_SCREEN, STRINGS, t, funny, parseVocabulary, applyVocabulary, explainRegex, search, parseColor, toRgb, scheduledTheme, STAGES, stageIndex, errorText };
+  return { AP_STATES, AP_PROPS, AP_FONTS, AP_FONT_LABELS, cleanStyle, cleanAppearance, appearanceCss, parseStyleFile, FORMATS, exportAs, zip, crc32, markdown, historyLabel, historyCategory, EXPLAIN, SETTINGS_ON_SCREEN, STRINGS, t, funny, parseVocabulary, applyVocabulary, explainRegex, search, parseColor, toRgb, scheduledTheme, STAGES, stageIndex, errorText };
 });

@@ -98,3 +98,27 @@ test('history labels say what actually changed', () => {
   assert.equal(Lib.historyCategory({ key: 'theme' }), 'Appearance');
   assert.equal(Lib.historyCategory({ key: 'theme', restoredFrom: 2 }), 'Restores');
 });
+
+test('appearance editor turns only validated values into CSS', () => {
+  const a = { elements: {
+    'go:settings': { rest: { size: 18, weight: 640, italic: true, underline: true, strike: true, color: 'red', radius: 12 }, hover: { glow: 10, background: 'url(x)' }, focus: { font: 'mono' } },
+    'bad"key': { rest: { size: 20 } },
+    'act:deploy': { rest: { size: 500, color: 'expression(alert(1))', font: 'Comic; }' } },
+  }, presets: { 'Big <b>': { rest: { size: 20 } }, Loud: { rest: { caps: true } } } };
+  const css = Lib.appearanceCss(a);
+  assert.match(css, /\[data-ak="go:settings"\] \{ font-size: 18px !important; font-weight: 650 !important; font-style: italic !important; color: #ff0000 !important; border-radius: 12px !important; text-decoration: underline line-through !important; \}/);
+  assert.match(css, /\[data-ak="go:settings"\]:hover \{ box-shadow: 0 0 10px var\(--ac\) !important; \}/);
+  assert.match(css, /:focus-visible \{ font-family: "JetBrains Mono"/);
+  assert.doesNotMatch(css, /bad|act:deploy|url\(|expression|Comic/);
+  const clean = Lib.cleanAppearance(a);
+  assert.deepEqual(Object.keys(clean.presets), ['Loud']);
+  assert.equal(clean.elements['act:deploy'], undefined);
+});
+
+test('style files must carry the schema and something usable', () => {
+  assert.equal(Lib.parseStyleFile('{').error, 'MALFORMED_JSON');
+  assert.equal(Lib.parseStyleFile('{"elements":{}}').error, 'SCHEMA');
+  assert.equal(Lib.parseStyleFile('{"schema":"aws-app-deployer.appearance/1","elements":{"x":{"rest":{"size":999}}}}').error, 'NOTHING_USABLE');
+  const r = Lib.parseStyleFile('{"schema":"aws-app-deployer.appearance/1","elements":{"go:help":{"pressed":{"opacity":50}}}}');
+  assert.ok(r.ok); assert.equal(Lib.appearanceCss(r.appearance), '.app [data-ak="go:help"]:active { opacity: 0.5 !important; }');
+});
