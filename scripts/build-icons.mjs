@@ -1,10 +1,11 @@
 // Generate the packaged icons from the master SVG. Run: node scripts/build-icons.mjs
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { Resvg } from '@resvg/resvg-js';
 import pngToIco from 'png-to-ico';
 
-const root = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const svg = fs.readFileSync(path.join(root, 'assets/icon.svg'));
 const out = path.join(root, 'build');
 fs.mkdirSync(out, { recursive: true });

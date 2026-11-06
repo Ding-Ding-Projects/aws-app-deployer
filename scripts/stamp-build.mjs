@@ -2,9 +2,10 @@
 //   node scripts/stamp-build.mjs <version> [codeName.json]
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { execFileSync } from 'node:child_process';
 
-const root = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const [version, codeNameFile] = process.argv.slice(2);
 if (!/^\d+\.\d+\.\d+$/.test(version || '')) throw new Error('usage: stamp-build.mjs <x.y.z> [codeName.json]');
 const commit = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' }).trim();
