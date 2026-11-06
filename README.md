@@ -10,6 +10,8 @@ Connect an AWS IAM Identity Center profile through browser sign-in, select a pro
 
 Initial implementation is in progress. No deployable release or live AWS verification is available yet.
 
+Read the [designer handoff](HANDOFF.md) for the complete product flows, ownership boundaries, and integration contract.
+
 ## Parallel design work
 
 Design proposals and handoffs belong in `design/`. The desktop interface belongs in `src/renderer/`; AWS operations belong in `src/backend/`. Coordinate the preload API before integrating UI work. Do not include credentials, account-specific configuration, or private instructions in this repository.
