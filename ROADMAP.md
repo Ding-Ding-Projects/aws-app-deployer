@@ -49,7 +49,12 @@ Honest inventory of the desktop app and its landing page. **Shipped** means impl
 - [x] Shipped: unlock ladder while waiting (dim sum quiz, ten sums, whack-a-mole, the clock), up to three ladders an hour; each rung clears a quarter of the wait and never reveals or resets the credential
 - [x] Shipped: Support Tickets, a local joke help desk that always resolves to the app data folder and states that nothing is sent anywhere
 - [x] Shipped: per-element appearance editor from the context menu: rest, hover, focus and pressed states; font, size, weight, italic, underline, strikethrough, capitals, letter spacing, text, background and border colours, radius, glow, opacity; per-property, per-element and global reset; undo and redo; copy and paste style; presets; validated JSON export and import
-- [ ] Not started: live charts, logo customization
+- [x] Shipped: live deployment charts (time per deployment, outcomes per day) from local records, with a table view
+- [x] Shipped: logo customization (symbol, shape, colour, or a checked PNG, JPEG or WebP)
+- [x] Shipped: Tools tab with a Base64 toolkit and a bounded local file converter (JSON, CSV, YAML output, Markdown, PNG, JPEG, WebP); missing tools are named on disabled rows
+- [x] Shipped: open results in VS Code (when installed) or the default app
+- [x] Shipped: per-language voices with pitch and speed, and a wording-drop celebration with a quiet path
+- [ ] Not started: YAML input, video and audio conversion, 7z
 
 ## Release and site
 

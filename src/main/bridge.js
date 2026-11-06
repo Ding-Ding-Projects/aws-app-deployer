@@ -106,8 +106,9 @@ function createBridge({ backend, deployer, installer, store, emit, fetchUrl = gl
       if (!/^\/[A-Za-z0-9._~\/-]{0,200}$/.test(health)) return { ok: false, error: 'INVALID_INPUT' };
       const payload = { ...v, expectedIdentity: input.expectedIdentity, name: input.name, source, environment: env, healthCheckPath: health, ...(port ? { containerPort: port } : {}) };
       return start('deploy', { ...v, accountId: input.expectedIdentity.accountId, name: input.name }, async ({ signal, progress }) => {
+        const startedAt = Date.now();
         const result = await deployer.deploy(payload, { signal, onProgress: progress });
-        store.recordDeployment({ name: input.name, ...v, accountId: input.expectedIdentity.accountId, ok: !!result.ok, url: result.url || null, image: result.image || null, error: result.ok ? null : result.error, stage: result.stage || null });
+        store.recordDeployment({ name: input.name, ...v, accountId: input.expectedIdentity.accountId, ok: !!result.ok, url: result.url || null, image: result.image || null, error: result.ok ? null : result.error, stage: result.stage || null, durationMs: Date.now() - startedAt });
         return result;
       });
     },

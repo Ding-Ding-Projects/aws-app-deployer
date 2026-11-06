@@ -338,7 +338,102 @@
     return { ok: true, appearance: clean };
   }
 
+
+  // ---- Base64 toolkit (UTF-8 aware, optional URL-safe alphabet) ----
+  function b64encode(text, { urlSafe = false } = {}) {
+    const bytes = typeof text === 'string' ? new TextEncoder().encode(text) : text;
+    let bin = ''; for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+    const out = btoa(bin);
+    return urlSafe ? out.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '') : out;
+  }
+  function b64decode(str) {
+    const clean = String(str || '').replace(/\s+/g, '').replace(/-/g, '+').replace(/_/g, '/');
+    if (!clean) return { ok: false, error: 'EMPTY' };
+    if (!/^[A-Za-z0-9+/]*={0,2}$/.test(clean) || clean.replace(/=+$/, '').length % 4 === 1) return { ok: false, error: 'NOT_BASE64' };
+    let bin; try { bin = atob(clean.padEnd(Math.ceil(clean.length / 4) * 4, '=')); } catch { return { ok: false, error: 'NOT_BASE64' }; }
+    const bytes = Uint8Array.from(bin, c => c.charCodeAt(0));
+    try { return { ok: true, text: new TextDecoder('utf-8', { fatal: true }).decode(bytes), bytes }; } catch { return { ok: true, text: null, bytes, binary: true }; }
+  }
+
+  // ---- File converter: text formats converted locally ----
+  function parseCsv(text) {
+    const rows = []; let row = [], field = '', q = false;
+    const src = String(text).replace(/^﻿/, '').replace(/\r\n?/g, '\n');
+    for (let i = 0; i < src.length; i++) {
+      const c = src[i];
+      if (q) { if (c === '"') { if (src[i + 1] === '"') { field += '"'; i++; } else q = false; } else field += c; }
+      else if (c === '"' && field === '') q = true;
+      else if (c === ',') { row.push(field); field = ''; }
+      else if (c === '\n') { row.push(field); rows.push(row); row = []; field = ''; }
+      else field += c;
+    }
+    if (q) return { ok: false, error: 'UNCLOSED_QUOTE' };
+    if (field !== '' || row.length) { row.push(field); rows.push(row); }
+    const body = rows.filter(r => !(r.length === 1 && r[0] === '') && !(r.length === 1 && r[0].startsWith('#')));
+    if (!body.length) return { ok: false, error: 'EMPTY' };
+    const [head, ...data] = body;
+    return { ok: true, rows: data.map(r => Object.fromEntries(head.map((h, i) => [h, r[i] ?? '']))) };
+  }
+  const CONVERSIONS = {
+    'json>yaml': { label: 'JSON to YAML', ext: 'yaml' }, 'json>csv': { label: 'JSON to CSV', ext: 'csv' },
+    'csv>json': { label: 'CSV to JSON', ext: 'json' }, 'csv>yaml': { label: 'CSV to YAML', ext: 'yaml' },
+    'md>html': { label: 'Markdown to HTML', ext: 'html' },
+  };
+  function convertText(kind, text) {
+    if (!CONVERSIONS[kind]) return { ok: false, error: 'UNSUPPORTED' };
+    if (typeof text !== 'string' || text.length > 25 * 1024 * 1024) return { ok: false, error: 'TOO_LARGE' };
+    const [from, to] = kind.split('>');
+    let data;
+    if (from === 'json') { try { data = JSON.parse(text); } catch (e) { return { ok: false, error: 'MALFORMED_JSON' }; } }
+    if (from === 'csv') { const r = parseCsv(text); if (!r.ok) return r; data = r.rows; }
+    if (from === 'md') return { ok: true, text: `<!doctype html>\n<meta charset="utf-8">\n${markdown(text)}\n` };
+    if (to === 'json') return { ok: true, text: JSON.stringify(data, null, 2) + '\n' };
+    if (to === 'yaml') return { ok: true, text: yaml(data).replace(/^\n/, '') + '\n' };
+    if (to === 'csv') {
+      const rows = Array.isArray(data) ? data : [data];
+      if (!rows.every(r => r && typeof r === 'object' && !Array.isArray(r))) return { ok: false, error: 'NOT_A_TABLE' };
+      const cols = columns(rows), qv = v => (/[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v);
+      return { ok: true, text: [cols.map(qv).join(','), ...rows.map(r => cols.map(c => qv(cell(r[c]))).join(','))].join('\n') + '\n', lossy: rows.some(r => Object.values(r).some(v => v && typeof v === 'object')) };
+    }
+    return { ok: false, error: 'UNSUPPORTED' };
+  }
+
+  // ---- Live charts from local deployment records ----
+  function chartData(deployments, { now = Date.now(), last = 12, days = 7 } = {}) {
+    const list = (deployments || []).filter(d => d && d.at);
+    const timed = list.filter(d => typeof d.durationMs === 'number' && d.durationMs > 0).slice(-last).map(d => ({ id: d.id || d.at, name: d.name, at: d.at, ok: !!d.ok, minutes: Math.round(d.durationMs / 6000) / 10 }));
+    const dayKey = t => new Date(t).toISOString().slice(0, 10);
+    const outcomes = Array.from({ length: days }, (_, i) => { const day = dayKey(now - (days - 1 - i) * 86400000); return { day, ok: 0, bad: 0 }; });
+    const idx = Object.fromEntries(outcomes.map((o, i) => [o.day, i]));
+    for (const d of list) { const i = idx[dayKey(d.at)]; if (i !== undefined) outcomes[i][d.ok ? 'ok' : 'bad']++; }
+    const mins = timed.map(t => t.minutes).sort((a, b) => a - b);
+    const median = mins.length ? (mins.length % 2 ? mins[(mins.length - 1) / 2] : (mins[mins.length / 2 - 1] + mins[mins.length / 2]) / 2) : null;
+    return { timed, outcomes, median, latest: timed.length ? timed[timed.length - 1].minutes : null };
+  }
+  function linePoints(values, w, h, pad = 6) {
+    if (!values.length) return [];
+    const max = Math.max(...values), min = Math.min(...values), span = max - min || 1;
+    return values.map((v, i) => [values.length === 1 ? w / 2 : Math.round((i * (w - 2 * pad)) / (values.length - 1) + pad), Math.round(h - pad - ((v - min) / span) * (h - 2 * pad))]);
+  }
+
+  // ---- Logo customization ----
+  const LOGO_SYMBOLS = ['rocket_launch', 'deployed_code', 'cloud_upload', 'ramen_dining', 'bakery_dining', 'pets', 'bolt', 'star', 'favorite', 'terminal'];
+  const LOGO_SHAPES = { rounded: '28%', circle: '50%', square: '4px' };
+  function cleanLogo(l) {
+    if (!l || typeof l !== 'object') return null;
+    const out = { symbol: LOGO_SYMBOLS.includes(l.symbol) ? l.symbol : 'rocket_launch', shape: LOGO_SHAPES[l.shape] ? l.shape : 'rounded', bg: parseColor(l.bg || '') || null, fg: parseColor(l.fg || '') || null };
+    if (typeof l.image === 'string' && l.image.length <= 400000 && /^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/]+=*$/.test(l.image)) out.image = l.image;
+    return out;
+  }
+  function imageKind(bytes) {
+    const b = bytes;
+    if (b[0] === 0x89 && b[1] === 0x50 && b[2] === 0x4e && b[3] === 0x47) return 'png';
+    if (b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff) return 'jpeg';
+    if (b[0] === 0x52 && b[1] === 0x49 && b[2] === 0x46 && b[3] === 0x46 && b[8] === 0x57 && b[9] === 0x45 && b[10] === 0x42 && b[11] === 0x50) return 'webp';
+    return null;
+  }
+
   const historyCategory = h => (h.restoredFrom !== undefined ? 'Restores' : CATEGORY[h.key] || (h.key.startsWith('deployments') ? 'Records' : 'Other'));
 
-  return { AP_STATES, AP_PROPS, AP_FONTS, AP_FONT_LABELS, cleanStyle, cleanAppearance, appearanceCss, parseStyleFile, FORMATS, exportAs, zip, crc32, markdown, historyLabel, historyCategory, EXPLAIN, SETTINGS_ON_SCREEN, STRINGS, t, funny, parseVocabulary, applyVocabulary, explainRegex, search, parseColor, toRgb, scheduledTheme, STAGES, stageIndex, errorText };
+  return { b64encode, b64decode, parseCsv, CONVERSIONS, convertText, chartData, linePoints, LOGO_SYMBOLS, LOGO_SHAPES, cleanLogo, imageKind, AP_STATES, AP_PROPS, AP_FONTS, AP_FONT_LABELS, cleanStyle, cleanAppearance, appearanceCss, parseStyleFile, FORMATS, exportAs, zip, crc32, markdown, historyLabel, historyCategory, EXPLAIN, SETTINGS_ON_SCREEN, STRINGS, t, funny, parseVocabulary, applyVocabulary, explainRegex, search, parseColor, toRgb, scheduledTheme, STAGES, stageIndex, errorText };
 });

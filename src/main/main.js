@@ -41,7 +41,7 @@ function createWindow() {
 
 async function captureScreenshots(dir) {
   fs.mkdirSync(dir, { recursive: true });
-  const routes = ['setup', 'deploys', 'accounts', 'wizard', 'settings', 'help', 'palette', 'a11y', 'info', 'menu', 'confirm', 'history', 'docs', 'changelog', 'tabs', 'export', 'lockwiz', 'unlock', 'support', 'appearance'];
+  const routes = ['setup', 'deploys', 'accounts', 'wizard', 'settings', 'help', 'palette', 'a11y', 'info', 'menu', 'confirm', 'history', 'docs', 'changelog', 'tabs', 'export', 'lockwiz', 'unlock', 'support', 'appearance', 'tools', 'party'];
   for (let i = 0; i < 90 && !(await win.webContents.executeJavaScript('!!(window.__ready && window.__ready())')); i++) await new Promise(res => setTimeout(res, 1000));
   for (const [w, tag] of [[1320, 'desktop'], [420, 'narrow']]) {
     win.setSize(w, 860);
@@ -105,6 +105,20 @@ if (!squirrelEvent) app.whenReady().then(() => {
     const r = await dialog.showSaveDialog(win, { defaultPath: name });
     if (r.canceled) return { ok: false, error: 'CANCELLED' };
     fs.writeFileSync(r.filePath, data); return { ok: true, path: r.filePath };
+  });
+  // Hand a file to an external editor. The file is written to a private hand-off folder first;
+  // VS Code is used only when its link handler is registered on this computer.
+  const handoffDir = path.join(app.getPath('userData'), 'handoff');
+  handle('editors', () => ({ ok: true, vscode: !!app.getApplicationNameForProtocol('vscode://') }));
+  handle('open-in-editor', async (name, data, editor) => {
+    if (typeof name !== 'string' || !/^[\w.-]{1,80}$/.test(name) || /^\.+$/.test(name) || typeof data !== 'string' || data.length > 25 * 1024 * 1024 || !['vscode', 'default'].includes(editor)) return { ok: false, error: 'INVALID_INPUT' };
+    fs.mkdirSync(handoffDir, { recursive: true });
+    const file = path.join(handoffDir, name); fs.writeFileSync(file, data);
+    if (editor === 'vscode') {
+      if (!app.getApplicationNameForProtocol('vscode://')) return { ok: false, error: 'VSCODE_NOT_FOUND', path: file };
+      await shell.openExternal('vscode://file/' + encodeURI(file.replace(/\\/g, '/'))); return { ok: true, path: file };
+    }
+    const err = await shell.openPath(file); return err ? { ok: false, error: 'NO_DEFAULT_EDITOR', detail: err, path: file } : { ok: true, path: file };
   });
   handle('dim-sum', () => bridge.dimSum());
   handle('version', () => app.getVersion());

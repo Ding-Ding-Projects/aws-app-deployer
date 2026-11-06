@@ -31,6 +31,8 @@ contextBridge.exposeInMainWorld('deployer', {
   docs: () => call('docs'),
   changelog: () => call('changelog'),
   saveFile: (name, data) => call('save-file', name, data),
+  editors: () => call('editors'),
+  openInEditor: (name, data, editor) => call('open-in-editor', name, data, editor),
   exportHistory: () => call('export-history'),
   dimSum: () => call('dim-sum'),
   version: () => call('version'),

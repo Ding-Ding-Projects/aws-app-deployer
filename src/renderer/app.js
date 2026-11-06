@@ -31,7 +31,7 @@
     if (!S.settings?.sounds) return;
     try {
       audio ||= new AudioContext();
-      const notes = { tap: [660], ok: [523, 784], err: [392, 262], start: [440, 587] }[kind] || [660];
+      const notes = { tap: [660], ok: [523, 784], err: [392, 262], start: [440, 587], tada: [523, 659, 784, 1047] }[kind] || [660];
       notes.forEach((f, i) => {
         const o = audio.createOscillator(), g = audio.createGain(), t0 = audio.currentTime + i * 0.09;
         o.type = 'sine'; o.frequency.value = f; g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(0.08, t0 + 0.015); g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.18);
@@ -43,8 +43,9 @@
     live.textContent = text;
     if (!S.settings?.narration || !('speechSynthesis' in window)) return;
     const u = new SpeechSynthesisUtterance(text);
-    const v = speechSynthesis.getVoices().find(x => x.name === S.settings.voice); if (v) u.voice = v;
-    u.rate = S.settings.rate || 1; speechSynthesis.cancel(); speechSynthesis.speak(u);
+    const lang = S.settings.language === 'yue' ? 'yue' : 'en', want = S.settings.voices?.[lang] || S.settings.voice;
+    const v = speechSynthesis.getVoices().find(x => x.name === want); if (v) u.voice = v;
+    u.rate = S.settings.rate || 1; u.pitch = S.settings.pitch || 1; speechSynthesis.cancel(); speechSynthesis.speak(u);
   }
   function toast(text, kind = 'ok') {
     const id = Math.random().toString(36).slice(2);
@@ -126,7 +127,7 @@
   function shell(content, { rail = true } = {}) {
     const nav = (v, icon, key) => `<button class="navi ${S.view === v || (v === 'deploys' && ['wizard', 'run', 'result'].includes(S.view)) ? 'on' : ''}" data-go="${v}" data-menu="nav" ${S.view === v ? 'aria-current="page"' : ''}><span class="pill">${ic(icon)}</span>${T(key)}</button>`;
     return `
-    <div class="titlebar"><img src="icon.png" alt="" width="18" height="18" style="flex: none"><span class="name">${esc(S.settings?.displayName || 'AWS App Deployer')}</span><span class="small mono" title="Running version and build time">${esc(provLine())}</span><span class="grow"></span>
+    <div class="titlebar">${logoHtml(20)}<span class="name">${esc(S.settings?.displayName || 'AWS App Deployer')}</span><span class="small mono" title="Running version and build time">${esc(provLine())}</span><span class="grow"></span>
       <button class="chip" style="height: 28px; -webkit-app-region: no-drag" data-act="palette" aria-label="${T('palette')}">${ic('search', 'sm')}<span class="kbd">Ctrl+Shift+F</span></button>
       ${S.settings?.a11y?.hidden ? '' : `<button class="chip" style="height: 28px; -webkit-app-region: no-drag" data-panel-open="a11y" aria-label="Accessibility tools" data-menu="a11y">${ic('accessibility_new', 'sm')}</button>`}
       <button class="chip" style="height: 28px; -webkit-app-region: no-drag" data-panel-open="notes" aria-label="${T('notifications')}">${ic('notifications', 'sm')}${S.notes.length ? `<span class="badge ac" style="height: 18px">${S.notes.length}</span>` : ''}</button>
@@ -230,7 +231,7 @@
       <div class="row" style="flex-wrap: wrap; gap: 6px"><button class="btn text" data-act="dep-all">Select all ${shown.length} shown</button><button class="btn text" data-act="dep-invert">Invert</button><span class="grow"></span>${S.depSel.size ? `<span class="badge ac">${S.depSel.size} selected</span><button class="btn text" data-act="dep-export">${ic('download')}Export</button><button class="btn text" style="color: var(--err)" data-act="dep-remove">${ic('delete')}Remove…</button>` : ''}</div>` : '';
     const rows = shown.map(x => `<div class="li static" data-menu="deploy" data-at="${esc(x.id || x.at)}" tabindex="0"><input type="checkbox" class="check" aria-label="Select ${esc(x.name)}" data-dep="${esc(x.id || x.at)}" ${S.depSel.has(x.id || x.at) ? 'checked' : ''}><span class="tile ${x.ok ? 'ok' : 'warn'}">${ic(x.ok ? 'deployed_code' : 'history', 'fill')}</span><span class="stack grow"><span class="t">${esc(x.name)}</span><span class="m">${esc(x.region)} · ${new Date(x.at).toLocaleString()}${x.ok ? '' : ' · ' + esc(Lib.errorText(x.error))}</span></span>${x.ok ? `<button class="btn text" data-act="open-url" data-url="${esc(x.url)}">${T('open')}</button><span class="badge ok">${ic('check', 'sm')}Healthy at deploy</span>` : `<span class="badge warn">Stopped</span>`}</div>`).join('');
     const body = !d.length && !S.run ? `<div class="empty rise"><span class="tile ac">${ic('rocket_launch', 'lg fill')}</span><span class="h2" style="font-size: 20px">${T('no_deployments')}</span><span class="sub" style="max-width: 480px">${T('no_deployments_sub')}</span><button class="btn fillb" data-go="wizard">${ic('add')}${T('new_deployment')}</button></div>`
-      : `${bar}<div class="list rise">${running}${rows || '<span class="small" style="padding: 12px">No records match the filter</span>'}</div><div class="row"><span class="small grow">Status shown is the result recorded when each deployment finished on this computer.</span><button class="btn text" data-panel-open="export:deploys">${T('export_history')}</button></div>`;
+      : `${chartsCard()}${bar}<div class="list rise">${running}${rows || '<span class="small" style="padding: 12px">No records match the filter</span>'}</div><div class="row"><span class="small grow">Status shown is the result recorded when each deployment finished on this computer.</span><button class="btn text" data-panel-open="export:deploys">${T('export_history')}</button></div>`;
     return page(T('deployments'), chip, body);
   }
   function viewWizard() {
@@ -309,7 +310,7 @@
         ${s.school ? '' : `<div class="set" style="flex-wrap: wrap" data-menu="setting" data-key="funnyLevel" data-search="funny level humour"><span class="stack grow" style="flex: 1 1 170px"><label class="t" for="fl" style="font-weight: 600">${T('funny')}</label><span class="small">Changes the wording only, never the facts</span></span> ${info('funnyLevel', T('funny'))}<input id="fl" type="range" min="1" max="5" value="${s.funnyLevel}" data-range="funnyLevel" style="flex: 1 1 100px; min-width: 0"><span class="badge ac" style="width: 28px; justify-content: center; padding: 0">${s.funnyLevel}</span><span class="card" style="flex: 1 1 100%; background: var(--s1); padding: 12px 14px; margin-top: 10px; gap: 2px"><span class="small">Preview</span><span>${esc(Lib.funny('success', s.funnyLevel, s.language))}</span></span></div>`}
         ${s.school ? '' : tog('emoji', T('emoji'), 'Adds emoji to some messages')}
         ${tog('narration', T('narration'), voices.length ? 'Uses a voice installed on this computer' : 'No voices found on this computer')}
-        ${s.narration && voices.length ? `<div class="set"><label class="grow" for="vc">Voice</label><select id="vc" data-select="voice"><option value="">System default</option>${voices.map(v => `<option ${v.name === s.voice ? 'selected' : ''}>${esc(v.name)}</option>`).join('')}</select></div>` : ''}
+        ${s.narration && voices.length ? [['en', 'English voice', /^en/i], ['yue', 'Cantonese voice', /^(yue|zh-HK)/i]].map(([k, l, re]) => { const list = voices.filter(v => re.test(v.lang)); return `<div class="set" data-search="voice ${l}"><label class="grow" for="vc-${k}">${l}</label>${list.length ? `<select id="vc-${k}" data-voice="${k}" style="max-width: 220px"><option value="">System default</option>${list.map(v => `<option ${v.name === s.voices?.[k] ? 'selected' : ''}>${esc(v.name)}</option>`).join('')}</select>` : `<span class="badge mute">No ${k === 'yue' ? 'Cantonese' : 'English'} voice installed</span>`}</div>`; }).join('') + `<div class="set" data-search="voice pitch speed rate"><label class="grow" for="vp">Pitch</label><input id="vp" type="range" min="0.5" max="2" step="0.1" value="${s.pitch}" data-range="pitch" style="width: 130px"><span class="badge ac mono">${s.pitch}</span></div><div class="set" data-search="voice speed rate"><label class="grow" for="vr">Speed</label><input id="vr" type="range" min="0.5" max="2" step="0.1" value="${s.rate}" data-range="rate" style="width: 130px"><span class="badge ac mono">${s.rate}</span></div><button class="btn text" data-act="voice-try" style="align-self: flex-start">${ic('play_arrow')}Try this voice</button>` : ''}
         ${tog('sounds', T('sounds'), 'Soft cues for deploy, success and errors')}
       </div></div>
       <div class="side">
@@ -318,6 +319,7 @@
           ${tog('focus', T('focus'), 'Hides side panels so one action leads')}${tog('calm', T('calm'), 'No pulsing or looping motion')}${tog('school', T('school'), 'Hides playful extras everywhere')}
           ${s.school ? '' : `<div class="set" style="flex-wrap: wrap" data-search="dim sum surprise"><span class="stack grow"><span class="t" style="font-weight: 600">${T('dim_sum')}</span><span class="small">A rare treat at launch</span></span><button class="toggle on" role="switch" aria-checked="true" aria-label="${T('dim_sum')}" data-act="troll"></button>${S.troll ? `<span class="card pop" style="flex: 1 1 100%; flex-direction: row; gap: 10px; align-items: center; padding: 10px 14px; margin-top: 10px; background: var(--warn-c)" role="status">${ic('lock', 'fill')}<span class="small" style="color: var(--tx)">${T('dim_sum_troll')}${emojiOn() ? ' 🥟' : ''}</span></span>` : ''}</div>`}
         </div>
+        ${logoCard()}
         <div class="card" data-search="toy locks lock pin password totp support tickets"><span class="h2">Toy locks</span><span class="small">Right-click anything and choose Lock this element… Just for fun, never security.</span>${(S.lockState?.locks || []).map(l => `<div class="li static" style="padding: 6px 0">${ic('lock', 'sm')}<span class="stack grow"><span class="t">${esc(l.label)}</span><span class="m">${esc(POLICY_LABEL[l.policy])}${l.waitMs ? ' · waiting' : ''}</span></span></div>`).join('') || '<span class="small">No locks yet.</span>'}<span class="small" style="color: var(--tx)">${esc(recoveryLine())}</span><button class="btn text" data-go="support" style="align-self: flex-start">${ic('support_agent')}Support Tickets</button></div>
         <div class="card" style="gap: 0" data-menu="setting" data-key="a11y" data-search="accessibility text size contrast focus targets read aloud button hidden"><div class="set">${info('a11y', 'Accessibility tools')}<span class="stack grow"><span class="t" style="font-weight: 600">Accessibility tools</span><span class="small">${s.a11y.hidden ? 'Title bar button hidden' : 'Button in the title bar'} · text ${s.a11y.textSize}%</span></span><button class="btn tonal" data-panel-open="a11y">Open</button>${s.a11y.hidden ? '<button class="btn text" data-act="a11y-show">Show button</button>' : ''}</div></div>
         <div class="row" style="gap: 6px; flex-wrap: wrap"><button class="btn text" data-panel-open="export:settings">${ic('download')}Export settings</button><button class="btn text" data-go="history">${ic('history')}Local history</button></div>
@@ -492,6 +494,7 @@
     { view: 'history', label: 'Local history', icon: 'history', keywords: 'undo restore revisions' },
     { view: 'docs', label: 'Docs', icon: 'menu_book', keywords: 'help articles offline' },
     { view: 'changelog', label: 'Changelog', icon: 'new_releases', keywords: 'versions releases' },
+    { view: 'tools', label: 'Tools: Base64 and file converter', icon: 'construction', keywords: 'base64 encode decode convert csv json yaml markdown image png jpeg webp editor vs code' },
     { view: 'settings', label: 'Settings', icon: 'tune' }, { view: 'help', label: 'Help and about', icon: 'help' },
     { view: 'support', label: 'Support Tickets', icon: 'support_agent', keywords: 'locked out forgot pin password' },
     { view: 'accounts', label: 'Accounts', icon: 'key' }, { view: 'deploys', label: 'Deployments', icon: 'rocket_launch' },
@@ -751,6 +754,106 @@
     render();
   }
 
+
+  // ---------- logo ----------
+  const logo = () => Lib.cleanLogo(S.settings.logo) || { symbol: 'rocket_launch', shape: 'rounded', bg: null, fg: null };
+  function logoHtml(size) {
+    const l = Lib.cleanLogo(S.settings?.logo);
+    if (!l) return `<img src="icon.png" alt="" width="${size - 2}" height="${size - 2}" style="flex: none">`;
+    const box = `width: ${size}px; height: ${size}px; border-radius: ${Lib.LOGO_SHAPES[l.shape]}; flex: none`;
+    if (l.image) return `<img src="${l.image}" alt="" style="${box}; object-fit: cover">`;
+    return `<span aria-hidden="true" style="${box}; display: grid; place-items: center; background: ${l.bg || 'var(--ac-c)'}; color: ${l.fg || 'var(--on-ac-c)'}"><i class="ms fill" style="font-size: ${Math.round(size * 0.64)}px; width: ${Math.round(size * 0.64)}px; height: ${Math.round(size * 0.64)}px">${l.symbol}</i></span>`;
+  }
+  function logoCard() {
+    const l = logo(), custom = !!S.settings.logo;
+    return `<div class="card" data-menu="setting" data-key="logo" data-search="logo icon symbol shape brand image"><div class="row"><span class="h2" style="flex: 1">Logo</span>${logoHtml(40)}</div>
+      <div class="row" style="gap: 6px; flex-wrap: wrap" role="radiogroup" aria-label="Symbol">${Lib.LOGO_SYMBOLS.map(sym => `<button class="sw" role="radio" aria-checked="${custom && !l.image && l.symbol === sym}" aria-label="${sym.replace(/_/g, ' ')}" style="display: grid; place-items: center; background: var(--s2); ${custom && !l.image && l.symbol === sym ? 'outline: 2px solid var(--ac)' : ''}" data-act="logo-symbol" data-v="${sym}">${ic(sym, 'sm fill')}</button>`).join('')}</div>
+      <div class="row" style="gap: 8px; flex-wrap: wrap"><span class="seg">${Object.keys(Lib.LOGO_SHAPES).map(sh => `<button class="${l.shape === sh ? 'on' : ''}" aria-pressed="${l.shape === sh}" data-act="logo-shape" data-v="${sh}">${sh[0].toUpperCase() + sh.slice(1)}</button>`).join('')}</span><label class="sr" for="lbg">Logo background colour</label><input id="lbg" class="mono" data-input="logoBg" placeholder="Background colour" value="${esc(l.bg || '')}" style="width: 150px; height: 36px; border-radius: 10px; border: 1px solid var(--line2); background: var(--s1); color: var(--tx); padding: 0 10px"></div>
+      <div class="row" style="gap: 6px; flex-wrap: wrap"><label class="btn tonal" style="cursor: pointer">${ic('upload')}Your own PNG, JPEG or WebP<input type="file" accept="image/png,image/jpeg,image/webp" data-file="logo" class="sr"></label><button class="btn text" data-act="reset" data-key="logo" ${custom ? '' : 'disabled'}>Reset</button></div>
+      <span class="small">Shown in the title bar. Images up to 256 KB are checked on this computer and never uploaded.</span></div>`;
+  }
+  async function logoUpload(file) {
+    if (file.size > 262144) { toast('That image is over 256 KB. Nothing changed.', 'err'); return; }
+    const bytes = new Uint8Array(await file.arrayBuffer()), kind = Lib.imageKind(bytes);
+    if (!kind) { toast('Only real PNG, JPEG or WebP images work as a logo. Nothing changed.', 'err'); return; }
+    const r = await set('logo', { ...logo(), image: `data:image/${kind};base64,${Lib.b64encode(bytes)}` });
+    if (r.ok) toast('Logo updated');
+  }
+
+  // ---------- live charts ----------
+  function chartsCard() {
+    const C = Lib.chartData(S.history.deployments), W = 400, H = 110;
+    const pts = Lib.linePoints(C.timed.map(t => t.minutes), W, H);
+    const maxDay = Math.max(1, ...C.outcomes.map(o => o.ok + o.bad));
+    const line = pts.length > 1 ? `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" class="chart-line" role="img" aria-label="Deployment minutes for the last ${C.timed.length} timed deployments"><path class="a" d="M${pts.map(p => p.join(' ')).join(' L')} L${W} ${H} L0 ${H}Z"/><path class="l" d="M${pts.map(p => p.join(' ')).join(' L')}"/>${pts.map((p, i) => `<circle cx="${p[0]}" cy="${p[1]}" r="${i === pts.length - 1 ? 5 : 3.5}" class="${C.timed[i].ok ? '' : 'bad'}"><title>${esc(C.timed[i].name)}: ${C.timed[i].minutes} min, ${new Date(C.timed[i].at).toLocaleString()}</title></circle>`).join('')}</svg>` : `<span class="small">Timing appears after two deployments finish with this version. Older records have no timing, and none is guessed.</span>`;
+    const bars = `<div class="chart-bars" role="img" aria-label="Outcomes for the last 7 days">${C.outcomes.map(o => `<span class="col" title="${o.day}: ${o.ok} healthy, ${o.bad} stopped"><i class="b" style="height: ${(o.bad / maxDay) * 100}%"></i><i style="height: ${(o.ok / maxDay) * 100}%"></i><span class="d">${new Date(o.day + 'T12:00:00Z').toLocaleDateString(undefined, { weekday: 'narrow' })}</span></span>`).join('')}</div>`;
+    const table = `<table class="chart-table"><thead><tr><th>Day</th><th>Healthy</th><th>Stopped</th></tr></thead><tbody>${C.outcomes.map(o => `<tr><td>${o.day}</td><td>${o.ok}</td><td>${o.bad}</td></tr>`).join('')}</tbody></table>${C.timed.length ? `<table class="chart-table"><thead><tr><th>Deployment</th><th>Minutes</th></tr></thead><tbody>${C.timed.map(t => `<tr><td>${esc(t.name)}</td><td>${t.minutes}</td></tr>`).join('')}</tbody></table>` : ''}`;
+    return `<div class="card rise chart-card" data-search="charts"><div class="row" style="gap: 8px; flex-wrap: wrap"><span class="h2" style="flex: 1">Deployment time and outcomes</span>${S.run ? `<span class="badge ok">${ic('fiber_manual_record', 'sm fill')}Live</span>` : ''}<button class="btn text" data-act="chart-table" aria-pressed="${!!S.chartTable}">${ic(S.chartTable ? 'show_chart' : 'table_rows')}${S.chartTable ? 'Chart view' : 'Table view'}</button></div>
+      ${S.chartTable ? table : `<div class="chart-grid"><div class="stack" style="gap: 6px; min-width: 0">${line}<span class="small">${C.latest !== null ? `Latest ${C.latest} min · median ${C.median} min · ` : ''}Built from records on this computer only.</span></div>${bars}</div>`}</div>`;
+  }
+
+  // ---------- tools: Base64 and file converter ----------
+  S.tools = { b64mode: 'encode', b64in: '', b64out: null, urlSafe: false, conv: null };
+  async function b64File(file) {
+    if (file.size > 10 * 1024 * 1024) { toast('Files up to 10 MB only. Nothing was read.', 'err'); return; }
+    S.tools.b64out = { ok: true, text: Lib.b64encode(new Uint8Array(await file.arrayBuffer()), { urlSafe: S.tools.urlSafe }), name: file.name.replace(/[^\w.-]+/g, '-') + '.b64.txt' }; render();
+  }
+  async function convertFile(kind, file) {
+    if (file.size > 25 * 1024 * 1024) { toast('Files up to 25 MB only. Nothing was read.', 'err'); return; }
+    const base = file.name.replace(/\.[^.]+$/, '').replace(/[^\w.-]+/g, '-').slice(0, 60) || 'converted';
+    if (kind.startsWith('img>')) {
+      const to = kind.slice(4), mime = { png: 'image/png', jpeg: 'image/jpeg', webp: 'image/webp' }[to];
+      if (!Lib.imageKind(new Uint8Array(await file.slice(0, 16).arrayBuffer()))) { toast('That is not a PNG, JPEG or WebP image. Nothing changed.', 'err'); return; }
+      try {
+        const bmp = await createImageBitmap(file), c = document.createElement('canvas'); c.width = bmp.width; c.height = bmp.height;
+        const g = c.getContext('2d'); if (to === 'jpeg') { g.fillStyle = '#ffffff'; g.fillRect(0, 0, c.width, c.height); } g.drawImage(bmp, 0, 0);
+        const blob = await new Promise(r => c.toBlob(r, mime, 0.92));
+        S.tools.conv = { name: `${base}.${to === 'jpeg' ? 'jpg' : to}`, bytes: new Uint8Array(await blob.arrayBuffer()), note: `${bmp.width} × ${bmp.height}${to === 'jpeg' ? ', transparency filled with white' : ''}` };
+      } catch { toast('This image could not be decoded. Nothing changed.', 'err'); return; }
+    } else {
+      const r = Lib.convertText(kind, await file.text());
+      if (!r.ok) { toast(`${Lib.CONVERSIONS[kind].label} failed: ${r.error.toLowerCase().replace(/_/g, ' ')}. Nothing was saved.`, 'err'); return; }
+      S.tools.conv = { name: `${base}.${Lib.CONVERSIONS[kind].ext}`, text: r.text, note: r.lossy ? 'Nested values are written as JSON text inside one cell.' : '' };
+    }
+    toast(`Converted to ${S.tools.conv.name}`); cue('ok'); render();
+  }
+  function viewTools() {
+    const T2 = S.tools, out = T2.b64out;
+    const io = 'width: 100%; min-height: 96px; border-radius: 12px; border: 1px solid var(--line2); background: var(--s1); color: var(--tx); padding: 10px 12px; font: 13px/1.5 "JetBrains Mono", monospace; resize: vertical';
+    const row = (label, kind, accept, ready = true, need = '') => `<div class="conv ${ready ? '' : 'off'}"><span>${label}</span>${ready ? `<span class="badge ok">Ready</span><label class="btn text" style="cursor: pointer">Choose…<input type="file" accept="${accept}" data-convfile="${kind}" class="sr"></label>` : `<span class="badge mute">${need}</span>`}</div>`;
+    const ed = S.editors || {};
+    return page('Tools', '', `<div class="cols"><div class="wide">
+      <div class="card"><span class="h2">Base64 toolkit</span>
+        <div class="row" style="gap: 8px; flex-wrap: wrap"><span class="seg">${[['encode', 'Encode text'], ['decode', 'Decode']].map(([v, l]) => `<button class="${T2.b64mode === v ? 'on' : ''}" aria-pressed="${T2.b64mode === v}" data-act="b64-mode" data-v="${v}">${l}</button>`).join('')}</span><button class="badge ${T2.urlSafe ? 'ac' : 'mute'}" style="border: 0; cursor: pointer" aria-pressed="${T2.urlSafe}" data-act="b64-url">URL-safe</button><label class="btn text" style="cursor: pointer">${ic('upload_file')}File to Base64<input type="file" data-b64file="1" class="sr"></label></div>
+        <label class="sr" for="b64in">Input</label><textarea id="b64in" data-input="b64in" style="${io}" placeholder="${T2.b64mode === 'encode' ? 'Text to encode (UTF-8)' : 'Base64 to decode'}">${esc(T2.b64in)}</textarea>
+        <button class="btn fillb" data-act="b64-go" style="align-self: flex-start">${ic('swap_vert')}${T2.b64mode === 'encode' ? 'Encode' : 'Decode'}</button>
+        ${out ? (out.ok ? `<label class="sr" for="b64out">Result</label><textarea id="b64out" readonly style="${io}">${esc(out.text ?? '')}</textarea>${out.binary ? `<span class="small">This is binary data (${out.bytes.length} bytes), not UTF-8 text. Save it as a file instead.</span>` : ''}<div class="row" style="gap: 6px; flex-wrap: wrap"><button class="btn text" data-act="b64-copy" ${out.binary ? 'disabled' : ''}>${ic('content_copy')}Copy</button><button class="btn text" data-act="b64-save">${ic('download')}Save</button><button class="btn text" data-act="b64-edit" data-e="default">${ic('edit_note')}Open with the default app</button><button class="btn text" data-act="b64-edit" data-e="vscode" ${ed.vscode ? '' : 'disabled'} title="${ed.vscode ? '' : 'VS Code is not installed on this computer'}">${ic('code')}Open in VS Code${ed.vscode ? '' : ' (not found)'}</button></div>` : `<span class="badge err" role="alert">${esc({ EMPTY: 'Nothing to decode', NOT_BASE64: 'That is not valid Base64' }[out.error] || out.error)}</span>`) : ''}
+      </div></div>
+      <div class="side"><div class="card"><span class="h2">File converter</span><span class="small">Up to 25 MB, converted on this computer. Nothing is uploaded.</span>
+        ${row('JSON to YAML', 'json>yaml', '.json,application/json')}${row('JSON to CSV', 'json>csv', '.json,application/json')}${row('CSV to JSON', 'csv>json', '.csv,text/csv')}${row('CSV to YAML', 'csv>yaml', '.csv,text/csv')}${row('Markdown to HTML', 'md>html', '.md,.markdown,text/markdown')}
+        ${row('Image to PNG', 'img>png', 'image/png,image/jpeg,image/webp')}${row('Image to JPEG', 'img>jpeg', 'image/png,image/jpeg,image/webp')}${row('Image to WebP', 'img>webp', 'image/png,image/jpeg,image/webp')}
+        ${row('YAML to JSON', '', '', false, 'Needs a YAML reader, not included')}${row('Video and audio', '', '', false, 'Needs FFmpeg, not included')}${row('7z and RAR archives', '', '', false, 'Needs 7-Zip, not included')}
+        ${T2.conv ? `<div class="card outline" style="gap: 8px"><span class="t" style="font-weight: 650">${esc(T2.conv.name)}</span>${T2.conv.note ? `<span class="small">${esc(T2.conv.note)}</span>` : ''}<div class="row" style="gap: 6px; flex-wrap: wrap"><button class="btn tonal" data-act="conv-save">${ic('download')}Save</button>${T2.conv.text !== undefined ? `<button class="btn text" data-act="conv-edit" data-e="vscode" ${ed.vscode ? '' : 'disabled'}>${ic('code')}Open in VS Code${ed.vscode ? '' : ' (not found)'}</button><button class="btn text" data-act="conv-edit" data-e="default">Open with the default app</button>` : ''}</div></div>` : ''}
+      </div></div></div>`);
+  }
+  async function handoff(name, text, editor) {
+    const r = await api.openInEditor(name, text, editor);
+    if (r.ok) toast(`Opened ${name}`); else toast(r.error === 'VSCODE_NOT_FOUND' ? 'VS Code is not installed on this computer.' : `No app opened the file. It is saved at ${r.path}`, 'err');
+  }
+
+  // ---------- wording celebration ----------
+  function partyHtml() {
+    const p = S.party; if (!p) return '';
+    const quiet = S.settings.reduceMotion || S.settings.calm || S.settings.school || matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (quiet) return `<div class="party quiet" role="status">${ic('check_circle', 'fill')}${esc(p)}</div>`;
+    const bits = Array.from({ length: 36 }, (_, i) => `<i style="left: ${(i * 37) % 100}%; animation-delay: ${(i % 9) * 0.08}s; background: ${['var(--ac)', 'var(--ok)', 'var(--warn)', 'var(--err)'][i % 4]}; transform: rotate(${i * 23}deg)"></i>`).join('');
+    return `<div class="party" role="status" aria-live="polite"><div class="party-card">${ic('celebration', 'fill')}<span class="h2">Tada! ${esc(p)}</span></div>${bits}</div>`;
+  }
+  function celebrate(text) {
+    S.party = text; render(); cue('tada'); say(text);
+    clearTimeout(S.partyTimer); S.partyTimer = setTimeout(() => { S.party = null; render(); }, 2600);
+  }
+
   // ---------- Support Tickets ----------
   const SEVERITY = ['Mild inconvenience', 'Moderately dramatic', 'Catastrophic (ignored)', 'Existential'];
   const STATUSES = ['Received', 'Triaged by the Desk', 'Escalated to a drawer', 'Resolved: delete the app data folder'];
@@ -780,10 +883,10 @@
   function render() {
     if (!S.settings || (browser && !api.authenticated)) return;
     const focusId = document.activeElement?.id, caret = document.activeElement?.selectionStart;
-    const views = { setup: viewSetup, accounts: viewAccounts, deploys: viewDeploys, wizard: viewWizard, run: viewRun, result: viewResult, settings: viewSettings, help: viewHelp, history: viewHistory, changelog: viewChangelog, docs: viewDocs, support: viewSupport };
+    const views = { setup: viewSetup, accounts: viewAccounts, deploys: viewDeploys, wizard: viewWizard, run: viewRun, result: viewResult, settings: viewSettings, help: viewHelp, history: viewHistory, changelog: viewChangelog, docs: viewDocs, support: viewSupport, tools: viewTools };
     const tab = S.tabs.find(t => t.id === S.active) || S.tabs[0];
     const v = tab.id === 'ws' ? S.view : tab.view;
-    root.innerHTML = shell((views[v] || viewDeploys)(), { rail: v !== 'setup' }) + paletteHtml() + panelHtml() + dimsumHtml();
+    root.innerHTML = shell((views[v] || viewDeploys)(), { rail: v !== 'setup' }) + paletteHtml() + panelHtml() + dimsumHtml() + partyHtml();
     Kit.watchPanels(root, (id, box) => { const ui = S.settings.ui || { filtersOpen: {}, panels: {} }; api.setSetting('ui', { ...ui, panels: { ...ui.panels, [id]: box } }).then(r => r.ok && (S.settings.ui = r.value)); });
     if (S.view === 'settings' && S.settingsQuery) { const q = S.settingsQuery.toLowerCase(); root.querySelectorAll('[data-search]').forEach(el => { el.hidden = !el.dataset.search.toLowerCase().includes(q); }); }
     vocabularize(root);
@@ -800,6 +903,8 @@
     if (v === 'export') { go('history'); openPanel('export:history'); return; }
     if (v === 'lockwiz') { go('deploys'); openLockWizard({ key: 'go:settings', label: 'Settings' }); S.lockWiz.policy = 'pin+totp'; api.lockTotp('Settings').then(x => { S.lockWiz.totp = x; S.lockWiz.pin = '2468'; render(); }); return; }
     if (v === 'unlock') { go('deploys'); api.lockCreate('go:settings', { label: 'Settings', policy: 'pin', pin: '2468' }).then(async () => { await refreshLocks(); render(); openUnlock({ key: 'go:settings', label: 'Settings' }); S.unlock.pin = '24'; render(); }); return; }
+    if (v === 'tools') { go('deploys'); ensureData('tools'); openTab('tools'); S.tools.b64in = 'hello, har gow'; S.tools.b64out = { ok: true, text: Lib.b64encode('hello, har gow') }; S.tools.conv = { name: 'menu.yaml', text: 'x', note: '' }; render(); return; }
+    if (v === 'party') { S.active = 'ws'; go('deploys'); celebrate('42 words applied'); return; }
     if (v === 'appearance') { go('deploys'); openAppearance({ key: 'go:accounts', label: 'Accounts' }); apSet('weight', 750); apSet('color', '#4ade9a'); apSet('glow', 12); apSet('radius', 18); apSet('underline', true); render(); return; }
     if (v === 'support') { go('support'); S.ticketDraft = 'I locked Settings with a PIN and forgot it.'; render(); return; }
     const row = () => document.querySelector('[data-menu="deploy"]');
@@ -928,6 +1033,18 @@
       case 'dep-invert': S.history.deployments.forEach(x => { const k = x.id || x.at; S.depSel.has(k) ? S.depSel.delete(k) : S.depSel.add(k); }); render(); break;
       case 'dep-export': exportRecords(S.history.deployments.filter(x => S.depSel.has(x.id || x.at))); break;
       case 'dep-remove': removeRecords([...S.depSel], t); break;
+      case 'voice-try': { const was = S.settings.narration; S.settings.narration = true; say(S.settings.language === 'yue' ? '你好，部署準備好喇。' : 'Hello. Your deployment is ready.'); S.settings.narration = was; break; }
+      case 'logo-symbol': await set('logo', { ...logo(), symbol: t.dataset.v, image: undefined }); break;
+      case 'logo-shape': await set('logo', { ...logo(), shape: t.dataset.v }); break;
+      case 'chart-table': S.chartTable = !S.chartTable; render(); break;
+      case 'b64-mode': S.tools.b64mode = t.dataset.v; S.tools.b64out = null; render(); break;
+      case 'b64-url': S.tools.urlSafe = !S.tools.urlSafe; render(); break;
+      case 'b64-go': S.tools.b64out = S.tools.b64mode === 'encode' ? { ok: true, text: Lib.b64encode(S.tools.b64in, { urlSafe: S.tools.urlSafe }) } : Lib.b64decode(S.tools.b64in); render(); break;
+      case 'b64-copy': copy(S.tools.b64out.text); break;
+      case 'b64-save': { const o = S.tools.b64out; const r = await api.saveFile(o.name || (o.binary ? 'decoded.bin' : S.tools.b64mode === 'encode' ? 'encoded.txt' : 'decoded.txt'), o.binary ? o.bytes : o.text); if (r.ok) toast('Saved'); break; }
+      case 'b64-edit': handoff(S.tools.b64mode === 'encode' ? 'encoded.txt' : 'decoded.txt', S.tools.b64out.text || '', t.dataset.e); break;
+      case 'conv-save': { const c = S.tools.conv; const r = await api.saveFile(c.name, c.bytes || c.text); if (r.ok) toast(`Saved ${c.name}`); break; }
+      case 'conv-edit': handoff(S.tools.conv.name, S.tools.conv.text, t.dataset.e); break;
       case 'vocab-clear': await set('vocabulary', null); toast('Original words restored'); break;
     }
   });
@@ -962,12 +1079,18 @@
     if (['name', 'port', 'health'].includes(el.dataset.input)) { S.wizard[el.dataset.input] = el.value.trim(); clearTimeout(S.wt); S.wt = setTimeout(() => { saveDraft(); render(); }, 250); return; }
     if (el.dataset.env) { S.wizard.env[+el.dataset.env][el.dataset.k] = el.value; return; }
     if (el.dataset.range) { set(el.dataset.range, +el.value); return; }
+    if (el.dataset.input === 'b64in') { S.tools.b64in = el.value; S.tools.b64out = null; return; }
   });
   root.addEventListener('change', async e => {
     const el = e.target;
     if (el.dataset.input === 'displayName') set('displayName', el.value.trim());
     if (el.dataset.input === 'accentText') { const hex = Lib.parseColor(el.value); if (hex) { await set('rainbow', false); set('accent', hex); } else toast('Not a colour this app can read', 'err'); }
     if (el.dataset.select) set(el.dataset.select, el.value);
+    if (el.dataset.voice) set('voices', { ...S.settings.voices, [el.dataset.voice]: el.value });
+    if (el.dataset.file === 'logo' && el.files[0]) logoUpload(el.files[0]);
+    if (el.dataset.input === 'logoBg') { const c = Lib.parseColor(el.value); if (c) set('logo', { ...logo(), bg: c }); }
+    if (el.dataset.b64file && el.files[0]) b64File(el.files[0]);
+    if (el.dataset.convfile && el.files[0]) convertFile(el.dataset.convfile, el.files[0]);
     if (el.dataset.dep) { el.checked ? S.depSel.add(el.dataset.dep) : S.depSel.delete(el.dataset.dep); render(); }
     if (el.dataset.note) { el.checked ? S.noteSel.add(el.dataset.note) : S.noteSel.delete(el.dataset.note); render(); }
     if (el.dataset.file === 'vocab' && el.files[0]) applyVocabFile(el.files[0]);
@@ -979,7 +1102,7 @@
   async function applyVocabFile(file) {
     const r = Lib.parseVocabulary(await file.text());
     if (!r.ok) { toast('Wording file refused (' + r.error.toLowerCase().replace(/_/g, ' ') + '). Nothing changed.', 'err'); cue('err'); return; }
-    await set('vocabulary', r.vocabulary); toast(Object.keys(r.vocabulary.entries).length + ' words applied' + (emojiOn() ? ' ✨' : '')); cue('ok');
+    await set('vocabulary', r.vocabulary); const n = Object.keys(r.vocabulary.entries).length; toast(n + ' words applied' + (emojiOn() ? ' ✨' : '')); celebrate(`${n} word${n === 1 ? '' : 's'} applied`);
   }
   document.addEventListener('dragover', e => { if ([...e.dataTransfer.items].some(i => i.kind === 'file')) e.preventDefault(); });
   document.addEventListener('drop', e => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f && /\.json$/i.test(f.name)) applyVocabFile(f); });
@@ -987,6 +1110,7 @@
     if (view === 'history') await loadHistory();
     if (view === 'changelog' && !S.changelog) { S.changelog = await api.changelog(); }
     if (view === 'docs' && !S.docs) { S.docs = await api.docs(); }
+    if (view === 'tools' && !S.editors) { S.editors = (await api.editors?.()) || { vscode: false }; }
     render();
   }
   function togglePalette() { S.palette = S.palette ? null : { q: '', regex: false, sel: 0 }; render(); document.getElementById('pq')?.focus(); }

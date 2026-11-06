@@ -6,7 +6,7 @@ const path = require('node:path');
 const DEFAULTS = Object.freeze({
   theme: 'system', accent: '#6ea8ff', rainbow: false, reduceMotion: false,
   displayName: '', language: 'en', funnyLevel: 3, emoji: true,
-  narration: false, voice: '', rate: 1, sounds: true,
+  narration: false, voice: '', rate: 1, pitch: 1, voices: { en: '', yue: '' }, sounds: true, logo: null,
   schedule: { enabled: false, lightAt: '07:00', darkAt: '19:00', days: [0, 1, 2, 3, 4, 5, 6] },
   focus: false, calm: false, school: false,
   setupComplete: false, launches: 0,
@@ -31,6 +31,9 @@ const VALIDATORS = {
   voice: v => typeof v === 'string' && v.length <= 200,
   rate: v => typeof v === 'number' && v >= 0.5 && v <= 2,
   sounds: v => typeof v === 'boolean',
+  pitch: v => typeof v === 'number' && v >= 0.5 && v <= 2,
+  voices: v => v && typeof v === 'object' && ['en', 'yue'].every(k => typeof v[k] === 'string' && v[k].length <= 200),
+  logo: v => v === null || (v && typeof v === 'object' && JSON.stringify(v).length < 420000 && (v.image === undefined || /^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/]+=*$/.test(v.image))),
   schedule: v => v && typeof v === 'object' && typeof v.enabled === 'boolean' && isTime(v.lightAt) && isTime(v.darkAt) && Array.isArray(v.days) && v.days.every(d => Number.isInteger(d) && d >= 0 && d <= 6),
   focus: v => typeof v === 'boolean', calm: v => typeof v === 'boolean', school: v => typeof v === 'boolean',
   setupComplete: v => typeof v === 'boolean',
