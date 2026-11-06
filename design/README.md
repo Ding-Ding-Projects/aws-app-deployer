@@ -1,0 +1,7 @@
+# Design handoff
+
+This directory is reserved for the collaborating designer's source files and implementation handoff.
+
+Primary journeys: connect an AWS account in the browser and return to the desktop application; select a project; configure a deployment; follow build and deployment progress; inspect health and rollback status.
+
+Use ordinary technical terminology. Do not bundle account identifiers, credentials, or private instruction content. An initial design handoff has not yet been received.
