@@ -14,7 +14,7 @@ const DEFAULTS = Object.freeze({
   a11y: { textSize: 100, contrast: false, focus: false, targets: false, hidden: false },
   ui: { filtersOpen: {}, panels: {} },
 });
-const HISTORY_LIMIT = 300;
+const HISTORY_LIMIT = 5000;
 const DEPLOY_LIMIT = 50;
 
 const isTime = v => typeof v === 'string' && /^([01]\d|2[0-3]):[0-5]\d$/.test(v);
@@ -48,6 +48,7 @@ function createStore(dir, { now = () => new Date().toISOString() } = {}) {
     for (const [k, v] of Object.entries(raw.settings || {})) if (VALIDATORS[k]?.(v) || k === 'launches') { state.settings[k] = v; written.add(k); }
     if (Array.isArray(raw.history)) state.history = raw.history.slice(-HISTORY_LIMIT);
     if (Array.isArray(raw.deployments)) state.deployments = raw.deployments.slice(-DEPLOY_LIMIT);
+    if (raw.labels && typeof raw.labels === 'object') state.labels = raw.labels;
   } catch { /* first run or unreadable file: defaults */ }
   // Migration: any stored off switch for the dim sum surprise is dropped; it cannot be turned off.
   delete state.settings.dimSum;
@@ -81,6 +82,28 @@ function createStore(dir, { now = () => new Date().toISOString() } = {}) {
       return { ok: true, removed: before - state.deployments.length, skipped: ats.length - (before - state.deployments.length) };
     },
     recordDeployment(entry) { state.deployments.push({ id: require('node:crypto').randomUUID(), at: now(), ...entry }); state.deployments = state.deployments.slice(-DEPLOY_LIMIT); save(); },
+    // Restores never rewrite history: they append a new revision naming the one restored.
+    restore(index) {
+      const h = state.history[index];
+      if (!h) return { ok: false, error: 'UNKNOWN_REVISION' };
+      if (h.key === 'deployments.removed' && Array.isArray(h.restore)) {
+        const have = new Set(state.deployments.map(d => d.id || d.at));
+        const back = h.restore.filter(d => !have.has(d.id || d.at));
+        state.deployments.push(...back); state.deployments.sort((a, b) => a.at.localeCompare(b.at));
+        state.history.push({ at: now(), key: 'deployments.restored', before: null, after: back.map(d => d.name), restoredFrom: index });
+        save(); return { ok: true, restored: back.length, skipped: h.restore.length - back.length };
+      }
+      if (!(h.key in DEFAULTS) || h.key === 'vocabulary' || !VALIDATORS[h.key]?.(h.before)) return { ok: false, error: 'NOT_RESTORABLE' };
+      const before = state.settings[h.key];
+      state.settings[h.key] = structuredClone(h.before); written.add(h.key);
+      state.history.push({ at: now(), key: h.key, before, after: h.before, restoredFrom: index });
+      save(); return { ok: true, key: h.key, value: state.settings[h.key] };
+    },
+    label(index, text) {
+      if (!state.history[index] || typeof text !== 'string' || text.length > 80) return { ok: false, error: 'INVALID_INPUT' };
+      state.labels = { ...(state.labels || {}), [index]: text.trim() }; save(); return { ok: true };
+    },
+    labels: () => ({ ...(state.labels || {}) }),
     reset(key) { if (!(key in DEFAULTS)) return { ok: false, error: 'INVALID_INPUT' }; return this.set(key, structuredClone(DEFAULTS[key])); },
   };
 }

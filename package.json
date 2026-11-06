@@ -26,6 +26,7 @@
     "productName": "AWS App Deployer",
     "files": [
       "src/**/*",
+      "docs/**/*",
       "package.json"
     ],
     "directories": {

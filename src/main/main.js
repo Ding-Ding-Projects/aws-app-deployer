@@ -40,7 +40,7 @@ function createWindow() {
 
 async function captureScreenshots(dir) {
   fs.mkdirSync(dir, { recursive: true });
-  const routes = ['setup', 'deploys', 'accounts', 'wizard', 'settings', 'help', 'palette', 'a11y', 'info', 'menu', 'confirm'];
+  const routes = ['setup', 'deploys', 'accounts', 'wizard', 'settings', 'help', 'palette', 'a11y', 'info', 'menu', 'confirm', 'history', 'docs', 'changelog', 'tabs', 'export'];
   for (let i = 0; i < 90 && !(await win.webContents.executeJavaScript('!!(window.__ready && window.__ready())')); i++) await new Promise(res => setTimeout(res, 1000));
   for (const [w, tag] of [[1320, 'desktop'], [420, 'narrow']]) {
     win.setSize(w, 860);
@@ -83,6 +83,16 @@ if (!squirrelEvent) app.whenReady().then(() => {
   handle('reset-setting', k => bridge.resetSetting(k));
   handle('history', () => bridge.history());
   handle('remove-deployments', ats => bridge.removeDeployments(ats));
+  handle('restore', i => bridge.restore(i));
+  handle('label', (i, t) => bridge.label(i, t));
+  handle('docs', () => bridge.docs());
+  handle('changelog', () => bridge.changelog());
+  handle('save-file', async (name, data) => {
+    if (typeof name !== 'string' || !/^[\w.-]{1,80}$/.test(name) || !(typeof data === 'string' || data instanceof Uint8Array)) return { ok: false, error: 'INVALID_INPUT' };
+    const r = await dialog.showSaveDialog(win, { defaultPath: name });
+    if (r.canceled) return { ok: false, error: 'CANCELLED' };
+    fs.writeFileSync(r.filePath, data); return { ok: true, path: r.filePath };
+  });
   handle('dim-sum', () => bridge.dimSum());
   handle('version', () => app.getVersion());
   handle('provenance', () => provenance());

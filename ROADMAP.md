@@ -39,7 +39,13 @@ Honest inventory of the desktop app and its landing page. **Shipped** means impl
 - [x] Shipped: notification centre with search, regex, select all shown, invert, bulk copy and dismiss; errors stay until dismissed
 - [x] Shipped: deployment records with collapsible filter (search, regex, status), multi-select, invert, bulk export and bulk removal through super confirmation
 - [x] Shipped: anchored panels that drag by their header, resize from the corner, move with Alt+Arrows (Shift resizes), and remember size and position per panel with a reset
-- [ ] Not started: per-element appearance editor, element locks, tabs, live charts, logo customization, local version history with undo, changelog viewer, offline documentation
+- [x] Shipped: tabs: one Workspace tab, utility tabs only from the New tab catalog (search with regex), reselect focuses, close and close others from the tab's context menu
+- [x] Shipped: local history: every settings change and record removal kept append-only beside app data, category filters with counts, regex search, date range, before and after view, restore as a new revision, labels, export
+- [x] Shipped: changelog viewer built from release tags at build time: version, date, Added, Changed, Fixed, Removed, full commit SHA linking to GitHub, date and regex filters, copy and export
+- [x] Shipped: offline docs: one article per feature bundled into the app, rendered by one safe Markdown renderer, searchable with regex; a test fails if an article is missing or links to a missing one
+- [x] Shipped: export of records, history and settings as JSON, YAML, CSV or Markdown, or everything as a ZIP, each stating schema, UTF-8 and LF, and any loss before saving
+- [ ] Partial: 7z archives and encrypted archives are not offered yet (ZIP only)
+- [ ] Not started: per-element appearance editor, element locks, live charts, logo customization
 
 ## Release and site
 

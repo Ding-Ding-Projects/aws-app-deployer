@@ -116,7 +116,20 @@ function createBridge({ backend, deployer, installer, store, emit, fetchUrl = gl
     removeDeployments: ats => store.removeDeployments(ats),
     setSetting(key, value) { return store.set(key, value); },
     resetSetting(key) { return store.reset(key); },
-    history: () => ({ ok: true, history: store.history(), deployments: store.deployments() }),
+    history: () => ({ ok: true, history: store.history(), deployments: store.deployments(), labels: store.labels() }),
+    restore: i => (Number.isInteger(i) ? store.restore(i) : { ok: false, error: 'INVALID_INPUT' }),
+    label: (i, text) => store.label(i, text),
+    async docs() {
+      const dir = path.join(__dirname, '..', '..', 'docs', 'features');
+      try {
+        const files = (await fsp.readdir(dir)).filter(f => /^[a-z0-9-]+\.md$/.test(f)).sort();
+        return { ok: true, docs: await Promise.all(files.map(async f => { const body = await fsp.readFile(path.join(dir, f), 'utf8'); return { id: f.slice(0, -3), title: (/^# (.+)$/m.exec(body) || [, f])[1], body }; })) };
+      } catch { return { ok: false, error: 'DOCS_MISSING' }; }
+    },
+    async changelog() {
+      try { return { ok: true, ...JSON.parse(await fsp.readFile(path.join(__dirname, '..', 'changelog.json'), 'utf8')) }; }
+      catch { return { ok: false, error: 'NOT_GENERATED' }; }
+    },
     canOpen: url => safeExternal(url),
     async dimSum() {
       const s = store.get();

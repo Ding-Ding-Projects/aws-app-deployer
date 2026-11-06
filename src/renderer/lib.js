@@ -201,5 +201,79 @@
   };
   const SETTINGS_ON_SCREEN = ['theme', 'accent', 'rainbow', 'reduceMotion', 'displayName', 'schedule', 'language', 'funnyLevel', 'emoji', 'narration', 'voice', 'rate', 'sounds', 'focus', 'calm', 'school', 'vocabulary', 'a11y'];
 
-  return { EXPLAIN, SETTINGS_ON_SCREEN, STRINGS, t, funny, parseVocabulary, applyVocabulary, explainRegex, search, parseColor, toRgb, scheduledTheme, STAGES, stageIndex, errorText };
+  // ---- Export in every format that can carry the data, stating any loss first ----
+  const FORMATS = {
+    json: { label: 'JSON', mime: 'application/json', ext: 'json', loss: null },
+    yaml: { label: 'YAML', mime: 'application/yaml', ext: 'yaml', loss: null },
+    csv: { label: 'CSV', mime: 'text/csv', ext: 'csv', loss: 'Nested values are written as JSON text inside one cell; nothing is dropped.' },
+    md: { label: 'Markdown', mime: 'text/markdown', ext: 'md', loss: 'Nested values are written as JSON text inside one cell; nothing is dropped.' },
+  };
+  const cell = v => (v === null || v === undefined ? '' : typeof v === 'object' ? JSON.stringify(v) : String(v));
+  function columns(rows) { const cols = []; for (const r of rows) for (const k of Object.keys(r)) if (!cols.includes(k)) cols.push(k); return cols; }
+  function yaml(v, ind = '') {
+    if (v === null || v === undefined) return 'null';
+    if (Array.isArray(v)) return v.length ? v.map(x => `\n${ind}- ${yaml(x, ind + '  ').replace(/^\n\s*/, '')}`).join('') : '[]';
+    if (typeof v === 'object') { const e = Object.entries(v); return e.length ? e.map(([k, x]) => `\n${ind}${JSON.stringify(k)}: ${yaml(x, ind + '  ')}`).join('') : '{}'; }
+    return JSON.stringify(v);
+  }
+  function exportAs(format, schema, rows) {
+    const header = { schema, exportedAt: new Date().toISOString(), encoding: 'UTF-8', lineEndings: 'LF' };
+    if (format === 'json') return JSON.stringify({ ...header, records: rows }, null, 2) + '\n';
+    if (format === 'yaml') return ('# ' + JSON.stringify(header) + yaml({ ...header, records: rows })).trim() + '\n';
+    const cols = columns(rows);
+    if (format === 'csv') { const q = v => (/[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v); return [`# ${schema}`, cols.map(q).join(','), ...rows.map(r => cols.map(c => q(cell(r[c]))).join(','))].join('\n') + '\n'; }
+    if (format === 'md') { const p = v => cell(v).replace(/\|/g, '\\|').replace(/\n/g, ' '); return [`<!-- ${schema} · UTF-8 · LF -->`, '| ' + cols.join(' | ') + ' |', '|' + cols.map(() => ' --- ').join('|') + '|', ...rows.map(r => '| ' + cols.map(c => p(r[c])).join(' | ') + ' |')].join('\n') + '\n'; }
+    throw new Error('unknown format');
+  }
+  // Minimal ZIP writer (stored, no compression) with CRC-32, relative paths only.
+  const CRC = (() => { const t = []; for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
+  const crc32 = b => { let c = 0xffffffff; for (const x of b) c = CRC[(c ^ x) & 0xff] ^ (c >>> 8); return (c ^ 0xffffffff) >>> 0; };
+  function zip(files) {
+    const enc = new TextEncoder(), parts = [], central = []; let offset = 0;
+    for (const { name, data } of files) {
+      if (/^[\\/]|\.\.|:/.test(name)) throw new Error('unsafe path');
+      const n = enc.encode(name), d = typeof data === 'string' ? enc.encode(data) : data, c = crc32(d);
+      const h = new DataView(new ArrayBuffer(30)); [[0, 0x04034b50, 4], [4, 20, 2], [6, 0x0800, 2], [14, c, 4], [18, d.length, 4], [22, d.length, 4], [26, n.length, 2]].forEach(([o, v, s]) => (s === 4 ? h.setUint32(o, v, true) : h.setUint16(o, v, true)));
+      parts.push(new Uint8Array(h.buffer), n, d);
+      const ch = new DataView(new ArrayBuffer(46)); [[0, 0x02014b50, 4], [4, 20, 2], [6, 20, 2], [8, 0x0800, 2], [16, c, 4], [20, d.length, 4], [24, d.length, 4], [28, n.length, 2], [42, offset, 4]].forEach(([o, v, s]) => (s === 4 ? ch.setUint32(o, v, true) : ch.setUint16(o, v, true)));
+      central.push(new Uint8Array(ch.buffer), n); offset += 30 + n.length + d.length;
+    }
+    const size = central.reduce((a, b) => a + b.length, 0), e = new DataView(new ArrayBuffer(22));
+    [[0, 0x06054b50, 4], [8, files.length, 2], [10, files.length, 2], [12, size, 4], [16, offset, 4]].forEach(([o, v, s]) => (s === 4 ? e.setUint32(o, v, true) : e.setUint16(o, v, true)));
+    const all = [...parts, ...central, new Uint8Array(e.buffer)], out = new Uint8Array(all.reduce((a, b) => a + b.length, 0)); let p = 0; for (const a of all) { out.set(a, p); p += a.length; }
+    return out;
+  }
+
+  // ---- Markdown: one small, safe renderer for docs and the changelog ----
+  function markdown(src, { linkPrefix = '#doc:' } = {}) {
+    const escH = v => v.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+    const inline = t => escH(t).replace(/`([^`]+)`/g, '<code>$1</code>').replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>').replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, (m, l, h) => /^[a-z0-9-]+$/.test(h) ? `<a href="${linkPrefix}${h}" data-doc="${h}">${l}</a>` : /^https:\/\//.test(h) ? `<a href="${h}" data-url="${h}">${l}</a>` : l);
+    const out = []; let list = null, code = null;
+    for (const line of src.replace(/\r\n/g, '\n').split('\n')) {
+      if (code !== null) { if (/^```/.test(line)) { out.push(`<pre><code>${escH(code.join('\n'))}</code></pre>`); code = null; } else code.push(line); continue; }
+      if (/^```/.test(line)) { code = []; continue; }
+      const li = /^\s*[-*] (.*)$/.exec(line);
+      if (li) { if (!list) { list = []; } list.push(`<li>${inline(li[1])}</li>`); continue; }
+      if (list) { out.push(`<ul>${list.join('')}</ul>`); list = null; }
+      const h = /^(#{1,3}) (.*)$/.exec(line);
+      if (h) out.push(`<h${h[1].length + 1} class="md-h">${inline(h[2])}</h${h[1].length + 1}>`);
+      else if (line.trim()) out.push(`<p>${inline(line)}</p>`);
+    }
+    if (list) out.push(`<ul>${list.join('')}</ul>`);
+    if (code !== null) out.push(`<pre><code>${escH(code.join('\n'))}</code></pre>`);
+    return out.join('\n');
+  }
+
+  // ---- Local history labels and categories ----
+  const CATEGORY = { theme: 'Appearance', accent: 'Appearance', rainbow: 'Appearance', reduceMotion: 'Appearance', schedule: 'Appearance', a11y: 'Accessibility', ui: 'Layout', displayName: 'Appearance', language: 'Language', funnyLevel: 'Language', emoji: 'Language', narration: 'Voice', voice: 'Voice', rate: 'Voice', sounds: 'Voice', focus: 'Comfort', calm: 'Comfort', school: 'Comfort', vocabulary: 'Language', setupComplete: 'Setup', 'deployments.removed': 'Records', restore: 'Restores' };
+  const short = v => { const t = typeof v === 'string' ? v : JSON.stringify(v); return t === undefined ? 'nothing' : t.length > 40 ? t.slice(0, 37) + '…' : t; };
+  function historyLabel(h) {
+    if (h.key === 'deployments.removed') return `Removed ${h.before?.length || 0} deployment record${h.before?.length === 1 ? '' : 's'}`;
+    if (h.key === 'deployments.restored') return `Restored ${h.after?.length || 0} deployment record${h.after?.length === 1 ? '' : 's'}`;
+    if (h.restoredFrom !== undefined) return `Restored revision ${h.restoredFrom + 1}: ${h.key} ${short(h.after)}`;
+    return `${h.key} changed: ${short(h.before)} → ${short(h.after)}`;
+  }
+  const historyCategory = h => (h.restoredFrom !== undefined ? 'Restores' : CATEGORY[h.key] || (h.key.startsWith('deployments') ? 'Records' : 'Other'));
+
+  return { FORMATS, exportAs, zip, crc32, markdown, historyLabel, historyCategory, EXPLAIN, SETTINGS_ON_SCREEN, STRINGS, t, funny, parseVocabulary, applyVocabulary, explainRegex, search, parseColor, toRgb, scheduledTheme, STAGES, stageIndex, errorText };
 });

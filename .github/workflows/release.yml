@@ -32,6 +32,8 @@ jobs:
       VERSION: 0.1.${{ github.run_number }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
@@ -45,6 +47,8 @@ jobs:
         run: node scripts/code-name.mjs ${{ github.repository }} code-name.json
       - name: Stamp build provenance
         run: node scripts/stamp-build.mjs $env:VERSION code-name.json
+      - name: Build changelog from tags
+        run: node scripts/changelog.mjs
       - name: Build Squirrel.Windows installer
         run: npx electron-builder --win --publish never
       - name: Capture screenshots of the built app

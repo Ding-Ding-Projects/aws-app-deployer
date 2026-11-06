@@ -91,3 +91,22 @@ select { height: 40px; border-radius: var(--r2); border: 1px solid var(--line2);
 .sc.app { overflow: visible; }
 .ctx.app { width: 300px; }
 .sc.app { width: min(440px, calc(100% - 16px)); }
+.tabs { display: flex; align-items: flex-end; gap: 4px; padding: 6px 12px 0; background: var(--bg); border-bottom: 1px solid var(--line); overflow-x: auto; flex: none; }
+.tab { flex: none; display: flex; align-items: center; border-radius: 12px 12px 0 0; color: var(--tx2); }
+.tab.on { background: var(--s1); color: var(--tx); box-shadow: inset 0 2px 0 var(--ac); }
+.tab-b { display: flex; align-items: center; gap: 8px; height: 36px; padding: 0 8px 0 14px; border: 0; background: transparent; color: inherit; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
+.tab-x { width: 24px; height: 24px; margin-right: 6px; border-radius: 12px; border: 0; background: transparent; color: var(--tx3); display: grid; place-items: center; cursor: pointer; }
+.tab-x:hover { background: var(--s3); }
+.diff { font-family: "JetBrains Mono", monospace; font-size: 12.5px; border-radius: 10px; padding: 10px 12px; background: var(--bg); display: flex; flex-direction: column; gap: 4px; overflow-wrap: anywhere; }
+.diff .m { color: var(--err); } .diff .p { color: var(--ok); }
+.datein { height: 40px; border-radius: 12px; border: 1px solid var(--line2); background: var(--s1); color: var(--tx); padding: 0 10px; font: inherit; color-scheme: dark; }
+.light .datein { color-scheme: light; }
+.md { line-height: 1.6; }
+.md .md-h { margin: 8px 0 0; letter-spacing: -.02em; }
+.md h2.md-h { font-size: 24px; } .md h3.md-h { font-size: 17px; }
+.md p, .md ul { margin: 0; color: var(--tx2); } .md li { margin: 4px 0; }
+.md code { font-family: "JetBrains Mono", monospace; font-size: 12.5px; background: var(--s3); border-radius: 6px; padding: 1px 6px; color: var(--tx); }
+.md pre { background: var(--bg); border-radius: 10px; padding: 12px; overflow-x: auto; }
+#app.app { position: fixed; inset: 0; height: auto; }
+.body { overflow: hidden; }
+.main { min-height: 0; max-height: 100%; }

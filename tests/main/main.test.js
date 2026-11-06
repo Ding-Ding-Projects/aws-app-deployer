@@ -146,3 +146,27 @@ test('store reports where each value came from and removes records with a histor
   assert.equal(s.history().at(-1).key, 'deployments.removed');
   assert.equal(s.set('a11y', { textSize: 300, contrast: false, focus: false, targets: false, hidden: false }).ok, false);
 });
+
+test('restores append a new revision and bring removed records back', () => {
+  const s = createStore(tmp());
+  s.set('theme', 'dark'); s.set('theme', 'light');
+  const r = s.restore(0);
+  assert.deepEqual([r.ok, s.get().theme], [true, 'system']);
+  assert.equal(s.history().length, 3);
+  assert.equal(s.history()[2].restoredFrom, 0);
+  s.recordDeployment({ name: 'x' }); const id = s.deployments()[0].id;
+  s.removeDeployments([id]);
+  const back = s.restore(s.history().length - 1);
+  assert.deepEqual([back.restored, s.deployments().length], [1, 1]);
+  assert.equal(s.restore(99).error, 'UNKNOWN_REVISION');
+  assert.equal(s.label(0, 'before trip').ok, true);
+});
+
+test('every feature article is bundled and titled', async () => {
+  const bridge = createBridge({ backend: {}, deployer: {}, installer: {}, store: {}, emit: () => {} });
+  const r = await bridge.docs();
+  const files = fs.readdirSync(path.join(__dirname, '../../docs/features')).filter(f => f.endsWith('.md'));
+  assert.equal(r.docs.length, files.length);
+  for (const d of r.docs) assert.ok(d.title && !d.title.endsWith('.md'), d.id);
+  for (const d of r.docs) for (const [, link] of d.body.matchAll(/\]\(([a-z0-9-]+)\)/g)) assert.ok(files.includes(link + '.md'), `${d.id} links to missing ${link}`);
+});

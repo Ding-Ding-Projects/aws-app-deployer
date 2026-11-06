@@ -71,3 +71,30 @@ test('every setting on screen explains itself with real guided steps', () => {
     assert.ok(key in DEFAULTS, `${key} has no real default to show as provenance`);
   }
 });
+
+test('exports state their schema and keep every value, and the ZIP is readable', () => {
+  const rows = [{ name: 'a,b', nested: { x: 1 } }, { name: 'c', extra: 'only here' }];
+  const csv = Lib.exportAs('csv', 'x/1', rows);
+  assert.match(csv, /^# x\/1\nname,nested,extra\n"a,b","\{""x"":1\}",\nc,,only here\n$/);
+  assert.equal(JSON.parse(Lib.exportAs('json', 'x/1', rows)).records[1].extra, 'only here');
+  assert.match(Lib.exportAs('md', 'x/1', rows), /\| a,b \| \{"x":1\} \|/);
+  assert.match(Lib.exportAs('yaml', 'x/1', rows), /"encoding": "UTF-8"/);
+  const z = Lib.zip([{ name: 'a.json', data: '{}' }]);
+  assert.equal(new DataView(z.buffer).getUint32(0, true), 0x04034b50);
+  assert.throws(() => Lib.zip([{ name: '../evil', data: '' }]));
+  assert.equal(Lib.crc32(new TextEncoder().encode('hello')), 0x3610a686);
+});
+
+test('markdown escapes HTML and keeps links inside the app', () => {
+  const h = Lib.markdown('# T\n<script>x</script> [docs](tabs) [bad](javascript:alert(1)) [web](https://github.com)');
+  assert.ok(!h.includes('<script>'));
+  assert.match(h, /data-doc="tabs"/);
+  assert.ok(!/javascript:/.test(h));
+  assert.match(h, /data-url="https:\/\/github.com"/);
+});
+
+test('history labels say what actually changed', () => {
+  assert.equal(Lib.historyLabel({ key: 'theme', before: 'system', after: 'dark' }), 'theme changed: "system" → "dark"'.replace(/"/g, '') );
+  assert.equal(Lib.historyCategory({ key: 'theme' }), 'Appearance');
+  assert.equal(Lib.historyCategory({ key: 'theme', restoredFrom: 2 }), 'Restores');
+});

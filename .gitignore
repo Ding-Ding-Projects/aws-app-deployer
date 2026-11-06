@@ -8,3 +8,4 @@ dist/
 .aws/
 local-data/
 src/build-info.json
+src/changelog.json

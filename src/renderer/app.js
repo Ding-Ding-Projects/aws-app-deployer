@@ -12,6 +12,7 @@
     wizard: { step: 1, file: null, inspect: null, name: '', port: '', health: '/', env: [] },
     run: null, result: null, history: { history: [], deployments: [] },
     prov: null, update: null, updateLater: false,
+    tabs: [{ id: 'ws' }], active: 'ws', tabQ: '', tabRegex: false, hist: { q: '', regex: false, cat: 'All', from: '', to: '', sel: null }, clog: { q: '', regex: false, from: '', to: '' }, docF: { q: '', regex: false, id: null }, changelog: null, docs: null, exportFmt: 'json',
     palette: null, panel: null, practice: {}, infoStep: 0, noteQ: '', noteRegex: false, noteSel: new Set(), depQ: '', depRegex: false, depStatus: 'all', depSel: new Set(), sources: {}, defaults: {},
     drawer: false, notes: [], toasts: [], dimsum: null, troll: false, maximized: false,
   };
@@ -129,6 +130,7 @@
       <button class="chip" style="height: 28px; -webkit-app-region: no-drag" data-panel-open="notes" aria-label="${T('notifications')}">${ic('notifications', 'sm')}${S.notes.length ? `<span class="badge ac" style="height: 18px">${S.notes.length}</span>` : ''}</button>
       ${browser ? '<span class="badge ac">Browser companion</span><button class="chip" data-act="sign-out">Sign out</button>' : `<div class="caption"><button data-win="minimize" aria-label="Minimize">${ic('remove')}</button><button data-win="maximize" aria-label="${S.maximized ? 'Restore' : 'Maximize'}">${ic(S.maximized ? 'filter_none' : 'crop_square')}</button><button class="x" data-win="close" aria-label="Close">${ic('close')}</button></div>`}</div>
     ${S.update?.status === 'ready' && !S.updateLater ? `<div class="banner" role="status">${ic('system_update', 'fill')}<span class="stack grow" style="flex: 1 1 320px"><span style="font-weight: 650">Version ${esc(S.update.next)} is ready to install</span><span class="small" style="color: inherit; opacity: .85">Unsigned build: Windows may show an unknown-publisher or SmartScreen warning. Your settings and drafts are kept.</span></span><button class="btn text" style="color: inherit" data-act="open-url" data-url="https://github.com/Ding-Ding-Projects/aws-app-deployer/releases/latest">Release notes</button><button class="btn out" style="color: inherit; border-color: currentColor" data-act="update-later">Later</button><button class="btn fillb" data-act="update-install">${ic('restart_alt')}Restart to install update</button></div>` : ''}
+    ${S.view !== 'setup' || S.active !== 'ws' ? tabStrip() : ''}
     <div class="body">
       ${rail ? `<nav class="rail" aria-label="Main">
         <button class="fab" data-go="wizard" aria-label="${T('new_deployment')}">${ic('add', 'lg')}</button>
@@ -226,7 +228,7 @@
       <div class="row" style="flex-wrap: wrap; gap: 6px"><button class="btn text" data-act="dep-all">Select all ${shown.length} shown</button><button class="btn text" data-act="dep-invert">Invert</button><span class="grow"></span>${S.depSel.size ? `<span class="badge ac">${S.depSel.size} selected</span><button class="btn text" data-act="dep-export">${ic('download')}Export</button><button class="btn text" style="color: var(--err)" data-act="dep-remove">${ic('delete')}Remove…</button>` : ''}</div>` : '';
     const rows = shown.map(x => `<div class="li static" data-menu="deploy" data-at="${esc(x.id || x.at)}" tabindex="0"><input type="checkbox" class="check" aria-label="Select ${esc(x.name)}" data-dep="${esc(x.id || x.at)}" ${S.depSel.has(x.id || x.at) ? 'checked' : ''}><span class="tile ${x.ok ? 'ok' : 'warn'}">${ic(x.ok ? 'deployed_code' : 'history', 'fill')}</span><span class="stack grow"><span class="t">${esc(x.name)}</span><span class="m">${esc(x.region)} · ${new Date(x.at).toLocaleString()}${x.ok ? '' : ' · ' + esc(Lib.errorText(x.error))}</span></span>${x.ok ? `<button class="btn text" data-act="open-url" data-url="${esc(x.url)}">${T('open')}</button><span class="badge ok">${ic('check', 'sm')}Healthy at deploy</span>` : `<span class="badge warn">Stopped</span>`}</div>`).join('');
     const body = !d.length && !S.run ? `<div class="empty rise"><span class="tile ac">${ic('rocket_launch', 'lg fill')}</span><span class="h2" style="font-size: 20px">${T('no_deployments')}</span><span class="sub" style="max-width: 480px">${T('no_deployments_sub')}</span><button class="btn fillb" data-go="wizard">${ic('add')}${T('new_deployment')}</button></div>`
-      : `${bar}<div class="list rise">${running}${rows || '<span class="small" style="padding: 12px">No records match the filter</span>'}</div><div class="row"><span class="small grow">Status shown is the result recorded when each deployment finished on this computer.</span><button class="btn text" data-act="export">${T('export_history')}</button></div>`;
+      : `${bar}<div class="list rise">${running}${rows || '<span class="small" style="padding: 12px">No records match the filter</span>'}</div><div class="row"><span class="small grow">Status shown is the result recorded when each deployment finished on this computer.</span><button class="btn text" data-panel-open="export:deploys">${T('export_history')}</button></div>`;
     return page(T('deployments'), chip, body);
   }
   function viewWizard() {
@@ -315,7 +317,7 @@
           ${s.school ? '' : `<div class="set" style="flex-wrap: wrap" data-search="dim sum surprise"><span class="stack grow"><span class="t" style="font-weight: 600">${T('dim_sum')}</span><span class="small">A rare treat at launch</span></span><button class="toggle on" role="switch" aria-checked="true" aria-label="${T('dim_sum')}" data-act="troll"></button>${S.troll ? `<span class="card pop" style="flex: 1 1 100%; flex-direction: row; gap: 10px; align-items: center; padding: 10px 14px; margin-top: 10px; background: var(--warn-c)" role="status">${ic('lock', 'fill')}<span class="small" style="color: var(--tx)">${T('dim_sum_troll')}${emojiOn() ? ' 🥟' : ''}</span></span>` : ''}</div>`}
         </div>
         <div class="card" style="gap: 0" data-menu="setting" data-key="a11y" data-search="accessibility text size contrast focus targets read aloud button hidden"><div class="set">${info('a11y', 'Accessibility tools')}<span class="stack grow"><span class="t" style="font-weight: 600">Accessibility tools</span><span class="small">${s.a11y.hidden ? 'Title bar button hidden' : 'Button in the title bar'} · text ${s.a11y.textSize}%</span></span><button class="btn tonal" data-panel-open="a11y">Open</button>${s.a11y.hidden ? '<button class="btn text" data-act="a11y-show">Show button</button>' : ''}</div></div>
-        <button class="btn text" data-act="export" style="align-self: flex-start">${ic('download')}${T('export_history')}</button>
+        <div class="row" style="gap: 6px; flex-wrap: wrap"><button class="btn text" data-panel-open="export:settings">${ic('download')}Export settings</button><button class="btn text" data-go="history">${ic('history')}Local history</button></div>
       </div></div>`);
   }
   function updatesCard() {
@@ -334,7 +336,7 @@
     return page(T('nav_help'), '', `<div class="cols"><div class="wide"><div class="card"><span class="h2">Keyboard</span><dl class="kv" style="margin: 0"><dt><span class="kbd">Ctrl+Shift+F</span></dt><dd>Command palette with regex search</dd><dt><span class="kbd">Ctrl+N</span></dt><dd>New deployment</dd><dt><span class="kbd">Ctrl+,</span></dt><dd>Settings</dd><dt><span class="kbd">Esc</span></dt><dd>Close palette or panel</dd></dl></div>
       <div class="card"><span class="h2">What a deployment creates</span><span class="sub">A VPC across two availability zones, a public Application Load Balancer, one NAT gateway, two Fargate tasks in private subnets, an ECR repository with an immutable image, and CloudWatch logs. These cost money until you delete them in AWS.</span></div>
       <div class="card"><span class="h2">Not supported yet</span><span class="sub">Multi-service Compose, volumes, Compose secrets, adjustable task size, custom-domain HTTPS from the app, automatic updates from a repository, and deleting a deployment from the app.</span></div></div>
-      <div class="side">${updatesCard()}<div class="card"><span class="h2">About</span>${aboutBody()}<span class="small">Free, source on GitHub. Not affiliated with Amazon Web Services.</span><button class="btn out" data-act="open-url" data-url="https://github.com/Ding-Ding-Projects/aws-app-deployer" style="align-self: flex-start">${ic('code')}Source</button><button class="btn text" data-go="setup" style="align-self: flex-start">Run setup again</button></div></div></div>`);
+      <div class="side">${updatesCard()}<div class="card"><span class="h2">About</span>${aboutBody()}<span class="small">Free, source on GitHub. Not affiliated with Amazon Web Services.</span><button class="btn out" data-act="open-url" data-url="https://github.com/Ding-Ding-Projects/aws-app-deployer" style="align-self: flex-start">${ic('code')}Source</button><button class="btn text" data-go="changelog" style="align-self: flex-start">${ic('new_releases')}Changelog</button><button class="btn text" data-go="docs" style="align-self: flex-start">${ic('menu_book')}Docs</button><button class="btn text" data-go="setup" style="align-self: flex-start">Run setup again</button></div></div></div>`);
   }
 
   // ---------- overlays ----------
@@ -344,6 +346,10 @@
     { id: 'settings', label: 'Settings', run: () => go('settings') }, { id: 'setup', label: 'Setup and tool check', keywords: 'install prerequisites', run: () => go('setup') },
     { id: 'help', label: 'Help and keyboard shortcuts', run: () => go('help') }, { id: 'theme', label: 'Toggle dark and light theme', run: () => set('theme', S.settings.theme === 'dark' ? 'light' : 'dark') },
     { id: 'motion', label: 'Toggle reduce motion', run: () => set('reduceMotion', !S.settings.reduceMotion) }, { id: 'export', label: 'Export history', run: () => api.exportHistory() },
+    { id: 'history', label: 'Local history', keywords: 'undo restore revisions', run: () => go('history') },
+    { id: 'changelog', label: 'Changelog', keywords: 'versions releases', run: () => go('changelog') },
+    { id: 'docs', label: 'Docs', keywords: 'help articles offline', run: () => go('docs') },
+    { id: 'export', label: 'Export settings, history or records', keywords: 'export json csv yaml markdown zip', run: () => openPanel('export:settings') },
     { id: 'updates', label: 'Check for updates', keywords: 'update upgrade version', run: async () => { S.update = await api.checkUpdates(); go('help'); } },
     { id: 'notes', label: 'Notifications', run: () => openPanel('notes') },
     { id: 'a11y', label: 'Accessibility tools', keywords: 'text size contrast focus targets read aloud', run: () => openPanel('a11y') },
@@ -408,6 +414,8 @@
         <div class="row" style="flex-wrap: wrap; gap: 6px"><button class="btn text" data-act="note-all">Select all ${list.length} shown</button><button class="btn text" data-act="note-invert">Invert</button><span class="grow"></span><button class="btn text" data-act="note-copy" ${S.noteSel.size ? '' : 'disabled'}>Copy ${S.noteSel.size || ''}</button><button class="btn text" data-act="note-dismiss" ${S.noteSel.size ? '' : 'disabled'}>Dismiss ${S.noteSel.size || ''}</button></div>
         ${list.map(n => `<label class="li static" style="padding: 8px 0"><input type="checkbox" class="check" data-note="${n.id}" ${S.noteSel.has(n.id) ? 'checked' : ''}><span class="tile ${n.kind === 'err' ? 'err' : 'ok'}">${ic(n.kind === 'err' ? 'error' : 'check_circle', 'fill')}</span><span class="stack grow"><span class="t">${esc(n.text)}</span><span class="m">${esc(n.at)}</span></span></label>`).join('') || '<span class="small">Nothing here</span>'}`, right + ' height: 520px;');
     }
+    if (P.id === 'newtab') return newTabPanel();
+    if (P.id.startsWith('export:')) return exportPanel(P.id.slice(7));
     if (P.id.startsWith('info:')) {
       const key = P.id.slice(5), ex = Lib.EXPLAIN[key];
       if (!ex) return '';
@@ -431,7 +439,8 @@
       items.push({ label: S.depSel.has(at) ? 'Deselect' : 'Select', icon: 'check_box', run: () => { S.depSel.has(at) ? S.depSel.delete(at) : S.depSel.add(at); render(); } });
       items.push({ label: 'Export this record', icon: 'download', run: () => exportRecords([d]) });
       items.push({ label: 'Remove from history…', icon: 'delete', danger: true, shortcut: 'remove', run: o => removeRecords([at], o) });
-    } else if (kind === 'nav') items.push({ label: 'Open', icon: 'arrow_forward', run: () => go(m.dataset.go) });
+    } else if (kind === 'tab') { const id = m.dataset.tab; if (id !== 'ws') items.push({ label: 'Close tab', icon: 'close', run: () => closeTabs([id]) }); const others = S.tabs.filter(t => t.id !== 'ws' && t.id !== id).map(t => t.id); items.push({ label: `Close ${others.length} other tab${others.length === 1 ? '' : 's'}`, icon: 'tab_close', disabled: !others.length, run: () => closeTabs(others) }); }
+    else if (kind === 'nav') items.push({ label: 'Open', icon: 'arrow_forward', run: () => go(m.dataset.go) });
     else if (kind === 'setting') { const k = m.dataset.key; items.push({ label: 'About this setting', icon: 'info', run: () => openPanel('info:' + k) }, { label: 'Reset to default', icon: 'restart_alt', run: async () => { const r = await api.resetSetting(k); if (r.ok) { S.settings[k] = r.value; await refreshSources(); applyAppearance(); render(); } } }); }
     else if (kind === 'a11y') items.push({ label: 'Open accessibility tools', icon: 'accessibility_new', run: () => openPanel('a11y') }, { label: 'Hide this button…', icon: 'visibility_off', run: () => openPanel('a11y-hide') });
     const field = el.closest('input, textarea');
@@ -463,6 +472,102 @@
   }
   async function refreshSources() { const r = await api.settings(); S.sources = r.sources || {}; S.defaults = r.defaults || {}; }
 
+
+  // ---------- tabs ----------
+  const CATALOG = [
+    { view: 'history', label: 'Local history', icon: 'history', keywords: 'undo restore revisions' },
+    { view: 'docs', label: 'Docs', icon: 'menu_book', keywords: 'help articles offline' },
+    { view: 'changelog', label: 'Changelog', icon: 'new_releases', keywords: 'versions releases' },
+    { view: 'settings', label: 'Settings', icon: 'tune' }, { view: 'help', label: 'Help and about', icon: 'help' },
+    { view: 'accounts', label: 'Accounts', icon: 'key' }, { view: 'deploys', label: 'Deployments', icon: 'rocket_launch' },
+  ];
+  function tabStrip() {
+    return `<div class="tabs" role="tablist" aria-label="Open tabs">${S.tabs.map(t => { const c = t.id === 'ws' ? { label: 'Workspace', icon: 'rocket_launch' } : CATALOG.find(x => x.view === t.view); return `<span class="tab ${S.active === t.id ? 'on' : ''}" data-menu="tab" data-tab="${t.id}"><button class="tab-b" role="tab" aria-selected="${S.active === t.id}" data-tab-go="${t.id}">${ic(c.icon, 'sm')}${esc(c.label)}</button>${t.id === 'ws' ? '' : `<button class="tab-x" data-tab-close="${t.id}" aria-label="Close ${esc(c.label)} tab">${ic('close', 'sm')}</button>`}</span>`; }).join('')}<button class="chip" style="height: 30px; margin: 0 0 3px 6px; flex: none" data-panel-open="newtab">${ic('add', 'sm')}New tab</button></div>`;
+  }
+  function openTab(view) { const id = 't' + Math.random().toString(36).slice(2, 7); S.tabs.push({ id, view }); S.active = id; S.panel = null; render(); }
+  function closeTabs(ids) { S.tabs = S.tabs.filter(t => t.id === 'ws' || !ids.includes(t.id)); if (!S.tabs.find(t => t.id === S.active)) S.active = 'ws'; render(); }
+  function newTabPanel() {
+    const r = Lib.search(CATALOG, S.tabQ || '', { regex: !!S.tabRegex });
+    return panelFrame('newtab', 'New tab', `<div class="row" style="gap: 6px"><label class="sr" for="tq">Search the catalog</label><input id="tq" class="mono" data-input="tabQ" value="${esc(S.tabQ || '')}" placeholder="Search destinations" data-autofocus="1" style="flex: 1; height: 36px; border-radius: 10px; border: 1px solid var(--line2); background: var(--s1); color: var(--tx); padding: 0 10px"><button class="badge ${S.tabRegex ? 'ac' : 'mute'} mono" style="border: 0; cursor: pointer" data-act="tab-regex" aria-pressed="${!!S.tabRegex}">.*</button></div>
+      ${r.ok ? (S.tabRegex && S.tabQ ? `<div class="row small" style="gap: 6px; flex-wrap: wrap">${(r.parts || []).map(p => `<span class="row" style="gap: 4px; white-space: nowrap"><span class="badge mute mono">${esc(p.token)}</span>${esc(p.meaning)}</span>`).join('')}</div>` : '') + r.items.map(c => `<button class="mi" data-act="open-tab" data-view="${c.view}">${ic(c.icon, 'sm')}${esc(c.label)}</button>`).join('') : `<span class="badge err">${esc(r.error)}</span>`}`, 'top: 84px; left: 140px; width: 360px;');
+  }
+
+  // ---------- local history ----------
+  function viewHistory() {
+    const H = S.hist, all = (S.history.history || []).map((h, i) => ({ ...h, i, label: Lib.historyLabel(h), cat: Lib.historyCategory(h) })).reverse();
+    const inRange = h => (!H.from || h.at.slice(0, 10) >= H.from) && (!H.to || h.at.slice(0, 10) <= H.to);
+    const byDate = all.filter(inRange);
+    const cats = ['All', ...new Set(all.map(h => h.cat))];
+    const counts = Object.fromEntries(cats.map(c => [c, c === 'All' ? byDate.length : byDate.filter(h => h.cat === c).length]));
+    const r = Lib.search(byDate.filter(h => H.cat === 'All' || h.cat === H.cat), H.q, { regex: H.regex });
+    const list = r.ok ? r.items : [];
+    const sel = all.find(h => h.i === H.sel) || list[0];
+    const labels = S.history.labels || {};
+    const detail = sel ? `<div class="card raise" style="border: 1px solid var(--line)"><span class="h2">Revision ${sel.i + 1}${labels[sel.i] ? ' · ' + esc(labels[sel.i]) : ''}</span><span class="small">${esc(stamp(sel.at))} · ${esc(sel.cat)}</span>
+      <div class="diff"><span class="m">- ${esc(JSON.stringify(sel.before))}</span><span class="p">+ ${esc(JSON.stringify(sel.after))}</span></div>
+      <span class="small">Restoring adds a new revision. History is never rewritten.</span>
+      <div class="row" style="flex-wrap: wrap"><button class="btn fillb" data-act="hist-restore" data-i="${sel.i}" ${sel.key === 'vocabulary' || sel.key === 'deployments.restored' ? 'disabled' : ''}>${ic('restore')}Restore</button><label class="sr" for="hl">Label this revision</label><input id="hl" data-input="histLabel" placeholder="Label" value="${esc(labels[sel.i] || '')}" style="flex: 1 1 140px; height: 40px; border-radius: 12px; border: 1px solid var(--line2); background: var(--s1); color: var(--tx); padding: 0 10px"><button class="btn text" data-act="hist-label" data-i="${sel.i}">Save label</button></div></div>` : '';
+    return page('Local history', `<button class="btn out" data-panel-open="export:history">${ic('download')}Export</button>`, `
+      <div class="row" style="gap: 8px; flex-wrap: wrap"><label class="sr" for="hq">Search history</label><input id="hq" class="mono" data-input="histQ" value="${esc(H.q)}" placeholder="Search changes" style="flex: 1 1 220px; height: 40px; border-radius: 12px; border: 1px solid var(--line2); background: var(--s1); color: var(--tx); padding: 0 12px"><button class="badge ${H.regex ? 'ac' : 'mute'} mono" style="border: 0; cursor: pointer" data-act="hist-regex" aria-pressed="${H.regex}">.* Regex</button>
+        <label class="small" for="hf">From</label><input id="hf" type="date" data-input="histFrom" value="${esc(H.from)}" class="datein"><label class="small" for="ht">To</label><input id="ht" type="date" data-input="histTo" value="${esc(H.to)}" class="datein"></div>
+      ${!r.ok ? `<span class="badge err">${esc(r.error)}</span>` : ''}
+      <div class="row" style="gap: 6px; flex-wrap: wrap">${cats.map(c => `<button class="badge ${H.cat === c ? 'ac' : 'mute'}" style="border: 0; cursor: pointer" data-act="hist-cat" data-c="${esc(c)}" aria-pressed="${H.cat === c}">${esc(c)} ${counts[c]}</button>`).join('')}</div>
+      <div class="cols"><div class="wide"><div class="list">${list.slice(0, 300).map(h => `<button class="li ${sel && sel.i === h.i ? 'sel' : ''}" data-act="hist-sel" data-i="${h.i}"><span class="stack grow"><span class="t">${esc(h.label)}</span><span class="m">${esc(stamp(h.at))} · revision ${h.i + 1}${labels[h.i] ? ' · ' + esc(labels[h.i]) : ''}</span></span></button>`).join('') || `<div class="empty" style="padding: 24px"><span class="h2">No changes ${H.q || H.from || H.to || H.cat !== 'All' ? 'match' : 'yet'}</span><span class="sub">Every settings change and record removal appears here.</span></div>`}</div>${list.length > 300 ? `<span class="small">Showing the newest 300 of ${list.length}. Narrow the filter to see older ones.</span>` : ''}</div><div class="side">${detail}</div></div>`);
+  }
+
+  // ---------- changelog ----------
+  function viewChangelog() {
+    const C = S.changelog, F = S.clog;
+    if (!C) return page('Changelog', '', '<div class="sk" style="height: 120px"></div>');
+    if (!C.ok) return page('Changelog', '', `<div class="empty"><span class="h2">Changelog unavailable</span><span class="sub">This is a development run; the changelog is generated when a release is built.</span></div>`);
+    const blocks = [...(C.unreleased?.length ? [{ version: S.prov?.version ? `${S.prov.version} (this build)` : 'Unreleased', date: C.unreleased[0].date, changes: C.unreleased, sha: C.unreleased[0].sha }] : []), ...C.versions];
+    const rx = F.q ? Lib.explainRegex(F.q) : null;
+    const match = c => (!F.from || c.date.slice(0, 10) >= F.from) && (!F.to || c.date.slice(0, 10) <= F.to) && (!F.q || (F.regex ? rx.ok && rx.regex.test(c.subject) : c.subject.toLowerCase().includes(F.q.toLowerCase())));
+    const shown = blocks.map(b => ({ ...b, changes: b.changes.filter(match) })).filter(b => b.changes.length);
+    S.clogShown = shown;
+    return page('Changelog', `<button class="btn out" data-act="clog-copy">${ic('content_copy')}Copy view</button><button class="btn out" data-act="clog-export">${ic('download')}Export</button>`, `
+      <div class="row" style="gap: 8px; flex-wrap: wrap"><label class="sr" for="cq">Search changes</label><input id="cq" class="mono" data-input="clogQ" value="${esc(F.q)}" placeholder="Search changes" style="flex: 1 1 220px; height: 40px; border-radius: 12px; border: 1px solid var(--line2); background: var(--s1); color: var(--tx); padding: 0 12px"><button class="badge ${F.regex ? 'ac' : 'mute'} mono" style="border: 0; cursor: pointer" data-act="clog-regex" aria-pressed="${F.regex}">.* Regex</button><label class="small" for="cf">From</label><input id="cf" type="date" class="datein" data-input="clogFrom" value="${esc(F.from)}"><label class="small" for="ct">To</label><input id="ct" type="date" class="datein" data-input="clogTo" value="${esc(F.to)}"></div>
+      ${rx && !rx.ok && F.regex ? `<span class="badge err">${esc(rx.error)}</span>` : ''}
+      ${shown.map(b => `<div class="card"><div class="row"><span class="h2">${esc(b.version)}</span><span class="small grow">${esc(stamp(b.date))}</span></div>${['Added', 'Changed', 'Fixed', 'Removed'].map(k => { const cs = b.changes.filter(c => c.kind === k); return cs.length ? `<span class="label">${k.toUpperCase()}</span>${cs.map(c => `<div class="row" style="gap: 10px; align-items: baseline"><button class="btn text mono" style="padding: 0; height: auto" data-act="open-url" data-url="${esc(C.repository)}/commit/${esc(c.sha)}" title="${esc(c.sha)}">${esc(c.sha.slice(0, 7))}</button><span>${esc(c.subject)}</span></div>`).join('')}` : ''; }).join('')}</div>`).join('') || '<div class="empty"><span class="h2">No changes match</span></div>'}`);
+  }
+  function changelogText() { return (S.clogShown || []).map(b => `## ${b.version} (${b.date.slice(0, 10)})\n` + b.changes.map(c => `- ${c.kind}: ${c.subject} (${c.sha})`).join('\n')).join('\n\n') + '\n'; }
+
+  // ---------- offline docs ----------
+  function viewDocs() {
+    const D = S.docs, F = S.docF;
+    if (!D) return page('Docs', '', '<div class="sk" style="height: 120px"></div>');
+    if (!D.ok) return page('Docs', '', '<div class="empty"><span class="h2">Docs are missing from this build</span></div>');
+    const r = Lib.search(D.docs.map(d => ({ ...d, label: d.title + ' ' + d.body })), F.q, { regex: F.regex });
+    const list = r.ok ? r.items : [];
+    const cur = D.docs.find(d => d.id === F.id) || list[0] || D.docs[0];
+    return page('Docs', '', `<div class="cols"><div class="side" style="flex: 0 1 300px"><div class="row" style="gap: 6px"><label class="sr" for="dsq">Search docs</label><input id="dsq" class="mono" data-input="docQ" value="${esc(F.q)}" placeholder="Search titles and text" style="flex: 1; height: 40px; border-radius: 12px; border: 1px solid var(--line2); background: var(--s1); color: var(--tx); padding: 0 12px"><button class="badge ${F.regex ? 'ac' : 'mute'} mono" style="border: 0; cursor: pointer" data-act="doc-regex" aria-pressed="${F.regex}">.*</button></div>${!r.ok ? `<span class="badge err">${esc(r.error)}</span>` : ''}
+      <div class="list">${list.map(d => `<button class="li ${cur && d.id === cur.id ? 'sel' : ''}" data-doc-open="${d.id}">${esc(d.title)}</button>`).join('') || '<span class="small" style="padding: 10px">No articles match</span>'}</div></div>
+      <article class="wide card md" aria-label="${esc(cur?.title || '')}">${cur ? Lib.markdown(cur.body) : ''}</article></div>`);
+  }
+
+  // ---------- export panel ----------
+  function exportPanel(what) {
+    const fmt = S.exportFmt || 'json', F = Lib.FORMATS[fmt];
+    const label = { history: 'local history', deploys: 'deployment records', settings: 'settings' }[what] || what;
+    return panelFrame('export', `Export ${label}`, `<span class="seg" role="radiogroup">${[...Object.keys(Lib.FORMATS), 'zip'].map(k => `<button role="radio" aria-checked="${fmt === k}" class="${fmt === k ? 'on' : ''}" data-act="exp-fmt" data-f="${k}">${k === 'zip' ? 'ZIP (all)' : Lib.FORMATS[k].label}</button>`).join('')}</span>
+      <span class="small">${fmt === 'zip' ? 'A ZIP with deployments, history and settings, each as JSON, plus CSV copies. Relative paths only.' : `UTF-8, LF line endings, schema aws-app-deployer.${what}/1. ${F.loss || 'Nothing is lost; the file can be imported back.'}`}</span>
+      <div class="row" style="justify-content: flex-end"><button class="btn text" data-act="panel-close">${T('cancel')}</button><button class="btn fillb" data-act="exp-go" data-w="${what}" data-autofocus="1">${ic('download')}Save</button></div>`, 'top: 90px; right: 24px; width: 420px;');
+  }
+  function exportRows(what) {
+    if (what === 'history') return (S.history.history || []).map((h, i) => ({ revision: i + 1, at: h.at, key: h.key, before: h.before, after: h.after, label: (S.history.labels || {})[i] || '' }));
+    if (what === 'deploys') return S.history.deployments;
+    return Object.entries(S.settings).filter(([k]) => k !== 'vocabulary').map(([key, value]) => ({ key, value, source: S.sources[key] || 'default' }));
+  }
+  async function doExport(what) {
+    const fmt = S.exportFmt || 'json';
+    if (fmt === 'zip') {
+      const files = ['deploys', 'history', 'settings'].flatMap(w => [{ name: `${w}.json`, data: Lib.exportAs('json', `aws-app-deployer.${w}/1`, exportRows(w)) }, { name: `${w}.csv`, data: Lib.exportAs('csv', `aws-app-deployer.${w}/1`, exportRows(w)) }]);
+      const r = await api.saveFile('aws-app-deployer-export.zip', Lib.zip(files)); if (r.ok) toast('Saved ZIP with ' + files.length + ' files'); return;
+    }
+    const r = await api.saveFile(`aws-app-deployer-${what}.${Lib.FORMATS[fmt].ext}`, Lib.exportAs(fmt, `aws-app-deployer.${what}/1`, exportRows(what)));
+    if (r.ok) toast(`Saved ${Lib.FORMATS[fmt].label} export`);
+  }
+
   // ---------- render ----------
   function vocabularize(node) {
     const v = S.settings?.vocabulary; if (!v) return;
@@ -472,19 +577,23 @@
   function render() {
     if (!S.settings || (browser && !api.authenticated)) return;
     const focusId = document.activeElement?.id, caret = document.activeElement?.selectionStart;
-    const views = { setup: viewSetup, accounts: viewAccounts, deploys: viewDeploys, wizard: viewWizard, run: viewRun, result: viewResult, settings: viewSettings, help: viewHelp };
-    root.innerHTML = shell((views[S.view] || viewDeploys)(), { rail: S.view !== 'setup' }) + paletteHtml() + panelHtml() + dimsumHtml();
+    const views = { setup: viewSetup, accounts: viewAccounts, deploys: viewDeploys, wizard: viewWizard, run: viewRun, result: viewResult, settings: viewSettings, help: viewHelp, history: viewHistory, changelog: viewChangelog, docs: viewDocs };
+    const tab = S.tabs.find(t => t.id === S.active) || S.tabs[0];
+    const v = tab.id === 'ws' ? S.view : tab.view;
+    root.innerHTML = shell((views[v] || viewDeploys)(), { rail: v !== 'setup' }) + paletteHtml() + panelHtml() + dimsumHtml();
     Kit.watchPanels(root, (id, box) => { const ui = S.settings.ui || { filtersOpen: {}, panels: {} }; api.setSetting('ui', { ...ui, panels: { ...ui.panels, [id]: box } }).then(r => r.ok && (S.settings.ui = r.value)); });
     if (S.view === 'settings' && S.settingsQuery) { const q = S.settingsQuery.toLowerCase(); root.querySelectorAll('[data-search]').forEach(el => { el.hidden = !el.dataset.search.toLowerCase().includes(q); }); }
     vocabularize(root);
     if (focusId) { const el = document.getElementById(focusId); if (el) { el.focus(); if (caret != null && el.setSelectionRange) try { el.setSelectionRange(caret, caret); } catch { } } }
   }
-  function go(view) { S.view = view; S.palette = null; render(); document.getElementById('main')?.focus?.(); }
+  function go(view) { S.view = view; S.active = 'ws'; S.palette = null; if (['history', 'changelog', 'docs'].includes(view)) ensureData(view); render(); document.getElementById('main')?.focus?.(); }
   window.__ready = () => !!S.prereq && S.profiles !== null;
   window.__go = v => {
     if (v === 'palette') { S.palette = { q: 'dep', regex: false, sel: 0 }; render(); return; }
     if (v === 'a11y') { go('deploys'); openPanel('a11y'); return; }
     if (v === 'info') { go('settings'); openPanel('info:funnyLevel'); return; }
+    if (v === 'tabs') { go('deploys'); ['history', 'docs', 'changelog'].forEach(x => { ensureData(x); openTab(x); }); S.active = S.tabs[1].id; render(); return; }
+    if (v === 'export') { go('history'); openPanel('export:history'); return; }
     const row = () => document.querySelector('[data-menu="deploy"]');
     if (v === 'menu') { go('deploys'); const r = row(); if (r) { const b = r.getBoundingClientRect(); Kit.openMenu(menuFor(r), { x: b.left + 240, y: b.top + 20, opener: r }); } return; }
     if (v === 'confirm') { go('deploys'); const r = row(); if (r) removeRecords([r.dataset.at], r); return; }
@@ -495,10 +604,13 @@
 
   // ---------- events ----------
   root.addEventListener('click', async e => {
-    const t = e.target.closest('[data-go],[data-act],[data-win],[data-toggle],[data-set],[data-cmd],[data-panel-open],[data-info],[data-a11y]');
+    const t = e.target.closest('[data-go],[data-act],[data-win],[data-toggle],[data-set],[data-cmd],[data-panel-open],[data-info],[data-a11y],[data-tab-go],[data-tab-close],[data-doc-open],[data-doc]');
     if (!t) return;
     if (t.dataset.stop && e.target === t) return;
     if (t.dataset.go) return go(t.dataset.go);
+    if (t.dataset.tabGo) { S.active = t.dataset.tabGo; const tb = S.tabs.find(x => x.id === S.active); if (tb?.view) ensureData(tb.view); render(); document.querySelector(`[data-tab-go="${S.active}"]`)?.focus(); return; }
+    if (t.dataset.tabClose) return closeTabs([t.dataset.tabClose]);
+    if (t.dataset.docOpen || t.dataset.doc) { e.preventDefault(); S.docF.id = t.dataset.docOpen || t.dataset.doc; render(); return; }
     if (t.dataset.panelOpen) return S.panel?.id === t.dataset.panelOpen ? closePanel() : openPanel(t.dataset.panelOpen, `[data-panel-open="${t.dataset.panelOpen}"]`);
     if (t.dataset.info) return openPanel('info:' + t.dataset.info, `[data-info="${t.dataset.info}"]`);
     if (t.dataset.a11y) return setA11y({ [t.dataset.a11y]: !S.settings.a11y[t.dataset.a11y] });
@@ -546,6 +658,19 @@
       case 'update-later': S.updateLater = true; render(); break;
       case 'update-install': if (S.run) { toast('A deployment is running. Restart after it finishes.', 'err'); break; } saveDraft(); await api.installUpdate(); break;
       case 'panel-close': closePanel(); break;
+      case 'open-tab': ensureData(t.dataset.view); openTab(t.dataset.view); break;
+      case 'tab-regex': S.tabRegex = !S.tabRegex; render(); break;
+      case 'hist-regex': S.hist.regex = !S.hist.regex; render(); break;
+      case 'hist-cat': S.hist.cat = t.dataset.c; render(); break;
+      case 'hist-sel': S.hist.sel = +t.dataset.i; render(); break;
+      case 'hist-restore': { const r = await api.restore(+t.dataset.i); if (r.ok) { const s2 = await api.settings(); S.settings = s2.settings; S.sources = s2.sources; applyAppearance(); await loadHistory(); toast(r.key ? `Restored ${r.key}` : `Restored ${r.restored} record${r.restored === 1 ? '' : 's'}`); } else toast('That revision cannot be restored: ' + r.error.toLowerCase().replace(/_/g, ' '), 'err'); render(); break; }
+      case 'hist-label': { const v = document.getElementById('hl').value; const r = await api.label(+t.dataset.i, v); if (r.ok) { await loadHistory(); render(); } break; }
+      case 'clog-regex': S.clog.regex = !S.clog.regex; render(); break;
+      case 'clog-copy': copy(changelogText()); break;
+      case 'clog-export': { const r = await api.saveFile('aws-app-deployer-changelog.md', changelogText()); if (r.ok) toast('Saved changelog'); break; }
+      case 'doc-regex': S.docF.regex = !S.docF.regex; render(); break;
+      case 'exp-fmt': S.exportFmt = t.dataset.f; render(); break;
+      case 'exp-go': await doExport(t.dataset.w); closePanel(); break;
       case 'panel-reset': { const ui = S.settings.ui; const panels = { ...ui.panels }; delete panels[t.dataset.id]; await set('ui', { ...ui, panels }); break; }
       case 'a11y-hide': openPanel('a11y-hide'); break;
       case 'a11y-hide-yes': S.panel = null; await setA11y({ hidden: true }); toast('Accessibility button hidden. Find it again in Settings or the command palette.'); break;
@@ -586,6 +711,8 @@
     if (el.dataset.input === 'settingsQuery') { S.settingsQuery = el.value; render(); return; }
     if (el.dataset.input === 'noteQ') { S.noteQ = el.value; render(); return; }
     if (el.dataset.input === 'depQ') { S.depQ = el.value; render(); return; }
+    const F = { tabQ: v => (S.tabQ = v), histQ: v => (S.hist.q = v), histFrom: v => (S.hist.from = v), histTo: v => (S.hist.to = v), clogQ: v => (S.clog.q = v), clogFrom: v => (S.clog.from = v), clogTo: v => (S.clog.to = v), docQ: v => (S.docF.q = v) }[el.dataset.input];
+    if (F) { F(el.value); render(); return; }
     if (el.dataset.a11ySize) { setA11y({ textSize: +el.value }); return; }
     if (el.dataset.input === 'region') { S.selection.region = el.value.trim(); return; }
     if (['name', 'port', 'health'].includes(el.dataset.input)) { S.wizard[el.dataset.input] = el.value.trim(); clearTimeout(S.wt); S.wt = setTimeout(() => { saveDraft(); render(); }, 250); return; }
@@ -608,6 +735,12 @@
   }
   document.addEventListener('dragover', e => { if ([...e.dataTransfer.items].some(i => i.kind === 'file')) e.preventDefault(); });
   document.addEventListener('drop', e => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f && /\.json$/i.test(f.name)) applyVocabFile(f); });
+  async function ensureData(view) {
+    if (view === 'history') await loadHistory();
+    if (view === 'changelog' && !S.changelog) { S.changelog = await api.changelog(); }
+    if (view === 'docs' && !S.docs) { S.docs = await api.docs(); }
+    render();
+  }
   function togglePalette() { S.palette = S.palette ? null : { q: '', regex: false, sel: 0 }; render(); document.getElementById('pq')?.focus(); }
   Kit.bind('palette', 'Ctrl+Shift+F', togglePalette);
   Kit.bind('new', 'Ctrl+N', () => go('wizard'));
