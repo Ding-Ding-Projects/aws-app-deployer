@@ -21,6 +21,8 @@ const REMEDIATION = {
   TARGETS_NOT_HEALTHY: 'Check ECS task events, application logs, listening port and health check path.',
   ENDPOINT_NOT_READY: 'Check application responses and, for HTTPS, the custom domain DNS and certificate.',
   DOMAIN_DNS_NOT_READY: 'Point the custom domain to the returned load balancer DNS name, allow DNS propagation, then retry.',
+  STACK_OWNERSHIP_CONFLICT: 'Choose a different project name. The existing stack is not tagged as belonging to this AWS App Deployer project.',
+  REPOSITORY_OWNERSHIP_CONFLICT: 'Choose a different project name. The existing repository is not tagged as belonging to this AWS App Deployer project.',
 };
 async function boundedResolve(hostname, { signal } = {}) {
   signal?.throwIfAborted();
@@ -77,10 +79,35 @@ function createDeployer({ run = createRunner(), backend, pause = sleep, fetchUrl
       const suffix = selection.region.startsWith('cn-') ? 'amazonaws.com.cn' : 'amazonaws.com';
       const registry = `${accountId}.dkr.ecr.${selection.region}.${suffix}`;
       const repo = `desktop-apps/${input.name}`;
+      const stackName = `desktop-${input.name}`;
+      const partition = selection.region.startsWith('cn-') ? 'aws-cn' : selection.region.startsWith('us-gov-') ? 'aws-us-gov' : 'aws';
+      const repositoryArn = `arn:${partition}:ecr:${selection.region}:${accountId}:repository/${repo}`;
+      const ownershipTags = [{ Key: 'ManagedBy', Value: 'AWSAppDeployer' }, { Key: 'Project', Value: input.name }];
+      const owned = tags => Array.isArray(tags) && ownershipTags.every(expected => tags.filter(tag => tag.Key === expected.Key && tag.Value === expected.Value).length === 1) && ownershipTags.every(expected => tags.filter(tag => tag.Key === expected.Key).length === 1);
+      async function inspectStackOwnership() {
+        const result = await aws(['cloudformation', 'describe-stacks', '--stack-name', stackName, '--output', 'json'], { readOnly: true });
+        if (!result.ok && result.error === 'STACK_NOT_FOUND') return false;
+        const stacks = json(result).Stacks;
+        if (!Array.isArray(stacks) || stacks.length !== 1) fail('INVALID_RESPONSE');
+        if (!owned(stacks[0].Tags)) fail('STACK_OWNERSHIP_CONFLICT');
+        return true;
+      }
+      async function inspectRepositoryOwnership() {
+        const result = await aws(['ecr', 'describe-repositories', '--registry-id', accountId, '--repository-names', repo, '--output', 'json'], { readOnly: true });
+        if (!result.ok && result.error === 'ECR_REPOSITORY_NOT_FOUND') return false;
+        const repositories = json(result).repositories;
+        if (!Array.isArray(repositories) || repositories.length !== 1 || repositories[0].repositoryArn !== repositoryArn) fail('INVALID_RESPONSE');
+        const tags = json(await aws(['ecr', 'list-tags-for-resource', '--resource-arn', repositoryArn, '--output', 'json'], { readOnly: true })).tags;
+        if (!owned(tags)) fail('REPOSITORY_OWNERSHIP_CONFLICT');
+        return true;
+      }
       const imageTag = `${registry}/${repo}:deploy-${uuid()}`;
       const templateInput = { ...input, ...selection, accountId, containerPort: source.containerPort, environment: source.environment, image: `${registry}/${repo}@sha256:${'0'.repeat(64)}` };
       // Validate the complete deployment before building or mutating AWS resources.
       check(buildTemplate(templateInput));
+      mark('ownership');
+      await inspectStackOwnership();
+      await inspectRepositoryOwnership();
       tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'aws-app-deployer-'));
       await fs.chmod(tempDir, 0o700);
       const docker = async (args, options = {}) => run('docker', ['--config', tempDir, ...args], { signal, ...options });
@@ -100,10 +127,10 @@ function createDeployer({ run = createRunner(), backend, pause = sleep, fetchUrl
       }
       mark('identity'); check(await backend.verifyDeployment(selection, input.expectedIdentity, { signal }));
       mark('repository'); resourcesMayExist = true;
-      const created = await aws(['ecr', 'create-repository', '--repository-name', repo, '--image-tag-mutability', 'IMMUTABLE', '--image-scanning-configuration', 'scanOnPush=true', '--output', 'json']);
+      const created = await aws(['ecr', 'create-repository', '--repository-name', repo, '--image-tag-mutability', 'IMMUTABLE', '--image-scanning-configuration', 'scanOnPush=true', '--tags', JSON.stringify(ownershipTags), '--output', 'json']);
       if (!created.ok) {
         if (created.error !== 'ECR_REPOSITORY_EXISTS') check(created);
-        check(await aws(['ecr', 'describe-repositories', '--registry-id', accountId, '--repository-names', repo, '--output', 'json'], { readOnly: true }));
+        if (!await inspectRepositoryOwnership()) fail('REPOSITORY_OWNERSHIP_CONFLICT');
       }
       mark('push');
       let password = check(await aws(['ecr', 'get-login-password'], { readOnly: true })).stdout.trim();
@@ -120,9 +147,9 @@ function createDeployer({ run = createRunner(), backend, pause = sleep, fetchUrl
       await fs.writeFile(templatePath, JSON.stringify(template), { mode: 0o600 });
       // Recheck immediately before stack mutation, including account, role, profile and region.
       mark('identity'); check(await backend.verifyDeployment(selection, input.expectedIdentity, { signal }));
+      mark('ownership'); await inspectStackOwnership();
       mark('stack');
-      const stackName = `desktop-${input.name}`;
-      check(await aws(['cloudformation', 'deploy', '--stack-name', stackName, '--template-file', templatePath, '--capabilities', 'CAPABILITY_IAM', '--no-fail-on-empty-changeset'], { timeoutMs: 30 * 60 * 1000 }));
+      check(await aws(['cloudformation', 'deploy', '--stack-name', stackName, '--template-file', templatePath, '--capabilities', 'CAPABILITY_IAM', '--no-fail-on-empty-changeset', '--tags', 'ManagedBy=AWSAppDeployer', `Project=${input.name}`], { timeoutMs: 30 * 60 * 1000 }));
       const stack = json(await aws(['cloudformation', 'describe-stacks', '--stack-name', stackName, '--output', 'json'], { readOnly: true })).Stacks;
       if (!Array.isArray(stack) || stack.length !== 1 || !['CREATE_COMPLETE', 'UPDATE_COMPLETE'].includes(stack[0].StackStatus)) fail('STACK_NOT_READY');
       const outputs = Object.fromEntries((stack[0].Outputs || []).map(x => [x.OutputKey, x.OutputValue]));

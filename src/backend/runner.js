@@ -41,6 +41,8 @@ function createRunner(spawnProcess = spawn) {
           else if (/ThrottlingException|RequestLimitExceeded|TooManyRequestsException/i.test(stderr)) error = 'AWS_THROTTLED';
           else if (/ServiceUnavailable|InternalFailure|InternalServerError/i.test(stderr)) error = 'AWS_TRANSIENT';
           else if (/RepositoryAlreadyExistsException/i.test(stderr)) error = 'ECR_REPOSITORY_EXISTS';
+          else if (args[0] === 'ecr' && /RepositoryNotFoundException/i.test(stderr)) error = 'ECR_REPOSITORY_NOT_FOUND';
+          else if (args[0] === 'cloudformation' && args[1] === 'describe-stacks' && /\(ValidationError\)/.test(stderr) && /Stack with id [^\r\n]+ does not exist/.test(stderr)) error = 'STACK_NOT_FOUND';
           else if (/OptInRequired|SubscriptionRequired|account.*(?:suspended|not.*verified)/i.test(stderr)) error = 'AWS_ACCOUNT_SETUP_REQUIRED';
         }
         finish(code === 0 ? { ok: true, stdout, stderr } : { ok: false, error, exitCode: Number.isInteger(code) ? code : null });

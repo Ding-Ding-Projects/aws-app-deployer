@@ -51,6 +51,17 @@ test('runner sends credentials only through stdin and classifies sanitized AWS e
   assert.equal(data, 'secret'); child.stderr.emit('data', 'AccessDenied: sensitive account details'); child.emit('close', 1);
   assert.deepEqual(await pending, { ok: false, error: 'AWS_PERMISSION_DENIED', exitCode: 1 });
 });
+test('runner recognizes service-specific absence and never treats arbitrary validation errors as missing resources', async () => {
+  for (const [args, stderr, expected] of [
+    [['cloudformation', 'describe-stacks'], 'An error occurred (ValidationError) when calling the DescribeStacks operation: Stack with id desktop-app does not exist', 'STACK_NOT_FOUND'],
+    [['cloudformation', 'describe-stacks'], 'An error occurred (ValidationError): Invalid stack name', 'COMMAND_FAILED'],
+    [['ecr', 'describe-repositories'], 'An error occurred (RepositoryNotFoundException)', 'ECR_REPOSITORY_NOT_FOUND'],
+    [['cloudformation', 'describe-stacks'], 'AccessDenied: Stack with id desktop-app does not exist', 'AWS_PERMISSION_DENIED'],
+  ]) {
+    const child = processStub(); const pending = createRunner(() => child)('aws', args);
+    child.stderr.emit('data', stderr); child.emit('close', 1); assert.equal((await pending).error, expected);
+  }
+});
 const input = { name: 'example-app', accountId: '123456789012', region: 'us-east-1', domain: 'app.example.com', certificateArn: 'arn:aws:acm:us-east-1:123456789012:certificate/12345678-1234-1234-1234-123456789abc', vpcId: 'vpc-12345678', publicSubnets: ['subnet-12345678', 'subnet-23456789'], privateSubnets: ['subnet-34567890', 'subnet-45678901'], image: '123456789012.dkr.ecr.us-east-1.amazonaws.com/example@sha256:' + 'a'.repeat(64) };
 test('template requires immutable same-account regional image and creates private two-task HTTPS service', () => {
   const result = buildTemplate(input); assert.equal(result.ok, true);
