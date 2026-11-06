@@ -114,3 +114,21 @@ test('Dockerfile inspection finds a single exposed TCP port', async () => {
   assert.equal(r.source.containerPort, 8080);
   assert.equal(r.source.contextPath, dir);
 });
+
+test('updater is honest outside a Squirrel install and only installs when ready', () => {
+  const { createUpdater, handleSquirrelEvent } = require('../../src/main/updater');
+  const sent = [];
+  const u = createUpdater({ app: { getVersion: () => '0.1.9' }, autoUpdater: {}, isSquirrel: false, send: s => sent.push(s) });
+  assert.equal(u.state().status, 'not-installed');
+  assert.equal(u.check().status, 'not-installed');
+  assert.equal(u.install().error, 'NOT_READY');
+  const handlers = {};
+  const au = { setFeedURL: o => (handlers.feed = o.url), on: (e, f) => (handlers[e] = f), checkForUpdates: () => handlers['update-downloaded']({}, '', 'v0.2.0'), quitAndInstall: () => (handlers.installed = true) };
+  const s = createUpdater({ app: { getVersion: () => '0.1.9' }, autoUpdater: au, isSquirrel: true, send: x => sent.push(x) });
+  assert.match(handlers.feed, /^https:\/\/github\.com\/Ding-Ding-Projects\/aws-app-deployer\/releases\/latest\/download$/);
+  s.check();
+  assert.deepEqual([s.state().status, s.state().next], ['ready', '0.2.0']);
+  assert.equal(s.install().ok, true);
+  assert.equal(handlers.installed, true);
+  assert.equal(handleSquirrelEvent({ quit() {} }), false);
+});

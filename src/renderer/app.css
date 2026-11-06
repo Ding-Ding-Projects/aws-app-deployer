@@ -56,3 +56,4 @@ select { height: 40px; border-radius: var(--r2); border: 1px solid var(--line2);
   .rail { flex: 0 0 auto; order: 2; }
   .titlebar .chip .kbd { display: none; }
 }
+.banner { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; padding: 10px 16px 10px 20px; background: var(--ac-c); color: var(--on-ac-c); border-bottom: 1px solid var(--line); animation: rise var(--d3) var(--ease) both; }

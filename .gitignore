@@ -7,3 +7,4 @@ dist/
 .agent/
 .aws/
 local-data/
+src/build-info.json

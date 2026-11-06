@@ -11,6 +11,7 @@ const NAME = /^[a-z][a-z0-9-]{1,30}[a-z0-9]$/;
 const ENV_KEY = /^[A-Za-z_][A-Za-z0-9_]{0,127}$/;
 const OPEN_HOSTS = [/\.elb\.amazonaws\.com$/, /^github\.com$/, /^docs\.aws\.amazon\.com$/, /^aws\.amazon\.com$/];
 const CATALOG = 'https://raw.githubusercontent.com/Ding-Ding-Projects/dim-sum-photos/main/catalog/index.json';
+const PHOTO_RELEASES = 'https://api.github.com/repos/Ding-Ding-Projects/dim-sum-photos/releases?per_page=100';
 
 function safeExternal(url) {
   try {
@@ -32,7 +33,19 @@ async function inspectDockerfile(dockerfilePath) {
   return { ok: true, source: { kind: 'dockerfile', contextPath: path.dirname(dockerfilePath), dockerfilePath, service: path.basename(path.dirname(dockerfilePath)), containerPort: ports.size === 1 ? [...ports][0] : undefined, ports: [...ports] } };
 }
 
-function createBridge({ backend, deployer, installer, store, emit, fetchUrl = globalThis.fetch, uuid = randomUUID, random = Math.random }) {
+function createBridge({ backend, deployer, installer, store, emit, fetchUrl = globalThis.fetch, uuid = randomUUID, random = Math.random, cacheDir = null }) {
+  // Published photos are catalog-v1* release assets of the public photo repository. The map is
+  // cached in application data for a day; photos themselves are never copied.
+  async function publishedPhotos() {
+    const file = cacheDir && path.join(cacheDir, 'dim-sum-photos.json');
+    try { const c = JSON.parse(await fsp.readFile(file, 'utf8')); if (Date.now() - c.at < 864e5) return c.photos; } catch { }
+    const photos = {};
+    const r = await fetchUrl(PHOTO_RELEASES, { headers: { Accept: 'application/vnd.github+json' }, signal: AbortSignal.timeout(6000) });
+    if (!r.ok) return photos;
+    for (const rel of await r.json()) if (/^catalog-v1/.test(rel.tag_name)) for (const a of rel.assets || []) if (/\.png$/.test(a.name)) photos[a.name] = a.browser_download_url;
+    if (file) await fsp.writeFile(file, JSON.stringify({ at: Date.now(), source: PHOTO_RELEASES, photos })).catch(() => {});
+    return photos;
+  }
   const ops = new Map();
   function start(kind, scope, work) {
     const id = `op-${uuid().slice(0, 8)}`;
@@ -108,14 +121,13 @@ function createBridge({ backend, deployer, installer, store, emit, fetchUrl = gl
       const s = store.get();
       if (s.school || !s.setupComplete || s.launches < 2 || random() >= 0.1) return { ok: true, show: false };
       try {
-        const r = await fetchUrl(CATALOG, { signal: AbortSignal.timeout(5000) });
-        if (!r.ok) return { ok: true, show: false };
-        const data = await r.json();
-        const items = (Array.isArray(data) ? data : data.items || data.dishes || []).filter(d => d?.name?.en && d?.name?.zhHant);
-        if (!items.length) return { ok: true, show: false };
-        const d = items[Math.floor(random() * items.length)];
-        const image = typeof d.image === 'string' && /^https:\/\/(github\.com|raw\.githubusercontent\.com|objects\.githubusercontent\.com)\//.test(d.image) ? d.image : null;
-        return { ok: true, show: true, dish: { en: d.name.en, zh: d.name.zhHant, image } };
+        const data = await (await fetchUrl(CATALOG, { signal: AbortSignal.timeout(6000) })).json();
+        const photos = await publishedPhotos();
+        const dishes = (data.dishes || []).filter(d => d?.name?.en && d?.name?.zhHant);
+        if (!dishes.length) return { ok: true, show: false };
+        const d = dishes[Math.floor(random() * dishes.length)];
+        const file = String(d.image?.path || '').split('/').pop();
+        return { ok: true, show: true, dish: { en: d.name.en, zh: d.name.zhHant, image: photos[file] || null, alt: d.image?.alt?.en || d.name.en } };
       } catch { return { ok: true, show: false }; }
     },
   };

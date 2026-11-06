@@ -1,11 +1,19 @@
 'use strict';
-const { app, BrowserWindow, ipcMain, dialog, shell, nativeTheme } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, shell, nativeTheme, autoUpdater } = require('electron');
 const path = require('node:path');
 const fs = require('node:fs');
 const { createBackend, createRunner, createDeployer } = require('../backend');
 const { createInstaller } = require('./installer');
 const { createStore } = require('./store');
 const { createBridge } = require('./bridge');
+const { createUpdater, handleSquirrelEvent } = require('./updater');
+
+const squirrelEvent = handleSquirrelEvent(app);
+function provenance() {
+  try { const p = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'build-info.json'), 'utf8')); return { ok: true, ...p, version: app.getVersion() }; }
+  catch { return { ok: false, version: app.getVersion(), reason: 'NO_BUILD_STAMP' }; }
+}
+const isSquirrel = process.platform === 'win32' && app.isPackaged && fs.existsSync(path.resolve(path.dirname(process.execPath), '..', 'Update.exe'));
 
 const screenshotDir = (process.argv.find(a => a.startsWith('--screenshots=')) || '').split('=')[1];
 let win;
@@ -15,6 +23,7 @@ function createWindow() {
     width: 1320, height: 860, minWidth: 380, minHeight: 560, frame: false, show: false,
     backgroundColor: nativeTheme.shouldUseDarkColors ? '#0b0d12' : '#f4f6fa',
     title: 'AWS App Deployer',
+    icon: path.join(__dirname, '..', 'renderer', 'icon.png'),
     webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, sandbox: true, nodeIntegration: false, spellcheck: false },
   });
   win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
@@ -31,7 +40,7 @@ function createWindow() {
 
 async function captureScreenshots(dir) {
   fs.mkdirSync(dir, { recursive: true });
-  const routes = ['setup', 'deploys', 'accounts', 'wizard', 'settings', 'palette'];
+  const routes = ['setup', 'deploys', 'accounts', 'wizard', 'settings', 'help', 'palette'];
   for (let i = 0; i < 90 && !(await win.webContents.executeJavaScript('!!(window.__ready && window.__ready())')); i++) await new Promise(res => setTimeout(res, 1000));
   for (const [w, tag] of [[1320, 'desktop'], [420, 'narrow']]) {
     win.setSize(w, 860);
@@ -45,13 +54,13 @@ async function captureScreenshots(dir) {
   app.quit();
 }
 
-app.whenReady().then(() => {
+if (!squirrelEvent) app.whenReady().then(() => {
   const run = createRunner();
   const backend = createBackend({ run });
   const store = createStore(app.getPath('userData'));
   store.bumpLaunch();
   const bridge = createBridge({
-    backend, store, deployer: createDeployer({ run, backend }), installer: createInstaller({ run }),
+    cacheDir: app.getPath('userData'), backend, store, deployer: createDeployer({ run, backend }), installer: createInstaller({ run }),
     emit: event => win && !win.isDestroyed() && win.webContents.send('op-event', event),
   });
   const handle = (name, fn) => ipcMain.handle(name, (event, ...args) => {
@@ -75,6 +84,12 @@ app.whenReady().then(() => {
   handle('history', () => bridge.history());
   handle('dim-sum', () => bridge.dimSum());
   handle('version', () => app.getVersion());
+  handle('provenance', () => provenance());
+  const updater = createUpdater({ app, autoUpdater, isSquirrel, send: s => win && !win.isDestroyed() && win.webContents.send('update', s) });
+  handle('update-state', () => updater.state());
+  handle('update-check', () => updater.check());
+  handle('update-install', () => updater.install());
+  updater.start();
   handle('pick-source', async () => {
     const r = await dialog.showOpenDialog(win, { title: 'Choose a Dockerfile or Compose file', properties: ['openFile'], filters: [{ name: 'Dockerfile or Compose', extensions: ['yaml', 'yml', 'dockerfile', '*'] }] });
     return r.canceled ? { ok: false, error: 'CANCELLED' } : { ok: true, path: r.filePaths[0] };

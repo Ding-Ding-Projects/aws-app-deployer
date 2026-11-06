@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Updates and provenance</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="./app.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400..700&amp;family=JetBrains+Mono:wght@400;500&amp;family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,300..600,0..1,0&amp;display=block">
+<style>
+body{margin:0}
+.banner{display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:12px 16px 12px 20px;background:var(--ac-c);color:var(--on-ac-c);border-bottom:1px solid var(--line);animation:rise var(--d3) var(--ease) both}
+</style>
+</helmet>
+<div class="app {{themeClass}}">
+  <div class="titlebar"><span class="name">AWS App Deployer</span><span class="small mono">v0.1.6 · Har Gow · 蝦餃 · built 2026-11-06 15:41:07 EST</span><span class="grow"></span><span class="chip" style="height: 28px"><i class="ms sm" aria-hidden="true">accessibility_new</i></span><span class="chip" style="height: 28px"><i class="ms sm" aria-hidden="true">search</i></span><div class="caption"><span><i class="ms">remove</i></span><span><i class="ms">crop_square</i></span><span><i class="ms">close</i></span></div></div>
+  <div class="banner" role="status">
+    <i class="ms fill" aria-hidden="true">system_update</i>
+    <span class="stack grow" style="flex: 1 1 360px"><span style="font-weight: 650">Version 0.1.7 is ready to install</span><span class="small" style="color: inherit; opacity: .85">Unsigned build: Windows may show an unknown-publisher or SmartScreen warning. Your work is kept.</span></span>
+    <a class="btn text" href="#" style="color: inherit">Release notes</a>
+    <button class="btn out" style="color: inherit; border-color: currentColor">Later</button>
+    <button class="btn fillb"><i class="ms" aria-hidden="true">restart_alt</i>Restart to install update</button>
+  </div>
+  <div class="body">
+    <nav class="rail" aria-label="Main"><span class="fab"><i class="ms lg">add</i></span><span class="navi"><span class="pill"><i class="ms">rocket_launch</i></span>Deploys</span><span class="navi"><span class="pill"><i class="ms">key</i></span>Accounts</span><span class="navi"><span class="pill"><i class="ms">tune</i></span>Settings</span><span class="gap"></span><span class="navi on"><span class="pill"><i class="ms">help</i></span>Help</span></nav>
+    <main class="main">
+      <header class="topbar"><h1 class="rise">Help and about</h1></header>
+      <div class="content">
+        <div class="cols">
+          <div class="wide">
+            <div class="card rise" style="--i:1">
+              <div class="row"><span class="tile ac"><i class="ms fill" aria-hidden="true">update</i></span><span class="stack grow" style="flex: 1"><span class="h2">Updates</span><span class="small">Checks at start and every 4 hours in the background</span></span><button class="btn tonal"><i class="ms" aria-hidden="true">refresh</i>Check for updates</button></div>
+              <div class="list" style="background: var(--s1)">
+                <span class="li"><span class="badge mute">Checking</span><span class="grow small">Reading the release feed over HTTPS</span></span>
+                <span class="li"><span class="badge ok">Up to date</span><span class="grow small">0.1.6 is the newest release</span></span>
+                <span class="li"><span class="badge ac">Downloading</span><span class="grow"><span class="bar"><i style="width: 46%; animation: fillTo 1.4s var(--ease) both"></i></span></span></span>
+                <span class="li"><span class="badge ac">Ready</span><span class="grow small">Banner shows until you restart or choose Later</span></span>
+                <span class="li"><span class="badge err">Failed</span><span class="grow small">Feed unreachable. Shown here, never hidden behind a spinner.</span><span class="btn text">Retry</span></span>
+                <span class="li"><span class="badge mute">Not installed</span><span class="grow small">Running from source: updates come from your Git checkout</span></span>
+              </div>
+            </div>
+            <div class="card rise" style="--i:2">
+              <span class="h2">This computer</span>
+              <div class="steps">
+                <div class="step bad"><span class="n"><i class="ms sm" aria-hidden="true">close</i></span><span class="stack"><span class="t">AWS CLI v2.22 or later</span><span class="m">Not on PATH: <span class="mono">aws</span> could not be started</span></span></div>
+                <div class="step bad"><span class="n"><i class="ms sm" aria-hidden="true">schedule</i></span><span class="stack"><span class="t">Docker Engine and Compose</span><span class="m">Check timed out after 30 s. Docker may still be starting.</span></span></div>
+              </div>
+            </div>
+          </div>
+          <div class="side">
+            <div class="card raise rise" style="--i:2; border: 1px solid var(--line)">
+              <div class="row"><span class="tile warn" style="width: 72px; height: 72px; border-radius: 16px" role="img" aria-label="Classic Har Gow photo from the public catalog"><i class="ms lg fill" aria-hidden="true">ramen_dining</i></span><span class="stack"><span class="label">THIS BUILD</span><span style="font-weight: 650; font-size: 17px">Classic Har Gow · 蝦餃</span><span class="small">Dim sum code name for 0.1.6</span></span></div>
+              <dl class="kv" style="margin: 0"><dt>Version</dt><dd class="mono">0.1.6</dd><dt>Built</dt><dd class="mono">2026-11-06 15:41:07 EST</dd><dt>Commit</dt><dd class="mono">7b9e68e</dd><dt>Installer</dt><dd>Squirrel, unsigned</dd></dl>
+              <span class="btn out" style="align-self: flex-start"><i class="ms" aria-hidden="true">history</i>Changelog</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["dark","light"],"default":"dark"},"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+renderVals() {
+return { themeClass: (this.props.theme ?? 'dark') === 'light' ? 'light' : '' };
+}
+}
+</script>
+</body>
+</html>

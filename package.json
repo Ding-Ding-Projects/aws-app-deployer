@@ -9,12 +9,15 @@
     "start": "electron .",
     "test": "node --test tests/backend/*.test.js tests/main/*.test.js tests/renderer/*.test.js",
     "screenshots": "electron . --screenshots=screenshots",
-    "dist:win": "electron-builder --win --publish never"
+    "dist:win": "electron-builder --win --publish never",
+    "icons": "node scripts/build-icons.mjs"
   },
-  "dependencies": {},
   "devDependencies": {
+    "@resvg/resvg-js": "^2.6.2",
     "electron": "^45.2.0",
-    "electron-builder": "^26.0.12"
+    "electron-builder": "^26.0.12",
+    "electron-builder-squirrel-windows": "^26.18.0",
+    "png-to-ico": "^3.0.2"
   },
   "build": {
     "appId": "io.github.dingdingprojects.awsappdeployer",
@@ -29,17 +32,19 @@
     "win": {
       "target": [
         {
-          "target": "nsis",
+          "target": "squirrel",
           "arch": [
             "x64"
           ]
         }
       ],
-      "artifactName": "AWS-App-Deployer-Setup-${version}.${ext}"
+      "icon": "build/icon.ico"
     },
-    "nsis": {
-      "oneClick": true,
-      "perMachine": false
+    "icon": "build/icon.ico",
+    "squirrelWindows": {
+      "iconUrl": "https://raw.githubusercontent.com/Ding-Ding-Projects/aws-app-deployer/main/build/icon.ico",
+      "artifactName": "AWS-App-Deployer-Setup-${version}.${ext}",
+      "name": "AWSAppDeployer"
     }
   }
 }

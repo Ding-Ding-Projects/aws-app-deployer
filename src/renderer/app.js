@@ -10,12 +10,15 @@
     selection: null, identity: null, login: null, install: null,
     wizard: { step: 1, file: null, inspect: null, name: '', port: '', health: '/', env: [] },
     run: null, result: null, history: { history: [], deployments: [] },
+    prov: null, update: null, updateLater: false,
     palette: null, drawer: false, notes: [], toasts: [], dimsum: null, troll: false, maximized: false,
   };
   const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const T = k => esc(Lib.t(k, S.settings?.language || 'en'));
   const ic = (name, cls = '') => `<i class="ms ${cls}" aria-hidden="true">${name}</i>`;
   const time = () => new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+  const stamp = iso => { try { const d = new Date(iso); const p = new Intl.DateTimeFormat(undefined, { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false, timeZoneName: 'short' }).formatToParts(d); const g = t => p.find(x => x.type === t)?.value || ''; return `${g('year')}-${g('month')}-${g('day')} ${g('hour')}:${g('minute')}:${g('second')} ${g('timeZoneName')}`; } catch { return 'unavailable'; } };
+  const provLine = () => { const p = S.prov; if (!p) return 'v' + VERSION; const cn = p.codeName?.available ? ` · ${p.codeName.en} · ${p.codeName.zh}` : ''; return p.ok ? `v${p.version}${cn} · built ${stamp(p.builtAt)}` : `v${p.version} · build time unavailable (not a release build)`; };
   const emojiOn = () => S.settings?.emoji && !S.settings?.school;
 
   // ---------- feedback: live region, narration, sounds, toasts, notifications ----------
@@ -114,10 +117,11 @@
   function shell(content, { rail = true } = {}) {
     const nav = (v, icon, key) => `<button class="navi ${S.view === v || (v === 'deploys' && ['wizard', 'run', 'result'].includes(S.view)) ? 'on' : ''}" data-go="${v}"><span class="pill">${ic(icon)}</span>${T(key)}</button>`;
     return `
-    <div class="titlebar"><span class="name">${esc(S.settings?.displayName || 'AWS App Deployer')}</span><span class="small mono" title="Version">v${VERSION}</span><span class="grow"></span>
+    <div class="titlebar"><img src="icon.png" alt="" width="18" height="18" style="flex: none"><span class="name">${esc(S.settings?.displayName || 'AWS App Deployer')}</span><span class="small mono" title="Running version and build time">${esc(provLine())}</span><span class="grow"></span>
       <button class="chip" style="height: 28px; -webkit-app-region: no-drag" data-act="palette" aria-label="${T('palette')}">${ic('search', 'sm')}<span class="kbd">Ctrl+Shift+F</span></button>
       <button class="chip" style="height: 28px; -webkit-app-region: no-drag" data-act="drawer" aria-label="${T('notifications')}">${ic('notifications', 'sm')}${S.notes.length ? `<span class="badge ac" style="height: 18px">${S.notes.length}</span>` : ''}</button>
       <div class="caption"><button data-win="minimize" aria-label="Minimize">${ic('remove')}</button><button data-win="maximize" aria-label="${S.maximized ? 'Restore' : 'Maximize'}">${ic(S.maximized ? 'filter_none' : 'crop_square')}</button><button class="x" data-win="close" aria-label="Close">${ic('close')}</button></div></div>
+    ${S.update?.status === 'ready' && !S.updateLater ? `<div class="banner" role="status">${ic('system_update', 'fill')}<span class="stack grow" style="flex: 1 1 320px"><span style="font-weight: 650">Version ${esc(S.update.next)} is ready to install</span><span class="small" style="color: inherit; opacity: .85">Unsigned build: Windows may show an unknown-publisher or SmartScreen warning. Your settings and drafts are kept.</span></span><button class="btn text" style="color: inherit" data-act="open-url" data-url="https://github.com/Ding-Ding-Projects/aws-app-deployer/releases/latest">Release notes</button><button class="btn out" style="color: inherit; border-color: currentColor" data-act="update-later">Later</button><button class="btn fillb" data-act="update-install">${ic('restart_alt')}Restart to install update</button></div>` : ''}
     <div class="body">
       ${rail ? `<nav class="rail" aria-label="Main">
         <button class="fab" data-go="wizard" aria-label="${T('new_deployment')}">${ic('add', 'lg')}</button>
@@ -129,6 +133,9 @@
   const page = (title, actions, body) => `<header class="topbar"><h1 class="rise">${title}</h1><span class="grow"></span>${actions || ''}</header><div class="content">${body}</div>`;
 
   // ---------- views ----------
+  function reason(code, cmd) {
+    return ({ UNAVAILABLE: `Not on PATH: ${cmd} could not be started`, TIMEOUT: 'Check timed out after 30 s; it may still be starting', AWS_CLI_UPDATE_REQUIRED: 'Installed, but older than 2.22, which browser sign-in needs', COMMAND_FAILED: `${cmd} ran but reported an error`, CANCELLED: 'Check was cancelled', OUTPUT_LIMIT: `${cmd} printed more than expected` })[code] || (code ? 'Not usable: ' + code : 'Not found');
+  }
   function prereqCard() {
     const p = S.prereq;
     if (!p) return `<div class="card"><span class="h2">${T('checking')}</span><div class="sk" style="height: 18px; width: 70%"></div><div class="sk" style="height: 18px; width: 55%"></div></div>`;
@@ -137,8 +144,8 @@
     const installing = S.install && !S.install.done;
     return `<div class="card rise" style="--i:3; flex: 1">
       <span class="h2">${T('checking')}</span>
-      <div class="steps">${row(p.aws?.available, 'AWS CLI v2.22 or later', p.aws?.available ? 'Found' : p.aws?.error === 'AWS_CLI_UPDATE_REQUIRED' ? 'Installed, but too old for browser sign-in' : 'Not found')}
-      ${row(p.docker?.available && p.docker?.running, 'Docker Engine and Compose', p.docker?.available ? (p.docker.running ? 'Running' : 'Installed, not running') : 'Not found')}</div>
+      <div class="steps">${row(p.aws?.available, 'AWS CLI v2.22 or later', p.aws?.available ? 'Found' : reason(p.aws?.error, 'aws'))}
+      ${row(p.docker?.available && p.docker?.running, 'Docker Engine and Compose', p.docker?.available ? (p.docker.running ? 'Running' : 'Installed, but the engine is not running (' + reason(p.docker?.error, 'docker').toLowerCase() + ')') : reason(p.docker?.error, 'docker'))}</div>
       ${missing.length ? `<button class="btn fillb" data-act="install" data-tools="${missing.join(',')}" ${installing || p.platform !== 'win32' ? 'disabled' : ''}>${ic('download', 'fill')}${T('install_missing')}</button>
         <span class="small">${p.platform === 'win32' ? T('install_note') : esc(Lib.errorText('UNSUPPORTED_PLATFORM'))}</span>` : `<span class="badge ok" style="align-self: flex-start">${ic('check', 'sm')}${T('all_ready')}</span>`}
       <button class="btn text" data-act="recheck" style="align-self: flex-start">${ic('refresh')}${T('refresh')}</button>
@@ -284,11 +291,23 @@
         <button class="btn text" data-act="export" style="align-self: flex-start">${ic('download')}${T('export_history')}</button>
       </div></div>`);
   }
+  function updatesCard() {
+    const u = S.update || { status: 'idle' };
+    const label = { idle: ['mute', 'Waiting for first check'], checking: ['mute', 'Checking'], 'up-to-date': ['ok', 'Up to date'], downloading: ['ac', 'Downloading'], ready: ['ac', 'Ready to install ' + (u.next || '')], failed: ['err', 'Failed'], 'not-installed': ['mute', 'Not installed'] }[u.status] || ['mute', u.status];
+    const detail = u.status === 'failed' ? esc(u.error) : u.status === 'not-installed' ? 'Running from source or an unpacked build; updates come from a new installer or your checkout.' : u.checkedAt ? 'Last checked ' + esc(stamp(u.checkedAt)) : 'Checks at start and every 4 hours';
+    return `<div class="card"><div class="row"><span class="tile ac">${ic('update', 'fill')}</span><span class="stack grow"><span class="h2">Updates</span><span class="small">${detail}</span></span></div><span class="badge ${label[0]}" style="align-self: flex-start">${esc(label[1])}</span><button class="btn tonal" data-act="update-check" style="align-self: flex-start" ${u.status === 'not-installed' ? 'disabled' : ''}>${ic('refresh')}Check for updates</button></div>`;
+  }
+  function aboutBody() {
+    const p = S.prov; if (!p) return '';
+    const cn = p.codeName;
+    return `${cn?.available ? `<div class="row">${cn.photo ? `<img src="${esc(cn.photo)}" alt="${esc(cn.alt || cn.en)}" style="width: 72px; height: 72px; border-radius: 16px; object-fit: cover; background: var(--s4)">` : ''}<span class="stack"><span class="label">CODE NAME</span><span style="font-weight: 650">${esc(cn.en)} · ${esc(cn.zh)}</span></span></div>` : ''}
+      <dl class="kv" style="margin: 0"><dt>Version</dt><dd class="mono">${esc(p.version)}</dd><dt>Built</dt><dd class="mono">${p.ok ? esc(stamp(p.builtAt)) : 'Unavailable: not a release build'}</dd>${p.ok ? `<dt>Commit</dt><dd class="mono"><button class="btn text mono" style="padding: 0; height: auto" data-act="open-url" data-url="https://github.com/Ding-Ding-Projects/aws-app-deployer/commit/${esc(p.commit)}">${esc(p.commit.slice(0, 7))}</button></dd>` : ''}<dt>Installer</dt><dd>Squirrel, unsigned</dd></dl>`;
+  }
   function viewHelp() {
     return page(T('nav_help'), '', `<div class="cols"><div class="wide"><div class="card"><span class="h2">Keyboard</span><dl class="kv" style="margin: 0"><dt><span class="kbd">Ctrl+Shift+F</span></dt><dd>Command palette with regex search</dd><dt><span class="kbd">Ctrl+N</span></dt><dd>New deployment</dd><dt><span class="kbd">Ctrl+,</span></dt><dd>Settings</dd><dt><span class="kbd">Esc</span></dt><dd>Close palette or panel</dd></dl></div>
       <div class="card"><span class="h2">What a deployment creates</span><span class="sub">A VPC across two availability zones, a public Application Load Balancer, one NAT gateway, two Fargate tasks in private subnets, an ECR repository with an immutable image, and CloudWatch logs. These cost money until you delete them in AWS.</span></div>
       <div class="card"><span class="h2">Not supported yet</span><span class="sub">Multi-service Compose, volumes, Compose secrets, adjustable task size, custom-domain HTTPS from the app, automatic updates from a repository, and deleting a deployment from the app.</span></div></div>
-      <div class="side"><div class="card"><span class="h2">About</span><span class="small">Version ${VERSION}. Free, source on GitHub. Not affiliated with Amazon Web Services.</span><button class="btn out" data-act="open-url" data-url="https://github.com/Ding-Ding-Projects/aws-app-deployer" style="align-self: flex-start">${ic('code')}Source</button><button class="btn text" data-go="setup" style="align-self: flex-start">Run setup again</button></div></div></div>`);
+      <div class="side">${updatesCard()}<div class="card"><span class="h2">About</span>${aboutBody()}<span class="small">Free, source on GitHub. Not affiliated with Amazon Web Services.</span><button class="btn out" data-act="open-url" data-url="https://github.com/Ding-Ding-Projects/aws-app-deployer" style="align-self: flex-start">${ic('code')}Source</button><button class="btn text" data-go="setup" style="align-self: flex-start">Run setup again</button></div></div></div>`);
   }
 
   // ---------- overlays ----------
@@ -298,6 +317,7 @@
     { id: 'settings', label: 'Settings', run: () => go('settings') }, { id: 'setup', label: 'Setup and tool check', keywords: 'install prerequisites', run: () => go('setup') },
     { id: 'help', label: 'Help and keyboard shortcuts', run: () => go('help') }, { id: 'theme', label: 'Toggle dark and light theme', run: () => set('theme', S.settings.theme === 'dark' ? 'light' : 'dark') },
     { id: 'motion', label: 'Toggle reduce motion', run: () => set('reduceMotion', !S.settings.reduceMotion) }, { id: 'export', label: 'Export history', run: () => api.exportHistory() },
+    { id: 'updates', label: 'Check for updates', keywords: 'update upgrade version', run: async () => { S.update = await api.checkUpdates(); go('help'); } },
     { id: 'notes', label: 'Notifications', run: () => { S.drawer = true; render(); } },
   ];
   function paletteHtml() {
@@ -318,7 +338,7 @@
   }
   function dimsumHtml() {
     const d = S.dimsum; if (!d) return '';
-    return `<div class="dimsum" role="status">${d.image ? `<img src="${esc(d.image)}" alt="${esc(d.en)}">` : `<span class="tile warn" style="width: 64px; height: 64px">${ic('ramen_dining', 'lg fill')}</span>`}<span class="stack"><span class="small">Dim sum surprise</span><span style="font-weight: 650">${esc(d.en)} · ${esc(d.zh)}</span></span></div>`;
+    return `<div class="dimsum" role="status">${d.image ? `<img src="${esc(d.image)}" alt="${esc(d.alt || d.en)}">` : `<span class="tile warn" style="width: 64px; height: 64px">${ic('ramen_dining', 'lg fill')}</span>`}<span class="stack"><span class="small">Dim sum surprise</span><span style="font-weight: 650">${esc(d.en)} · ${esc(d.zh)}</span></span></div>`;
   }
   function renderToasts() {
     let el = document.getElementById('toasts'); if (!el) { el = document.createElement('div'); el.id = 'toasts'; el.className = 'toasts'; document.body.appendChild(el); }
@@ -386,6 +406,9 @@
       case 'reset': { const r = await api.resetSetting(t.dataset.key); if (r.ok) { S.settings[t.dataset.key] = r.value; applyAppearance(); render(); } break; }
       case 'schedule': await set('schedule', { ...S.settings.schedule, enabled: !S.settings.schedule.enabled }); break;
       case 'troll': S.troll = true; cue('tap'); render(); say(Lib.t('dim_sum_troll', S.settings.language)); setTimeout(() => { S.troll = false; render(); }, 4000); break;
+      case 'update-check': S.update = await api.checkUpdates(); render(); break;
+      case 'update-later': S.updateLater = true; render(); break;
+      case 'update-install': if (S.run) { toast('A deployment is running. Restart after it finishes.', 'err'); break; } saveDraft(); await api.installUpdate(); break;
       case 'vocab-clear': await set('vocabulary', null); toast('Original words restored'); break;
     }
   });
@@ -441,6 +464,8 @@
   // ---------- start ----------
   (async () => {
     VERSION = await api.version();
+    S.prov = await api.provenance(); S.update = await api.updateState();
+    api.onUpdate(u => { if (u.status !== S.update?.status) S.updateLater = false; S.update = u; render(); });
     S.settings = (await api.settings()).settings;
     applyAppearance();
     const d = S.settings.draft;

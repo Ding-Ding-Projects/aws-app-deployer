@@ -39,7 +39,13 @@ jobs:
       - run: npm ci
       - name: Set version
         run: npm version $env:VERSION --no-git-tag-version
-      - name: Build Windows installer
+      - name: Pick dim sum code name
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/code-name.mjs ${{ github.repository }} code-name.json
+      - name: Stamp build provenance
+        run: node scripts/stamp-build.mjs $env:VERSION code-name.json
+      - name: Build Squirrel.Windows installer
         run: npx electron-builder --win --publish never
       - name: Capture screenshots of the built app
         run: npx electron . --screenshots=screenshots
@@ -48,8 +54,9 @@ jobs:
         with:
           name: windows
           path: |
-            dist/*.exe
+            dist/squirrel-windows/*
             screenshots/*.png
+            code-name.json
           if-no-files-found: error
   release:
     needs: [test, windows]
@@ -66,15 +73,24 @@ jobs:
       - name: Publish tagged release
         run: |
           started=$(gh api repos/${{ github.repository }}/actions/runs/${{ github.run_id }} --jq .run_started_at)
-          seconds=$(( $(date -u +%s) - $(date -u -d "$started" +%s) ))
+          finished=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          seconds=$(( $(date -u -d "$finished" +%s) - $(date -u -d "$started" +%s) ))
           (cd out/screenshots && zip -q ../screenshots.zip *.png)
+          if jq -e .available out/code-name.json >/dev/null; then
+            code="Code name: $(jq -r .en out/code-name.json) · $(jq -r .zh out/code-name.json) ([photo]($(jq -r .photo out/code-name.json)))"
+          else
+            code="No dim sum code name for this build: $(jq -r .reason out/code-name.json)."
+          fi
           cat > notes.md <<EOF
           Automatic release of commit ${GITHUB_SHA::7}.
 
-          - Workflow time: $((seconds / 60)) min $((seconds % 60)) s from start to release
+          $code
+
+          - Workflow started $started, finished $finished UTC: $((seconds / 60)) min $((seconds % 60)) s end to end
           - Source and test lines: ${{ needs.test.outputs.lines }}
+          - Installer: Squirrel.Windows (\`Setup.exe\`, \`RELEASES\`, full \`.nupkg\`). Installed copies update themselves from this release.
           - Screenshots of this exact build, captured on a Windows runner, are attached.
 
-          This build has passed automated tests only. It has not been verified against a live AWS account.
+          These builds are unsigned. Windows may show an unknown-publisher or SmartScreen warning. This build has passed automated tests only and has not been verified against a live AWS account.
           EOF
-          gh release create "v$VERSION" out/dist/*.exe out/screenshots.zip --target "$GITHUB_SHA" --title "AWS App Deployer $VERSION" --notes-file notes.md
+          gh release create "v$VERSION" out/dist/squirrel-windows/* out/screenshots.zip --target "$GITHUB_SHA" --title "AWS App Deployer $VERSION" --notes-file notes.md

@@ -16,7 +16,7 @@ Honest inventory of the desktop app and its landing page. **Shipped** means impl
 
 ## Setup
 
-- [x] Shipped: first-run setup with prerequisite checks and profile selection
+- [x] Shipped: first-run setup with prerequisite checks that name the exact reason (not on PATH, timed out, too old, failed to run) and profile selection
 - [x] Shipped: one-click installer for AWS CLI v2 and Docker Desktop on Windows: Windows Package Manager first, then the publisher's signed installer with Authenticode verification, silent install, retries, WSL repair, PATH refresh, Docker start; never opens a download page; reports a declined Windows prompt or a blocking policy exactly
 - [ ] Partial: installer logic is tested with stand-in commands; it has not yet run against a clean Windows machine
 
@@ -31,11 +31,17 @@ Honest inventory of the desktop app and its landing page. **Shipped** means impl
 - [x] Shipped: command palette on Ctrl+Shift+F with a regex mode that explains each token, settings search, keyboard shortcuts
 - [x] Shipped: app rename with reset, scheduled light and dark theme, local settings history with export
 - [ ] Partial: Cantonese covers the main labels; some longer explanatory text is English in every mode
-- [ ] Partial: dim sum surprise reads the public catalog; a photo shows only when the catalog record carries a public image address
+- [x] Shipped: dim sum surprise shows the dish name in both languages with its published catalog photo; the photo list is cached in application data for a day and photos are never copied
 - [ ] Not started: per-element appearance editor, tabs, context menus, live charts, logo customization, local version history with undo, changelog viewer, offline documentation
 
 ## Release and site
 
 - [x] Shipped: every push to main tests, builds the Windows installer, captures screenshots on a Windows runner, and publishes a tagged release with workflow time and line count
 - [x] Shipped: landing page with vendored fonts and a link preview image, published by GitHub Pages at https://ding-ding-projects.github.io/aws-app-deployer/
-- [ ] Not started: code signing, Squirrel installer, automatic updates inside the app, dim sum release code names, original app icon
+- [x] Shipped: original app icon from `assets/icon.svg`, generated into a multi-size `.ico` and wired into the window, executable and installer
+- [x] Shipped: Squirrel.Windows installer (`Setup.exe`, `RELEASES`, full `.nupkg`), unsigned and labelled as such in release notes and the update banner
+- [x] Shipped: automatic updates for installed copies: checks at start and every 4 hours, ready banner with version, release notes, unsigned warning, Restart to install update and Later, manual Check for updates, visible failure state
+- [x] Shipped: version, dim sum code name and build time (with seconds and time zone) from a build stamp on the first screen; honest unavailable state for unstamped builds
+- [x] Shipped: dim sum code names from published catalog photos, used once per project, named in release notes and About; a release never waits on the catalog
+- [ ] Partial: delta packages are not generated yet (full packages only)
+- [ ] Not planned: code signing (builds stay unsigned by policy)
