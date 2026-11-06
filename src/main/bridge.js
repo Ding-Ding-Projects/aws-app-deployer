@@ -112,7 +112,8 @@ function createBridge({ backend, deployer, installer, store, emit, fetchUrl = gl
       });
     },
     cancel(id) { const op = ops.get(id); if (!op) return { ok: false, error: 'UNKNOWN_OPERATION' }; op.controller.abort(); return { ok: true }; },
-    settings: () => ({ ok: true, settings: store.get() }),
+    settings: () => ({ ok: true, settings: store.get(), sources: store.sources(), defaults: store.defaults() }),
+    removeDeployments: ats => store.removeDeployments(ats),
     setSetting(key, value) { return store.set(key, value); },
     resetSetting(key) { return store.reset(key); },
     history: () => ({ ok: true, history: store.history(), deployments: store.deployments() }),

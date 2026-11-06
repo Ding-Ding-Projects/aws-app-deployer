@@ -40,7 +40,7 @@ function createWindow() {
 
 async function captureScreenshots(dir) {
   fs.mkdirSync(dir, { recursive: true });
-  const routes = ['setup', 'deploys', 'accounts', 'wizard', 'settings', 'help', 'palette'];
+  const routes = ['setup', 'deploys', 'accounts', 'wizard', 'settings', 'help', 'palette', 'a11y', 'info', 'menu', 'confirm'];
   for (let i = 0; i < 90 && !(await win.webContents.executeJavaScript('!!(window.__ready && window.__ready())')); i++) await new Promise(res => setTimeout(res, 1000));
   for (const [w, tag] of [[1320, 'desktop'], [420, 'narrow']]) {
     win.setSize(w, 860);
@@ -82,6 +82,7 @@ if (!squirrelEvent) app.whenReady().then(() => {
   handle('set-setting', (k, v) => bridge.setSetting(k, v));
   handle('reset-setting', k => bridge.resetSetting(k));
   handle('history', () => bridge.history());
+  handle('remove-deployments', ats => bridge.removeDeployments(ats));
   handle('dim-sum', () => bridge.dimSum());
   handle('version', () => app.getVersion());
   handle('provenance', () => provenance());

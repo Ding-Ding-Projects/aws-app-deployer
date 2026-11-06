@@ -57,3 +57,37 @@ select { height: 40px; border-radius: var(--r2); border: 1px solid var(--line2);
   .titlebar .chip .kbd { display: none; }
 }
 .banner { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; padding: 10px 16px 10px 20px; background: var(--ac-c); color: var(--on-ac-c); border-bottom: 1px solid var(--line); animation: rise var(--d3) var(--ease) both; }
+.ctx { position: fixed; z-index: 60; width: 300px; overflow: auto; background: var(--s3); border: 1px solid var(--line2); border-radius: 14px; box-shadow: var(--shadow); padding: 6px; display: flex; flex-direction: column; gap: 2px; animation: dialogIn var(--d2) var(--ease) both; }
+.ctx-f { padding: 4px; gap: 8px; }
+.ctx-f input { flex: 1; min-width: 0; height: 32px; border: 1px solid var(--line2); border-radius: 8px; background: var(--s1); color: var(--tx); padding: 0 8px; }
+.ctx-f .badge { border: 0; cursor: pointer; }
+.ctx-x { padding: 2px 8px 6px; gap: 6px; flex-wrap: wrap; }
+.mi { display: flex; align-items: center; gap: 12px; padding: 9px 10px; border-radius: 9px; font: inherit; font-size: 13.5px; border: 0; background: transparent; color: var(--tx); text-align: left; cursor: pointer; width: 100%; }
+.mi .k { margin-left: auto; font-family: "JetBrains Mono", monospace; font-size: 11.5px; color: var(--tx3); }
+.mi.on, .mi:hover { background: var(--ac-c); color: var(--on-ac-c); }
+.mi.on .k { color: inherit; opacity: .8; }
+.mi.danger { color: var(--err); }
+.mi[disabled] { opacity: .45; }
+.sc { position: fixed; z-index: 70; width: min(440px, calc(100% - 16px)); background: var(--s2); border: 1px solid var(--line2); border-radius: var(--r3); box-shadow: 0 24px 64px rgba(0,0,0,.5); padding: 20px; display: flex; flex-direction: column; gap: 16px; animation: dialogIn var(--d3) var(--ease) both; }
+.sc .key { width: 56px; height: 56px; border-radius: 16px; border: 2px solid var(--line2); background: var(--s1); color: var(--tx2); font: inherit; font-weight: 700; cursor: pointer; display: grid; place-items: center; transition: all var(--d2) var(--ease); }
+.sc .key.on { border-color: var(--ok); background: var(--ok-c); color: var(--ok); transform: rotate(-12deg); }
+.slide-in { -webkit-appearance: none; appearance: none; width: 100%; height: 48px; border-radius: 24px; background: linear-gradient(90deg, var(--err-c) var(--v), var(--s1) var(--v)); border: 1px solid var(--line2); }
+.slide-in::-webkit-slider-thumb { -webkit-appearance: none; width: 40px; height: 40px; border-radius: 20px; background: var(--err); cursor: grab; }
+.slide-in:disabled { opacity: .5; }
+.sc-done { animation: pop 600ms var(--ease) both; }
+.info { width: 28px; height: 28px; border-radius: 14px; border: 0; background: var(--s3); color: var(--ac); display: grid; place-items: center; cursor: pointer; flex: none; }
+.info:focus-visible { outline: 2px solid var(--ac); outline-offset: 2px; }
+.panel { position: fixed; z-index: 50; background: var(--s2); border: 1px solid var(--line2); border-radius: var(--r3); box-shadow: var(--shadow); display: flex; flex-direction: column; overflow: auto; resize: both; min-width: 260px; min-height: 160px; max-width: calc(100vw - 16px); max-height: calc(100vh - 54px); animation: dialogIn var(--d3) var(--ease) both; }
+.panel > header { display: flex; align-items: center; gap: 8px; padding: 12px 12px 8px 16px; cursor: move; position: sticky; top: 0; background: var(--s2); z-index: 1; }
+.panel > .pb { padding: 0 16px 16px; display: flex; flex-direction: column; gap: 10px; }
+.app.contrast { --tx2: var(--tx); --tx3: var(--tx); --line: var(--tx3); --line2: var(--tx2); }
+.app.focusring *:focus { outline: 2px solid var(--ac) !important; outline-offset: 2px; }
+.app.bigtargets .btn, .app.bigtargets .chip, .app.bigtargets .li, .app.bigtargets .mi { min-height: 48px; }
+.app.bigtargets .toggle { transform: scale(1.15); }
+.check { width: 20px; height: 20px; accent-color: var(--ac); flex: none; }
+.collapser { display: flex; align-items: center; gap: 8px; border: 0; background: transparent; color: var(--tx2); font: inherit; font-weight: 600; cursor: pointer; padding: 4px 0; }
+
+.ctx.app, .sc.app { height: auto; min-height: 0; overflow: auto; flex-direction: column; }
+.sc.app { overflow: visible; }
+.ctx.app { width: 300px; }
+.sc.app { width: min(440px, calc(100% - 16px)); }

@@ -11,7 +11,8 @@
     wizard: { step: 1, file: null, inspect: null, name: '', port: '', health: '/', env: [] },
     run: null, result: null, history: { history: [], deployments: [] },
     prov: null, update: null, updateLater: false,
-    palette: null, drawer: false, notes: [], toasts: [], dimsum: null, troll: false, maximized: false,
+    palette: null, panel: null, practice: {}, infoStep: 0, noteQ: '', noteRegex: false, noteSel: new Set(), depQ: '', depRegex: false, depStatus: 'all', depSel: new Set(), sources: {}, defaults: {},
+    drawer: false, notes: [], toasts: [], dimsum: null, troll: false, maximized: false,
   };
   const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const T = k => esc(Lib.t(k, S.settings?.language || 'en'));
@@ -44,9 +45,9 @@
   }
   function toast(text, kind = 'ok') {
     const id = Math.random().toString(36).slice(2);
-    S.toasts.push({ id, text, kind }); S.notes.unshift({ text, kind, at: time() }); S.notes = S.notes.slice(0, 50);
+    S.toasts.push({ id, text, kind }); S.notes.unshift({ id, text, kind, at: time() }); S.notes = S.notes.slice(0, 200);
     say(text); renderToasts();
-    setTimeout(() => { S.toasts = S.toasts.filter(t => t.id !== id); renderToasts(); }, 4200);
+    if (kind !== 'err') setTimeout(() => dismissToast(id), 4200);
   }
 
   // ---------- appearance ----------
@@ -56,7 +57,9 @@
     const sched = Lib.scheduledTheme(s.schedule, new Date());
     const theme = sched || (s.theme === 'system' ? (matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark') : s.theme);
     const reduce = s.reduceMotion || matchMedia('(prefers-reduced-motion: reduce)').matches;
-    root.className = ['app', theme === 'light' ? 'light' : '', reduce ? 'reduce' : '', s.calm ? 'calm' : '', s.focus ? 'focus' : ''].join(' ');
+    const a = s.a11y || {};
+    root.className = ['app', theme === 'light' ? 'light' : '', reduce ? 'reduce' : '', s.calm ? 'calm' : '', s.focus ? 'focus' : '', a.contrast ? 'contrast' : '', a.focus ? 'focusring' : '', a.targets ? 'bigtargets' : ''].join(' ');
+    document.body.style.zoom = (a.textSize || 100) / 100;
     document.body.style.background = theme === 'light' ? '#f4f6fa' : '#0b0d12';
     clearInterval(rainbowTimer);
     if (s.rainbow && !reduce) { let h = 210; rainbowTimer = setInterval(() => { h = (h + 2) % 360; root.style.setProperty('--ac', `hsl(${h} 90% 70%)`); }, 120); }
@@ -65,7 +68,7 @@
   }
   async function set(key, value) {
     const r = await api.setSetting(key, value);
-    if (r.ok) { S.settings[key] = r.value; applyAppearance(); render(); cue('tap'); }
+    if (r.ok) { S.settings[key] = r.value; S.sources[key] = 'file'; applyAppearance(); render(); cue('tap'); }
     return r;
   }
 
@@ -115,11 +118,12 @@
 
   // ---------- shell ----------
   function shell(content, { rail = true } = {}) {
-    const nav = (v, icon, key) => `<button class="navi ${S.view === v || (v === 'deploys' && ['wizard', 'run', 'result'].includes(S.view)) ? 'on' : ''}" data-go="${v}"><span class="pill">${ic(icon)}</span>${T(key)}</button>`;
+    const nav = (v, icon, key) => `<button class="navi ${S.view === v || (v === 'deploys' && ['wizard', 'run', 'result'].includes(S.view)) ? 'on' : ''}" data-go="${v}" data-menu="nav" ${S.view === v ? 'aria-current="page"' : ''}><span class="pill">${ic(icon)}</span>${T(key)}</button>`;
     return `
     <div class="titlebar"><img src="icon.png" alt="" width="18" height="18" style="flex: none"><span class="name">${esc(S.settings?.displayName || 'AWS App Deployer')}</span><span class="small mono" title="Running version and build time">${esc(provLine())}</span><span class="grow"></span>
       <button class="chip" style="height: 28px; -webkit-app-region: no-drag" data-act="palette" aria-label="${T('palette')}">${ic('search', 'sm')}<span class="kbd">Ctrl+Shift+F</span></button>
-      <button class="chip" style="height: 28px; -webkit-app-region: no-drag" data-act="drawer" aria-label="${T('notifications')}">${ic('notifications', 'sm')}${S.notes.length ? `<span class="badge ac" style="height: 18px">${S.notes.length}</span>` : ''}</button>
+      ${S.settings?.a11y?.hidden ? '' : `<button class="chip" style="height: 28px; -webkit-app-region: no-drag" data-panel-open="a11y" aria-label="Accessibility tools" data-menu="a11y">${ic('accessibility_new', 'sm')}</button>`}
+      <button class="chip" style="height: 28px; -webkit-app-region: no-drag" data-panel-open="notes" aria-label="${T('notifications')}">${ic('notifications', 'sm')}${S.notes.length ? `<span class="badge ac" style="height: 18px">${S.notes.length}</span>` : ''}</button>
       <div class="caption"><button data-win="minimize" aria-label="Minimize">${ic('remove')}</button><button data-win="maximize" aria-label="${S.maximized ? 'Restore' : 'Maximize'}">${ic(S.maximized ? 'filter_none' : 'crop_square')}</button><button class="x" data-win="close" aria-label="Close">${ic('close')}</button></div></div>
     ${S.update?.status === 'ready' && !S.updateLater ? `<div class="banner" role="status">${ic('system_update', 'fill')}<span class="stack grow" style="flex: 1 1 320px"><span style="font-weight: 650">Version ${esc(S.update.next)} is ready to install</span><span class="small" style="color: inherit; opacity: .85">Unsigned build: Windows may show an unknown-publisher or SmartScreen warning. Your settings and drafts are kept.</span></span><button class="btn text" style="color: inherit" data-act="open-url" data-url="https://github.com/Ding-Ding-Projects/aws-app-deployer/releases/latest">Release notes</button><button class="btn out" style="color: inherit; border-color: currentColor" data-act="update-later">Later</button><button class="btn fillb" data-act="update-install">${ic('restart_alt')}Restart to install update</button></div>` : ''}
     <div class="body">
@@ -200,9 +204,13 @@
     const d = [...S.history.deployments].reverse();
     const chip = S.identity ? `<button class="chip" data-go="accounts"><span class="dot"></span>${esc(S.identity.profile)} <span class="mono" style="color: var(--tx3)">${esc(S.identity.accountId)}</span></button><span class="chip">${ic('public', 'sm')}${esc(S.identity.region)}</span>` : `<button class="chip" data-go="accounts">${ic('key_off', 'sm')}Not signed in</button>`;
     const running = S.run ? `<button class="li" data-go="run"><span class="tile ac"><span class="spin"></span></span><span class="stack grow"><span class="t">${esc(S.run.name)}</span><span class="m">${esc(stageLabel(S.run.stage || 'validation'))}</span><span class="bar" style="margin-top: 6px; max-width: 320px"><i style="width: ${Math.max(4, 100 * Lib.stageIndex(S.run.stage || 'validation') / Lib.STAGES.length)}%"></i></span></span><span class="badge ac">Deploying</span></button>` : '';
-    const rows = d.map(x => `<div class="li static"><span class="tile ${x.ok ? 'ok' : 'warn'}">${ic(x.ok ? 'deployed_code' : 'history', 'fill')}</span><span class="stack grow"><span class="t">${esc(x.name)}</span><span class="m">${esc(x.region)} · ${new Date(x.at).toLocaleString()}${x.ok ? '' : ' · ' + esc(Lib.errorText(x.error))}</span></span>${x.ok ? `<button class="btn text" data-act="open-url" data-url="${esc(x.url)}">${T('open')}</button><span class="badge ok">${ic('check', 'sm')}Healthy at deploy</span>` : `<span class="badge warn">Stopped</span>`}</div>`).join('');
+    const F = filteredDeployments(); const shown = F.list; const fOpen = !!S.settings.ui?.filtersOpen?.deploys || !!S.depQ || S.depStatus !== 'all';
+    const bar = d.length ? `<button class="collapser" data-act="filters" data-id="deploys" aria-expanded="${fOpen}">${ic(fOpen ? 'expand_less' : 'expand_more', 'sm')}Filter${S.depQ || S.depStatus !== 'all' ? ` <span class="badge ac">active: ${shown.length} of ${d.length}</span>` : ''}</button>
+      ${fOpen ? `<div class="row" style="flex-wrap: wrap; gap: 8px"><label class="sr" for="dq">Search deployments</label><input id="dq" class="mono" data-input="depQ" value="${esc(S.depQ)}" placeholder="Search name, region or error" style="flex: 1 1 240px; height: 40px; border-radius: 12px; border: 1px solid var(--line2); background: var(--s1); color: var(--tx); padding: 0 12px"><button class="badge ${S.depRegex ? 'ac' : 'mute'} mono" style="border: 0; cursor: pointer" data-act="dep-regex" aria-pressed="${S.depRegex}">.* Regex</button><span class="seg">${[['all', 'All'], ['ok', 'Healthy'], ['bad', 'Stopped']].map(([v, l]) => `<button class="${S.depStatus === v ? 'on' : ''}" data-act="dep-status" data-v="${v}" aria-pressed="${S.depStatus === v}">${l}</button>`).join('')}</span></div>${F.error ? `<span class="badge err">${esc(F.error)}</span>` : ''}` : ''}
+      <div class="row" style="flex-wrap: wrap; gap: 6px"><button class="btn text" data-act="dep-all">Select all ${shown.length} shown</button><button class="btn text" data-act="dep-invert">Invert</button><span class="grow"></span>${S.depSel.size ? `<span class="badge ac">${S.depSel.size} selected</span><button class="btn text" data-act="dep-export">${ic('download')}Export</button><button class="btn text" style="color: var(--err)" data-act="dep-remove">${ic('delete')}Remove…</button>` : ''}</div>` : '';
+    const rows = shown.map(x => `<div class="li static" data-menu="deploy" data-at="${esc(x.id || x.at)}" tabindex="0"><input type="checkbox" class="check" aria-label="Select ${esc(x.name)}" data-dep="${esc(x.id || x.at)}" ${S.depSel.has(x.id || x.at) ? 'checked' : ''}><span class="tile ${x.ok ? 'ok' : 'warn'}">${ic(x.ok ? 'deployed_code' : 'history', 'fill')}</span><span class="stack grow"><span class="t">${esc(x.name)}</span><span class="m">${esc(x.region)} · ${new Date(x.at).toLocaleString()}${x.ok ? '' : ' · ' + esc(Lib.errorText(x.error))}</span></span>${x.ok ? `<button class="btn text" data-act="open-url" data-url="${esc(x.url)}">${T('open')}</button><span class="badge ok">${ic('check', 'sm')}Healthy at deploy</span>` : `<span class="badge warn">Stopped</span>`}</div>`).join('');
     const body = !d.length && !S.run ? `<div class="empty rise"><span class="tile ac">${ic('rocket_launch', 'lg fill')}</span><span class="h2" style="font-size: 20px">${T('no_deployments')}</span><span class="sub" style="max-width: 480px">${T('no_deployments_sub')}</span><button class="btn fillb" data-go="wizard">${ic('add')}${T('new_deployment')}</button></div>`
-      : `<div class="list rise">${running}${rows}</div><div class="row"><span class="small grow">Status shown is the result recorded when each deployment finished on this computer.</span><button class="btn text" data-act="export">${T('export_history')}</button></div>`;
+      : `${bar}<div class="list rise">${running}${rows || '<span class="small" style="padding: 12px">No records match the filter</span>'}</div><div class="row"><span class="small grow">Status shown is the result recorded when each deployment finished on this computer.</span><button class="btn text" data-act="export">${T('export_history')}</button></div>`;
     return page(T('deployments'), chip, body);
   }
   function viewWizard() {
@@ -260,34 +268,37 @@
   }
   function viewSettings() {
     const s = S.settings;
-    const tog = (key, label, sub, extra = '') => `<div class="set" data-search="${esc(label + ' ' + sub)}"><span class="stack grow"><span class="t" style="font-weight: 600">${label}</span><span class="small">${sub}</span></span><button class="toggle ${s[key] ? 'on' : ''}" role="switch" aria-checked="${!!s[key]}" aria-label="${label}" data-toggle="${key}"></button>${extra}</div>`;
+    const info = (key, label) => Lib.EXPLAIN[key] ? `<button class="info" data-info="${key}" aria-label="About ${esc(label)}: explanation and guided steps">${ic('info', 'sm')}</button>` : '';
+    const ctl = (key, label, control) => `<span class="stack" style="align-items: flex-end; gap: 4px">${info(key, label)}${control}</span>`;
+    const tog = (key, label, sub, extra = '') => `<div class="set" data-menu="setting" data-key="${key}" data-search="${esc(label + ' ' + sub)}"><span class="stack grow"><span class="t" style="font-weight: 600">${label}</span><span class="small">${sub} · ${S.sources[key] === 'file' ? 'set by you' : 'default'}</span></span>${ctl(key, label, `<button class="toggle ${s[key] ? 'on' : ''}" role="switch" aria-checked="${!!s[key]}" aria-label="${label}" data-toggle="${key}"></button>`)}${extra}</div>`;
     const seg = (key, opts) => `<span class="seg" role="radiogroup">${opts.map(([v, l]) => `<button role="radio" aria-checked="${s[key] === v}" class="${s[key] === v ? 'on' : ''}" data-set="${key}" data-val="${v}">${l}</button>`).join('')}</span>`;
     const voices = 'speechSynthesis' in window ? speechSynthesis.getVoices() : [];
     const q = S.settingsQuery || '';
     return page(T('nav_settings'), `<div class="field" style="flex: 0 1 380px; position: relative"><label for="sq" class="sr">${T('search_settings')}</label><input id="sq" data-input="settingsQuery" placeholder="${T('search_settings')}" value="${esc(q)}" style="padding-left: 42px; border-radius: 22px"><i class="ms" style="position: absolute; left: 14px; top: 12px; color: var(--tx3)" aria-hidden="true">search</i></div>`,
     `<div class="cols"><div class="wide" style="flex-direction: row; flex-wrap: wrap; align-items: flex-start">
       <div class="card" style="flex: 1 1 360px; gap: 0"><span class="h2" style="padding-bottom: 6px">Appearance</span>
-        <div class="set" data-search="theme light dark system"><span class="stack grow"><span class="t" style="font-weight: 600">${T('theme')}</span><span class="small">Follows Windows unless you pick one</span></span>${seg('theme', [['system', 'System'], ['light', 'Light'], ['dark', 'Dark']])}</div>
-        <div class="set" data-search="accent colour color"><span class="stack grow"><span class="t" style="font-weight: 600">${T('accent')}</span><span class="small">Type a hex, rgb(), hsl() or colour name</span></span><span class="row" style="gap: 8px">${['#6ea8ff', '#4ade9a', '#f5b451', '#ff8a8a'].map(c => `<button class="sw ${!s.rainbow && s.accent === c ? 'on' : ''}" style="background: ${c}" data-act="accent" data-c="${c}" aria-label="Accent ${c}"></button>`).join('')}<button class="sw rainbow ${s.rainbow ? 'on' : ''}" data-act="rainbow" aria-label="Rainbow accent"></button></span></div>
+        <div class="set" data-menu="setting" data-key="theme" data-search="theme light dark system"><span class="stack grow"><span class="t" style="font-weight: 600">${T('theme')}</span><span class="small">Follows Windows unless you pick one</span></span>${ctl('theme', T('theme'), seg('theme', [['system', 'System'], ['light', 'Light'], ['dark', 'Dark']]))}</div>
+        <div class="set" data-menu="setting" data-key="accent" data-search="accent colour color"><span class="stack grow"><span class="t" style="font-weight: 600">${T('accent')}</span><span class="small">Type a hex, rgb(), hsl() or colour name</span></span><span class="row" style="gap: 8px">${info('accent', T('accent'))}${['#6ea8ff', '#4ade9a', '#f5b451', '#ff8a8a'].map(c => `<button class="sw ${!s.rainbow && s.accent === c ? 'on' : ''}" style="background: ${c}" data-act="accent" data-c="${c}" aria-label="Accent ${c}"></button>`).join('')}<button class="sw rainbow ${s.rainbow ? 'on' : ''}" data-act="rainbow" aria-label="Rainbow accent"></button></span></div>
         <div class="set" data-search="accent custom colour"><span class="stack grow"><label class="t" for="acc" style="font-weight: 600">Custom colour</label><span class="small mono">${esc(s.accent)} · ${esc(Lib.toRgb(s.accent))}</span></span><input id="acc" class="mono" style="width: 150px; height: 40px; border-radius: 12px; border: 1px solid var(--line2); background: var(--s1); color: var(--tx); padding: 0 10px" data-input="accentText" placeholder="#6ea8ff"></div>
         ${tog('reduceMotion', T('reduce_motion'), 'Replaces movement with simple fades')}
-        <div class="set" data-search="app name rename display"><span class="stack grow"><label class="t" for="dn" style="font-weight: 600">${T('app_title')}</label><span class="small">Shown in the title bar and taskbar</span></span><input id="dn" style="width: 180px; height: 40px; border-radius: 12px; border: 1px solid var(--line2); background: var(--s1); color: var(--tx); padding: 0 10px" data-input="displayName" value="${esc(s.displayName)}" placeholder="AWS App Deployer"><button class="btn text" data-act="reset" data-key="displayName">${T('reset')}</button></div>
-        <div class="set" data-search="schedule light dark time"><span class="stack grow"><span class="t" style="font-weight: 600">${T('schedule')}</span><span class="small">Light from ${esc(s.schedule.lightAt)}, dark from ${esc(s.schedule.darkAt)}, every day</span></span><button class="toggle ${s.schedule.enabled ? 'on' : ''}" role="switch" aria-checked="${s.schedule.enabled}" aria-label="${T('schedule')}" data-act="schedule"></button></div>
+        <div class="set" data-menu="setting" data-key="displayName" data-search="app name rename display"><span class="stack grow"><label class="t" for="dn" style="font-weight: 600">${T('app_title')}</label><span class="small">Shown in the title bar and taskbar</span></span>${info('displayName', T('app_title'))}<input id="dn" style="width: 180px; height: 40px; border-radius: 12px; border: 1px solid var(--line2); background: var(--s1); color: var(--tx); padding: 0 10px" data-input="displayName" value="${esc(s.displayName)}" placeholder="AWS App Deployer"><button class="btn text" data-act="reset" data-key="displayName">${T('reset')}</button></div>
+        <div class="set" data-menu="setting" data-key="schedule" data-search="schedule light dark time"><span class="stack grow"><span class="t" style="font-weight: 600">${T('schedule')}</span><span class="small">Light from ${esc(s.schedule.lightAt)}, dark from ${esc(s.schedule.darkAt)}, every day</span></span>${ctl('schedule', T('schedule'), `<button class="toggle ${s.schedule.enabled ? 'on' : ''}" role="switch" aria-checked="${s.schedule.enabled}" aria-label="${T('schedule')}" data-act="schedule"></button>`)}</div>
       </div>
       <div class="card" style="flex: 1 1 360px; gap: 0"><span class="h2" style="padding-bottom: 6px">Language and voice</span>
-        <div class="set" data-search="language english cantonese both"><span class="stack grow"><span class="t" style="font-weight: 600">${T('language')}</span></span>${seg('language', [['en', 'English'], ['yue', '廣東話'], ['both', 'Both']])}</div>
-        ${s.school ? '' : `<div class="set" style="flex-wrap: wrap" data-search="funny level humour"><span class="stack grow" style="flex: 1 1 170px"><label class="t" for="fl" style="font-weight: 600">${T('funny')}</label><span class="small">Changes the wording only, never the facts</span></span><input id="fl" type="range" min="1" max="5" value="${s.funnyLevel}" data-range="funnyLevel" style="flex: 1 1 100px; min-width: 0"><span class="badge ac" style="width: 28px; justify-content: center; padding: 0">${s.funnyLevel}</span><span class="card" style="flex: 1 1 100%; background: var(--s1); padding: 12px 14px; margin-top: 10px; gap: 2px"><span class="small">Preview</span><span>${esc(Lib.funny('success', s.funnyLevel, s.language))}</span></span></div>`}
+        <div class="set" data-menu="setting" data-key="language" data-search="language english cantonese both"><span class="stack grow"><span class="t" style="font-weight: 600">${T('language')}</span></span>${ctl('language', T('language'), seg('language', [['en', 'English'], ['yue', '廣東話'], ['both', 'Both']]))}</div>
+        ${s.school ? '' : `<div class="set" style="flex-wrap: wrap" data-menu="setting" data-key="funnyLevel" data-search="funny level humour"><span class="stack grow" style="flex: 1 1 170px"><label class="t" for="fl" style="font-weight: 600">${T('funny')}</label><span class="small">Changes the wording only, never the facts</span></span> ${info('funnyLevel', T('funny'))}<input id="fl" type="range" min="1" max="5" value="${s.funnyLevel}" data-range="funnyLevel" style="flex: 1 1 100px; min-width: 0"><span class="badge ac" style="width: 28px; justify-content: center; padding: 0">${s.funnyLevel}</span><span class="card" style="flex: 1 1 100%; background: var(--s1); padding: 12px 14px; margin-top: 10px; gap: 2px"><span class="small">Preview</span><span>${esc(Lib.funny('success', s.funnyLevel, s.language))}</span></span></div>`}
         ${s.school ? '' : tog('emoji', T('emoji'), 'Adds emoji to some messages')}
         ${tog('narration', T('narration'), voices.length ? 'Uses a voice installed on this computer' : 'No voices found on this computer')}
         ${s.narration && voices.length ? `<div class="set"><label class="grow" for="vc">Voice</label><select id="vc" data-select="voice"><option value="">System default</option>${voices.map(v => `<option ${v.name === s.voice ? 'selected' : ''}>${esc(v.name)}</option>`).join('')}</select></div>` : ''}
         ${tog('sounds', T('sounds'), 'Soft cues for deploy, success and errors')}
       </div></div>
       <div class="side">
-        <div class="drop idle" style="flex-direction: column; align-items: flex-start; gap: 12px; padding: 22px" data-search="personal wording vocabulary json"><div class="row"><span class="tile ac">${ic('dictionary', 'fill')}</span><span class="stack"><span style="font-weight: 650">${T('vocabulary')}</span><span class="small">${s.vocabulary ? Object.keys(s.vocabulary.entries).length + ' words active' : 'Drop a vocabulary JSON anywhere in the app'}</span></span></div><span class="small">Format: {"version": 1, "entries": {"Deploy": "Ship"}}. Stays on this computer. Applied all at once or not at all.</span><span class="row" style="gap: 8px"><label class="btn tonal" for="vf">Choose file</label><input id="vf" type="file" accept="application/json,.json" class="sr" data-file="vocab"><button class="btn text" data-act="vocab-clear" ${s.vocabulary ? '' : 'disabled'}>Clear</button></span></div>
+        <div class="drop idle" style="flex-direction: column; align-items: flex-start; gap: 12px; padding: 22px" data-menu="setting" data-key="vocabulary" data-search="personal wording vocabulary json">${info('vocabulary', T('vocabulary'))}<div class="row"><span class="tile ac">${ic('dictionary', 'fill')}</span><span class="stack"><span style="font-weight: 650">${T('vocabulary')}</span><span class="small">${s.vocabulary ? Object.keys(s.vocabulary.entries).length + ' words active' : 'Drop a vocabulary JSON anywhere in the app'}</span></span></div><span class="small">Format: {"version": 1, "entries": {"Deploy": "Ship"}}. Stays on this computer. Applied all at once or not at all.</span><span class="row" style="gap: 8px"><label class="btn tonal" for="vf">Choose file</label><input id="vf" type="file" accept="application/json,.json" class="sr" data-file="vocab"><button class="btn text" data-act="vocab-clear" ${s.vocabulary ? '' : 'disabled'}>Clear</button></span></div>
         <div class="card" style="gap: 0"><span class="h2" style="padding-bottom: 6px">Focus and comfort</span>
           ${tog('focus', T('focus'), 'Hides side panels so one action leads')}${tog('calm', T('calm'), 'No pulsing or looping motion')}${tog('school', T('school'), 'Hides playful extras everywhere')}
           ${s.school ? '' : `<div class="set" style="flex-wrap: wrap" data-search="dim sum surprise"><span class="stack grow"><span class="t" style="font-weight: 600">${T('dim_sum')}</span><span class="small">A rare treat at launch</span></span><button class="toggle on" role="switch" aria-checked="true" aria-label="${T('dim_sum')}" data-act="troll"></button>${S.troll ? `<span class="card pop" style="flex: 1 1 100%; flex-direction: row; gap: 10px; align-items: center; padding: 10px 14px; margin-top: 10px; background: var(--warn-c)" role="status">${ic('lock', 'fill')}<span class="small" style="color: var(--tx)">${T('dim_sum_troll')}${emojiOn() ? ' 🥟' : ''}</span></span>` : ''}</div>`}
         </div>
+        <div class="card" style="gap: 0" data-menu="setting" data-key="a11y" data-search="accessibility text size contrast focus targets read aloud button hidden"><div class="set">${info('a11y', 'Accessibility tools')}<span class="stack grow"><span class="t" style="font-weight: 600">Accessibility tools</span><span class="small">${s.a11y.hidden ? 'Title bar button hidden' : 'Button in the title bar'} · text ${s.a11y.textSize}%</span></span><button class="btn tonal" data-panel-open="a11y">Open</button>${s.a11y.hidden ? '<button class="btn text" data-act="a11y-show">Show button</button>' : ''}</div></div>
         <button class="btn text" data-act="export" style="align-self: flex-start">${ic('download')}${T('export_history')}</button>
       </div></div>`);
   }
@@ -318,7 +329,10 @@
     { id: 'help', label: 'Help and keyboard shortcuts', run: () => go('help') }, { id: 'theme', label: 'Toggle dark and light theme', run: () => set('theme', S.settings.theme === 'dark' ? 'light' : 'dark') },
     { id: 'motion', label: 'Toggle reduce motion', run: () => set('reduceMotion', !S.settings.reduceMotion) }, { id: 'export', label: 'Export history', run: () => api.exportHistory() },
     { id: 'updates', label: 'Check for updates', keywords: 'update upgrade version', run: async () => { S.update = await api.checkUpdates(); go('help'); } },
-    { id: 'notes', label: 'Notifications', run: () => { S.drawer = true; render(); } },
+    { id: 'notes', label: 'Notifications', run: () => openPanel('notes') },
+    { id: 'a11y', label: 'Accessibility tools', keywords: 'text size contrast focus targets read aloud', run: () => openPanel('a11y') },
+    { id: 'a11y-show', label: 'Show the accessibility button', keywords: 'accessibility hidden restore', run: () => setA11y({ hidden: false }) },
+    { id: 'keys', label: 'Keyboard help', keywords: 'shortcuts', run: () => openPanel('keys') },
   ];
   function paletteHtml() {
     const P = S.palette; if (!P) return '';
@@ -340,10 +354,98 @@
     const d = S.dimsum; if (!d) return '';
     return `<div class="dimsum" role="status">${d.image ? `<img src="${esc(d.image)}" alt="${esc(d.alt || d.en)}">` : `<span class="tile warn" style="width: 64px; height: 64px">${ic('ramen_dining', 'lg fill')}</span>`}<span class="stack"><span class="small">Dim sum surprise</span><span style="font-weight: 650">${esc(d.en)} · ${esc(d.zh)}</span></span></div>`;
   }
+  function dismissToast(id) { S.toasts = S.toasts.filter(t => t.id !== id); renderToasts(); }
   function renderToasts() {
     let el = document.getElementById('toasts'); if (!el) { el = document.createElement('div'); el.id = 'toasts'; el.className = 'toasts'; document.body.appendChild(el); }
-    el.innerHTML = S.toasts.map(t => `<div class="toast" role="status">${ic(t.kind === 'err' ? 'error' : 'check_circle', 'fill')}${esc(t.text)}</div>`).join('');
+    el.innerHTML = S.toasts.map(t => `<div class="toast" role="${t.kind === 'err' ? 'alert' : 'status'}" tabindex="-1">${ic(t.kind === 'err' ? 'error' : 'check_circle', 'fill')}<span style="flex: 1">${esc(t.text)}</span><button class="btn text" data-toast="${t.id}" aria-label="Dismiss notification">${ic('close')}</button></div>`).join('');
+    el.querySelectorAll('[data-toast]').forEach(b => (b.onclick = () => dismissToast(b.dataset.toast)));
   }
+
+
+  // ---------- anchored panels: accessibility, notifications, info, keyboard help ----------
+  function openPanel(id, anchor) { S.panel = { id, anchor: anchor || null }; S.infoStep = 0; render(); setTimeout(() => document.querySelector(`[data-panel="${id.split(':')[0]}"] [data-autofocus]`)?.focus(), 30); }
+  function closePanel() { const a = S.panel?.anchor; S.panel = null; render(); if (a) document.querySelector(a)?.focus(); }
+  async function setA11y(patch) { await set('a11y', { ...S.settings.a11y, ...patch }); }
+  function panelFrame(id, title, body, anchorStyle) {
+    const saved = S.settings.ui?.panels;
+    return `<section class="panel" data-panel="${id}" role="dialog" aria-label="${esc(title)}" style="${Kit.panelStyle(id, saved, anchorStyle)}"><header data-drag="1"><span class="h2" style="flex: 1">${esc(title)}</span><button class="btn text" data-act="panel-reset" data-id="${id}" title="Reset size and position" aria-label="Reset panel size and position">${ic('restart_alt')}</button><button class="btn text" data-act="panel-close" aria-label="Close" data-autofocus="1">${ic('close')}</button></header><div class="pb">${body}</div></section>`;
+  }
+  function panelHtml() {
+    const P = S.panel; if (!P) return '';
+    const right = 'top: 46px; right: 12px; width: 380px;';
+    if (P.id === 'a11y') {
+      const a = S.settings.a11y;
+      const sw = (k, label) => `<div class="set"><span class="grow">${label}</span><button class="toggle ${a[k] ? 'on' : ''}" role="switch" aria-checked="${a[k]}" aria-label="${label}" data-a11y="${k}"></button></div>`;
+      return panelFrame('a11y', 'Accessibility tools', `<div class="set"><label class="grow" for="ts">Text size</label><input id="ts" type="range" min="80" max="160" step="10" value="${a.textSize}" data-a11y-size="1" style="width: 140px"><span class="badge ac">${a.textSize}%</span></div>
+        ${sw('contrast', 'High contrast')}<div class="set"><span class="grow">Reduce motion</span><button class="toggle ${S.settings.reduceMotion ? 'on' : ''}" role="switch" aria-checked="${S.settings.reduceMotion}" aria-label="Reduce motion" data-toggle="reduceMotion"></button></div>${sw('focus', 'Always show focus')}${sw('targets', 'Larger targets')}
+        <button class="btn tonal" data-cmd="keys">${ic('keyboard')}Keyboard help <span class="kbd">${Kit.keysFor('keys')}</span></button><button class="btn tonal" data-act="read-aloud">${ic('record_voice_over')}Read this screen aloud</button>
+        <button class="btn text" data-act="a11y-reset">Reset accessibility tools</button><div class="divider"></div><button class="btn text" style="color: var(--tx3)" data-act="a11y-hide">${ic('visibility_off')}Hide this button…</button>`, right);
+    }
+    if (P.id === 'a11y-hide') return panelFrame('a11y-hide', 'Hide the accessibility button?', `<span class="sub">The button leaves the title bar. Your accessibility choices stay on. Bring it back from Settings search, the command palette, or Reset accessibility tools.</span><div class="row" style="justify-content: flex-end"><button class="btn fillb" data-act="panel-close" data-autofocus="1">Cancel</button><button class="btn out" data-act="a11y-hide-yes">Hide it</button></div>`, right);
+    if (P.id === 'keys') return panelFrame('keys', 'Keyboard help', `<dl class="kv" style="margin: 0">${[['palette', 'Command palette with regex search'], ['new', 'New deployment'], ['settings', 'Settings'], ['keys', 'Keyboard help'], ['menu', 'Context menu for the focused element'], ['panelMove', 'Move a focused panel (add Shift to resize)']].map(([k, l]) => `<dt><span class="kbd">${esc(Kit.keysFor(k) || { menu: 'Shift+F10', panelMove: 'Alt+Arrows' }[k])}</span></dt><dd>${l}</dd>`).join('')}<dt><span class="kbd">Esc</span></dt><dd>Clear a filter, then close</dd></dl>`, 'top: 90px; left: calc(50% - 220px); width: 440px;');
+    if (P.id === 'notes') {
+      const r = Lib.search(S.notes.map(n => ({ ...n, label: n.text })), S.noteQ, { regex: S.noteRegex });
+      const list = r.ok ? r.items : [];
+      const open = !!S.settings.ui?.filtersOpen?.notes || !!S.noteQ;
+      return panelFrame('notes', T('notifications'), `<button class="collapser" data-act="filters" data-id="notes" aria-expanded="${open}">${ic(open ? 'expand_less' : 'expand_more', 'sm')}Search${S.noteQ ? ` <span class="badge ac">filter active: ${list.length} of ${S.notes.length}</span>` : ''}</button>
+        ${open ? `<div class="row" style="gap: 6px"><label class="sr" for="nq">Search notifications</label><input id="nq" class="mono" data-input="noteQ" value="${esc(S.noteQ)}" placeholder="Search" style="flex: 1; height: 36px; border-radius: 10px; border: 1px solid var(--line2); background: var(--s1); color: var(--tx); padding: 0 10px"><button class="badge ${S.noteRegex ? 'ac' : 'mute'} mono" style="border: 0; cursor: pointer" data-act="note-regex" aria-pressed="${S.noteRegex}">.*</button></div>${!r.ok ? `<span class="badge err">${esc(r.error)}</span>` : ''}` : ''}
+        <div class="row" style="flex-wrap: wrap; gap: 6px"><button class="btn text" data-act="note-all">Select all ${list.length} shown</button><button class="btn text" data-act="note-invert">Invert</button><span class="grow"></span><button class="btn text" data-act="note-copy" ${S.noteSel.size ? '' : 'disabled'}>Copy ${S.noteSel.size || ''}</button><button class="btn text" data-act="note-dismiss" ${S.noteSel.size ? '' : 'disabled'}>Dismiss ${S.noteSel.size || ''}</button></div>
+        ${list.map(n => `<label class="li static" style="padding: 8px 0"><input type="checkbox" class="check" data-note="${n.id}" ${S.noteSel.has(n.id) ? 'checked' : ''}><span class="tile ${n.kind === 'err' ? 'err' : 'ok'}">${ic(n.kind === 'err' ? 'error' : 'check_circle', 'fill')}</span><span class="stack grow"><span class="t">${esc(n.text)}</span><span class="m">${esc(n.at)}</span></span></label>`).join('') || '<span class="small">Nothing here</span>'}`, right + ' height: 520px;');
+    }
+    if (P.id.startsWith('info:')) {
+      const key = P.id.slice(5), ex = Lib.EXPLAIN[key];
+      if (!ex) return '';
+      const src = S.sources[key] === 'file' ? 'Value from your settings file.' : `Using the built-in default: ${JSON.stringify(S.defaults[key])}.`;
+      const step = Math.min(S.infoStep, ex.steps.length - 1);
+      return panelFrame('info', 'About this setting', `<span class="label">WHAT IT DOES</span><span>${esc(ex.what)}</span><span class="small mono">${esc(src)}</span>
+        <span class="label" style="margin-top: 4px">TRY IT · STEP ${step + 1} OF ${ex.steps.length}</span><span>${esc(ex.steps[step])}</span>
+        <div class="row" style="gap: 10px"><button class="toggle ${S.practice[key] ? 'on' : ''}" role="switch" aria-checked="${!!S.practice[key]}" aria-label="Practice switch" data-act="practice" data-key="${key}"></button><span class="small grow">Practice only: your real setting does not change.</span></div>
+        <div class="row" style="justify-content: flex-end"><button class="btn text" data-act="info-step" data-d="-1" ${step ? '' : 'disabled'}>${T('back')}</button><button class="btn tonal" data-act="info-step" data-d="1" ${step < ex.steps.length - 1 ? '' : 'disabled'}>${T('next')}</button></div>`, 'top: 120px; left: calc(50% - 200px); width: 400px;');
+    }
+    return '';
+  }
+
+  // ---------- context menus ----------
+  function menuFor(el) {
+    const items = [];
+    const m = el.closest('[data-menu]'); const kind = m?.dataset.menu;
+    if (kind === 'deploy') {
+      const at = m.dataset.at, d = S.history.deployments.find(x => (x.id || x.at) === at);
+      if (d?.url) items.push({ label: 'Open link', icon: 'open_in_new', run: () => api.openExternal(d.url) }, { label: 'Copy link', icon: 'content_copy', shortcut: 'copyLink', run: () => copy(d.url) });
+      items.push({ label: S.depSel.has(at) ? 'Deselect' : 'Select', icon: 'check_box', run: () => { S.depSel.has(at) ? S.depSel.delete(at) : S.depSel.add(at); render(); } });
+      items.push({ label: 'Export this record', icon: 'download', run: () => exportRecords([d]) });
+      items.push({ label: 'Remove from history…', icon: 'delete', danger: true, shortcut: 'remove', run: o => removeRecords([at], o) });
+    } else if (kind === 'nav') items.push({ label: 'Open', icon: 'arrow_forward', run: () => go(m.dataset.go) });
+    else if (kind === 'setting') { const k = m.dataset.key; items.push({ label: 'About this setting', icon: 'info', run: () => openPanel('info:' + k) }, { label: 'Reset to default', icon: 'restart_alt', run: async () => { const r = await api.resetSetting(k); if (r.ok) { S.settings[k] = r.value; await refreshSources(); applyAppearance(); render(); } } }); }
+    else if (kind === 'a11y') items.push({ label: 'Open accessibility tools', icon: 'accessibility_new', run: () => openPanel('a11y') }, { label: 'Hide this button…', icon: 'visibility_off', run: () => openPanel('a11y-hide') });
+    const field = el.closest('input, textarea');
+    if (field) items.push({ label: 'Cut', icon: 'content_cut', run: () => document.execCommand('cut') }, { label: 'Copy', icon: 'content_copy', run: () => document.execCommand('copy') }, { label: 'Paste', icon: 'content_paste', run: async () => { field.focus(); document.execCommand('insertText', false, await navigator.clipboard.readText()); } }, { label: 'Select all', icon: 'select_all', run: () => field.select() });
+    const sel = String(getSelection() || '').trim(), txt = (el.closest('[data-menu],.card,.li,.btn,.chip,h1,.h2,dd,dt,span,div') || el).innerText?.trim();
+    items.push({ label: sel ? 'Copy selected text' : 'Copy this text', icon: 'content_copy', disabled: !(sel || txt), run: () => copy(sel || txt) });
+    items.push({ label: 'Command palette', icon: 'search', shortcut: 'palette', run: () => togglePalette() }, { label: 'Keyboard help', icon: 'keyboard', shortcut: 'keys', run: () => openPanel('keys') });
+    return items;
+  }
+  async function copy(text) { await navigator.clipboard.writeText(text); toast(Lib.t('copied', S.settings.language)); }
+  root.addEventListener('contextmenu', e => { e.preventDefault(); Kit.openMenu(menuFor(e.target), { x: e.clientX, y: e.clientY, opener: e.target.closest('button,a,input,[tabindex]') || e.target, title: 'Actions' }); });
+  function menuFromKeyboard() { const el = document.activeElement && root.contains(document.activeElement) ? document.activeElement : root; const r = el.getBoundingClientRect(); Kit.openMenu(menuFor(el), { x: r.left + 12, y: r.bottom + 4, opener: el, title: 'Actions' }); }
+
+  // ---------- records: filter, select, export, remove ----------
+  function exportRecords(list) {
+    const blob = new Blob([JSON.stringify({ schema: 'aws-app-deployer.deployments/1', exportedAt: new Date().toISOString(), records: list }, null, 2)], { type: 'application/json' });
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `deployments-${list.length}.json`; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+    toast(`Exported ${list.length} record${list.length === 1 ? '' : 's'} as UTF-8 JSON`);
+  }
+  function removeRecords(ats, opener) {
+    const names = S.history.deployments.filter(d => ats.includes(d.id || d.at)).map(d => d.name);
+    Kit.superConfirm({ title: `Remove ${ats.length} record${ats.length === 1 ? '' : 's'} from history`, detail: `${names.slice(0, 4).join(', ')}${names.length > 4 ? ` and ${names.length - 4} more` : ''} on this computer. Nothing in AWS changes; the removal is kept in local history.`, confirmLabel: 'remove', opener,
+      onConfirm: async () => { const r = await api.removeDeployments(ats); ats.forEach(a => S.depSel.delete(a)); await loadHistory(); toast(`Removed ${r.removed}${r.skipped ? `, skipped ${r.skipped} already gone` : ''}`); render(); } });
+  }
+  function filteredDeployments() {
+    const d = [...S.history.deployments].reverse().filter(x => S.depStatus === 'all' || (S.depStatus === 'ok') === !!x.ok);
+    const r = Lib.search(d.map(x => ({ ...x, label: `${x.name} ${x.region} ${x.error || ''}` })), S.depQ, { regex: S.depRegex });
+    return r.ok ? { list: r.items, error: null } : { list: [], error: r.error };
+  }
+  async function refreshSources() { const r = await api.settings(); S.sources = r.sources || {}; S.defaults = r.defaults || {}; }
 
   // ---------- render ----------
   function vocabularize(node) {
@@ -355,21 +457,35 @@
     if (!S.settings) return;
     const focusId = document.activeElement?.id, caret = document.activeElement?.selectionStart;
     const views = { setup: viewSetup, accounts: viewAccounts, deploys: viewDeploys, wizard: viewWizard, run: viewRun, result: viewResult, settings: viewSettings, help: viewHelp };
-    root.innerHTML = shell((views[S.view] || viewDeploys)(), { rail: S.view !== 'setup' }) + paletteHtml() + drawerHtml() + dimsumHtml();
+    root.innerHTML = shell((views[S.view] || viewDeploys)(), { rail: S.view !== 'setup' }) + paletteHtml() + panelHtml() + dimsumHtml();
+    Kit.watchPanels(root, (id, box) => { const ui = S.settings.ui || { filtersOpen: {}, panels: {} }; api.setSetting('ui', { ...ui, panels: { ...ui.panels, [id]: box } }).then(r => r.ok && (S.settings.ui = r.value)); });
     if (S.view === 'settings' && S.settingsQuery) { const q = S.settingsQuery.toLowerCase(); root.querySelectorAll('[data-search]').forEach(el => { el.hidden = !el.dataset.search.toLowerCase().includes(q); }); }
     vocabularize(root);
     if (focusId) { const el = document.getElementById(focusId); if (el) { el.focus(); if (caret != null && el.setSelectionRange) try { el.setSelectionRange(caret, caret); } catch { } } }
   }
   function go(view) { S.view = view; S.palette = null; render(); document.getElementById('main')?.focus?.(); }
   window.__ready = () => !!S.prereq && S.profiles !== null;
-  window.__go = v => { if (v === 'palette') { S.palette = { q: 'dep', regex: false, sel: 0 }; render(); } else go(v); };
+  window.__go = v => {
+    if (v === 'palette') { S.palette = { q: 'dep', regex: false, sel: 0 }; render(); return; }
+    if (v === 'a11y') { go('deploys'); openPanel('a11y'); return; }
+    if (v === 'info') { go('settings'); openPanel('info:funnyLevel'); return; }
+    const row = () => document.querySelector('[data-menu="deploy"]');
+    if (v === 'menu') { go('deploys'); const r = row(); if (r) { const b = r.getBoundingClientRect(); Kit.openMenu(menuFor(r), { x: b.left + 240, y: b.top + 20, opener: r }); } return; }
+    if (v === 'confirm') { go('deploys'); const r = row(); if (r) removeRecords([r.dataset.at], r); return; }
+    S.panel = null; Kit.closeMenu(false); go(v);
+  };
+  const __goInner = window.__go;
+  window.__go = v => { S.panel = null; Kit.closeMenu(false); document.querySelector('.sc')?.remove(); __goInner(v); };
 
   // ---------- events ----------
   root.addEventListener('click', async e => {
-    const t = e.target.closest('[data-go],[data-act],[data-win],[data-toggle],[data-set],[data-cmd]');
+    const t = e.target.closest('[data-go],[data-act],[data-win],[data-toggle],[data-set],[data-cmd],[data-panel-open],[data-info],[data-a11y]');
     if (!t) return;
     if (t.dataset.stop && e.target === t) return;
     if (t.dataset.go) return go(t.dataset.go);
+    if (t.dataset.panelOpen) return S.panel?.id === t.dataset.panelOpen ? closePanel() : openPanel(t.dataset.panelOpen, `[data-panel-open="${t.dataset.panelOpen}"]`);
+    if (t.dataset.info) return openPanel('info:' + t.dataset.info, `[data-info="${t.dataset.info}"]`);
+    if (t.dataset.a11y) return setA11y({ [t.dataset.a11y]: !S.settings.a11y[t.dataset.a11y] });
     if (t.dataset.win) { const r = await api.window(t.dataset.win); S.maximized = r.maximized; return; }
     if (t.dataset.toggle) return set(t.dataset.toggle, !S.settings[t.dataset.toggle]);
     if (t.dataset.set) return set(t.dataset.set, t.dataset.val);
@@ -409,6 +525,27 @@
       case 'update-check': S.update = await api.checkUpdates(); render(); break;
       case 'update-later': S.updateLater = true; render(); break;
       case 'update-install': if (S.run) { toast('A deployment is running. Restart after it finishes.', 'err'); break; } saveDraft(); await api.installUpdate(); break;
+      case 'panel-close': closePanel(); break;
+      case 'panel-reset': { const ui = S.settings.ui; const panels = { ...ui.panels }; delete panels[t.dataset.id]; await set('ui', { ...ui, panels }); break; }
+      case 'a11y-hide': openPanel('a11y-hide'); break;
+      case 'a11y-hide-yes': S.panel = null; await setA11y({ hidden: true }); toast('Accessibility button hidden. Find it again in Settings or the command palette.'); break;
+      case 'a11y-show': await setA11y({ hidden: false }); break;
+      case 'a11y-reset': await set('a11y', { textSize: 100, contrast: false, focus: false, targets: false, hidden: false }); break;
+      case 'read-aloud': { const main = document.getElementById('main'); const text = [...main.querySelectorAll('h1, .h2, .t, .sub, .small, dt, dd, .badge')].filter(n => !n.closest('input, .mono')).map(n => n.innerText.trim()).filter(Boolean).join('. '); if ('speechSynthesis' in window) { speechSynthesis.cancel(); speechSynthesis.speak(new SpeechSynthesisUtterance(text.slice(0, 4000))); } else toast('No voice is available on this computer', 'err'); break; }
+      case 'filters': { const ui = S.settings.ui; await set('ui', { ...ui, filtersOpen: { ...ui.filtersOpen, [t.dataset.id]: !ui.filtersOpen?.[t.dataset.id] } }); break; }
+      case 'note-regex': S.noteRegex = !S.noteRegex; render(); break;
+      case 'note-all': { const r = Lib.search(S.notes.map(n => ({ ...n, label: n.text })), S.noteQ, { regex: S.noteRegex }); (r.items || []).forEach(n => S.noteSel.add(n.id)); render(); break; }
+      case 'note-invert': S.notes.forEach(n => (S.noteSel.has(n.id) ? S.noteSel.delete(n.id) : S.noteSel.add(n.id))); render(); break;
+      case 'note-copy': copy(S.notes.filter(n => S.noteSel.has(n.id)).map(n => `${n.at} ${n.text}`).join('\n')); break;
+      case 'note-dismiss': { const n = S.noteSel.size; S.notes = S.notes.filter(x => !S.noteSel.has(x.id)); S.noteSel.clear(); render(); say(`Dismissed ${n} notifications`); break; }
+      case 'practice': S.practice[t.dataset.key] = !S.practice[t.dataset.key]; render(); break;
+      case 'info-step': S.infoStep = Math.max(0, S.infoStep + +t.dataset.d); render(); break;
+      case 'dep-regex': S.depRegex = !S.depRegex; render(); break;
+      case 'dep-status': S.depStatus = t.dataset.v; render(); break;
+      case 'dep-all': filteredDeployments().list.forEach(x => S.depSel.add(x.id || x.at)); render(); break;
+      case 'dep-invert': S.history.deployments.forEach(x => { const k = x.id || x.at; S.depSel.has(k) ? S.depSel.delete(k) : S.depSel.add(k); }); render(); break;
+      case 'dep-export': exportRecords(S.history.deployments.filter(x => S.depSel.has(x.id || x.at))); break;
+      case 'dep-remove': removeRecords([...S.depSel], t); break;
       case 'vocab-clear': await set('vocabulary', null); toast('Original words restored'); break;
     }
   });
@@ -426,6 +563,9 @@
     const el = e.target;
     if (el.dataset.input === 'paletteQ') { S.palette.q = el.value; S.palette.sel = 0; render(); return; }
     if (el.dataset.input === 'settingsQuery') { S.settingsQuery = el.value; render(); return; }
+    if (el.dataset.input === 'noteQ') { S.noteQ = el.value; render(); return; }
+    if (el.dataset.input === 'depQ') { S.depQ = el.value; render(); return; }
+    if (el.dataset.a11ySize) { setA11y({ textSize: +el.value }); return; }
     if (el.dataset.input === 'region') { S.selection.region = el.value.trim(); return; }
     if (['name', 'port', 'health'].includes(el.dataset.input)) { S.wizard[el.dataset.input] = el.value.trim(); clearTimeout(S.wt); S.wt = setTimeout(() => { saveDraft(); render(); }, 250); return; }
     if (el.dataset.env) { S.wizard.env[+el.dataset.env][el.dataset.k] = el.value; return; }
@@ -436,6 +576,8 @@
     if (el.dataset.input === 'displayName') set('displayName', el.value.trim());
     if (el.dataset.input === 'accentText') { const hex = Lib.parseColor(el.value); if (hex) { await set('rainbow', false); set('accent', hex); } else toast('Not a colour this app can read', 'err'); }
     if (el.dataset.select) set(el.dataset.select, el.value);
+    if (el.dataset.dep) { el.checked ? S.depSel.add(el.dataset.dep) : S.depSel.delete(el.dataset.dep); render(); }
+    if (el.dataset.note) { el.checked ? S.noteSel.add(el.dataset.note) : S.noteSel.delete(el.dataset.note); render(); }
     if (el.dataset.file === 'vocab' && el.files[0]) applyVocabFile(el.files[0]);
   });
   async function applyVocabFile(file) {
@@ -445,16 +587,24 @@
   }
   document.addEventListener('dragover', e => { if ([...e.dataTransfer.items].some(i => i.kind === 'file')) e.preventDefault(); });
   document.addEventListener('drop', e => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f && /\.json$/i.test(f.name)) applyVocabFile(f); });
+  function togglePalette() { S.palette = S.palette ? null : { q: '', regex: false, sel: 0 }; render(); document.getElementById('pq')?.focus(); }
+  Kit.bind('palette', 'Ctrl+Shift+F', togglePalette);
+  Kit.bind('new', 'Ctrl+N', () => go('wizard'));
+  Kit.bind('settings', 'Ctrl+,', () => go('settings'));
+  Kit.bind('keys', 'F1', () => openPanel('keys'));
+  Kit.bind('copyLink', 'Ctrl+Shift+C', () => { const at = document.activeElement?.closest?.('[data-menu="deploy"]')?.dataset.at; const d = S.history.deployments.find(x => (x.id || x.at) === at) || (S.result?.ok && S.result); if (d?.url) copy(d.url); }, () => !!(document.activeElement?.closest?.('[data-menu="deploy"]') || S.result?.ok));
+  Kit.bind('remove', 'Delete', () => { const el = document.activeElement.closest('[data-menu="deploy"]'); removeRecords([el.dataset.at], el); }, () => !!document.activeElement?.closest?.('[data-menu="deploy"]') && !document.activeElement.matches('input'));
   document.addEventListener('keydown', e => {
-    if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'f') { e.preventDefault(); S.palette = S.palette ? null : { q: '', regex: false, sel: 0 }; render(); document.getElementById('pq')?.focus(); return; }
-    if (e.ctrlKey && !e.shiftKey && e.key.toLowerCase() === 'n') { e.preventDefault(); go('wizard'); return; }
-    if (e.ctrlKey && e.key === ',') { e.preventDefault(); go('settings'); return; }
-    if (e.key === 'Escape') { if (S.palette) { S.palette = null; render(); } else if (S.drawer) { S.drawer = false; render(); } return; }
+    if (Kit.menuOpen() || Kit.confirmOpen()) return;
+    if (Kit.nudgePanel(e)) return;
+    if ((e.shiftKey && e.key === 'F10') || e.key === 'ContextMenu') { e.preventDefault(); menuFromKeyboard(); return; }
+    if (e.key === 'Escape') { if (S.palette) { S.palette = null; render(); } else if (S.panel) closePanel(); return; }
     if (S.palette && ['ArrowDown', 'ArrowUp', 'Enter'].includes(e.key)) {
       e.preventDefault(); const P = S.palette;
       if (e.key === 'Enter') { const c = P.items?.[P.sel]; S.palette = null; render(); c?.run(); return; }
-      P.sel = Math.max(0, Math.min((P.items?.length || 1) - 1, P.sel + (e.key === 'ArrowDown' ? 1 : -1))); render(); document.getElementById('pq')?.focus();
+      P.sel = Math.max(0, Math.min((P.items?.length || 1) - 1, P.sel + (e.key === 'ArrowDown' ? 1 : -1))); render(); document.getElementById('pq')?.focus(); return;
     }
+    Kit.dispatch(e);
   });
   api.onWindow(w => { S.maximized = w.maximized; render(); });
   matchMedia('(prefers-color-scheme: light)').addEventListener('change', applyAppearance);
@@ -466,7 +616,7 @@
     VERSION = await api.version();
     S.prov = await api.provenance(); S.update = await api.updateState();
     api.onUpdate(u => { if (u.status !== S.update?.status) S.updateLater = false; S.update = u; render(); });
-    S.settings = (await api.settings()).settings;
+    { const r = await api.settings(); S.settings = r.settings; S.sources = r.sources || {}; S.defaults = r.defaults || {}; }
     applyAppearance();
     const d = S.settings.draft;
     if (d) Object.assign(S.wizard, { step: Math.min(d.step || 1, 3), file: d.file || null, name: d.name || '', port: d.port || '', health: d.health || '/', env: d.env || [] });

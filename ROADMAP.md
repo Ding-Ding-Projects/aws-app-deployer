@@ -32,7 +32,14 @@ Honest inventory of the desktop app and its landing page. **Shipped** means impl
 - [x] Shipped: app rename with reset, scheduled light and dark theme, local settings history with export
 - [ ] Partial: Cantonese covers the main labels; some longer explanatory text is English in every mode
 - [x] Shipped: dim sum surprise shows the dish name in both languages with its published catalog photo; the photo list is cached in application data for a day and photos are never copied
-- [ ] Not started: per-element appearance editor, tabs, context menus, live charts, logo customization, local version history with undo, changelog viewer, offline documentation
+- [x] Shipped: a context menu on every element (right-click, Shift+F10 or the menu key) with a filter field, its own regex builder with token explanations, target-specific actions, and shortcuts shown from the same registry that binds them
+- [x] Shipped: two-key super confirmation for destructive actions: both keys (click or R and M), then a full-range slider, Emergency exit and Escape, focus returned
+- [x] Shipped: accessibility tools in the title bar: text size, high contrast, reduce motion, always-visible focus, larger targets, keyboard help (F1), read the screen aloud, a confirmed hide action with Cancel focused, and reset; reachable from Settings search and the palette when hidden
+- [x] Shipped: an info button above every setting control with what it does, where the value came from (your settings file or the named built-in default), guided steps and a practice control that never changes the real setting; a test fails if a setting has no explanation
+- [x] Shipped: notification centre with search, regex, select all shown, invert, bulk copy and dismiss; errors stay until dismissed
+- [x] Shipped: deployment records with collapsible filter (search, regex, status), multi-select, invert, bulk export and bulk removal through super confirmation
+- [x] Shipped: anchored panels that drag by their header, resize from the corner, move with Alt+Arrows (Shift resizes), and remember size and position per panel with a reset
+- [ ] Not started: per-element appearance editor, element locks, tabs, live charts, logo customization, local version history with undo, changelog viewer, offline documentation
 
 ## Release and site
 

@@ -132,3 +132,17 @@ test('updater is honest outside a Squirrel install and only installs when ready'
   assert.equal(handlers.installed, true);
   assert.equal(handleSquirrelEvent({ quit() {} }), false);
 });
+
+test('store reports where each value came from and removes records with a history entry', () => {
+  const dir = tmp();
+  const s = createStore(dir);
+  assert.equal(s.sources().theme, 'default');
+  s.set('theme', 'dark');
+  assert.equal(createStore(dir).sources().theme, 'file');
+  s.recordDeployment({ name: 'a' }); s.recordDeployment({ name: 'b' });
+  const ats = s.deployments().map(d => d.id);
+  const r = s.removeDeployments([ats[0], 'missing']);
+  assert.deepEqual([r.removed, r.skipped], [1, 1]);
+  assert.equal(s.history().at(-1).key, 'deployments.removed');
+  assert.equal(s.set('a11y', { textSize: 300, contrast: false, focus: false, targets: false, hidden: false }).ok, false);
+});

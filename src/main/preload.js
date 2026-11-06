@@ -16,6 +16,7 @@ contextBridge.exposeInMainWorld('deployer', {
   setSetting: (k, v) => call('set-setting', k, v),
   resetSetting: k => call('reset-setting', k),
   history: () => call('history'),
+  removeDeployments: ats => call('remove-deployments', ats),
   exportHistory: () => call('export-history'),
   dimSum: () => call('dim-sum'),
   version: () => call('version'),

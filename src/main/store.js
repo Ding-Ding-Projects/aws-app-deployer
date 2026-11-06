@@ -11,6 +11,8 @@ const DEFAULTS = Object.freeze({
   focus: false, calm: false, school: false,
   setupComplete: false, launches: 0,
   selection: null, draft: null, vocabulary: null,
+  a11y: { textSize: 100, contrast: false, focus: false, targets: false, hidden: false },
+  ui: { filtersOpen: {}, panels: {} },
 });
 const HISTORY_LIMIT = 300;
 const DEPLOY_LIMIT = 50;
@@ -33,14 +35,17 @@ const VALIDATORS = {
   selection: v => v === null || (v && typeof v.profile === 'string' && typeof v.region === 'string'),
   draft: v => v === null || (v && typeof v === 'object' && JSON.stringify(v).length < 20000 && !('secrets' in v)),
   vocabulary: v => v === null || (v && typeof v === 'object' && v.entries && typeof v.entries === 'object'),
+  a11y: v => v && typeof v === 'object' && Number.isInteger(v.textSize) && v.textSize >= 80 && v.textSize <= 160 && ['contrast', 'focus', 'targets', 'hidden'].every(k => typeof v[k] === 'boolean'),
+  ui: v => v && typeof v === 'object' && v.filtersOpen && typeof v.filtersOpen === 'object' && v.panels && typeof v.panels === 'object' && JSON.stringify(v).length < 20000,
 };
 
 function createStore(dir, { now = () => new Date().toISOString() } = {}) {
   const file = path.join(dir, 'settings.json');
-  let state = { settings: { ...DEFAULTS }, history: [], deployments: [] };
+  let state = { settings: structuredClone(DEFAULTS), history: [], deployments: [] };
+  const written = new Set();
   try {
     const raw = JSON.parse(fs.readFileSync(file, 'utf8'));
-    for (const [k, v] of Object.entries(raw.settings || {})) if (VALIDATORS[k]?.(v) || k === 'launches') state.settings[k] = v;
+    for (const [k, v] of Object.entries(raw.settings || {})) if (VALIDATORS[k]?.(v) || k === 'launches') { state.settings[k] = v; written.add(k); }
     if (Array.isArray(raw.history)) state.history = raw.history.slice(-HISTORY_LIMIT);
     if (Array.isArray(raw.deployments)) state.deployments = raw.deployments.slice(-DEPLOY_LIMIT);
   } catch { /* first run or unreadable file: defaults */ }
@@ -54,6 +59,7 @@ function createStore(dir, { now = () => new Date().toISOString() } = {}) {
       if (!VALIDATORS[key]?.(value)) return { ok: false, error: 'INVALID_INPUT' };
       const before = state.settings[key];
       state.settings[key] = value;
+      written.add(key);
       if (!['draft', 'selection'].includes(key)) state.history.push({ at: now(), key, before: key === 'vocabulary' ? !!before : before, after: key === 'vocabulary' ? !!value : value });
       state.history = state.history.slice(-HISTORY_LIMIT);
       save();
@@ -62,7 +68,19 @@ function createStore(dir, { now = () => new Date().toISOString() } = {}) {
     bumpLaunch() { state.settings.launches = (state.settings.launches || 0) + 1; save(); return state.settings.launches; },
     history: () => structuredClone(state.history),
     deployments: () => structuredClone(state.deployments),
-    recordDeployment(entry) { state.deployments.push({ at: now(), ...entry }); state.deployments = state.deployments.slice(-DEPLOY_LIMIT); save(); },
+    sources: () => Object.fromEntries(Object.keys(DEFAULTS).map(k => [k, written.has(k) ? 'file' : 'default'])),
+    defaults: () => structuredClone(DEFAULTS),
+    removeDeployments(ats) {
+      if (!Array.isArray(ats) || ats.some(a => typeof a !== 'string')) return { ok: false, error: 'INVALID_INPUT' };
+      const before = state.deployments.length, set = new Set(ats);
+      const key = d => d.id || d.at;
+      const removed = state.deployments.filter(d => set.has(key(d)));
+      state.deployments = state.deployments.filter(d => !set.has(key(d)));
+      state.history.push({ at: now(), key: 'deployments.removed', before: removed.map(d => d.name), after: null, restore: removed });
+      save();
+      return { ok: true, removed: before - state.deployments.length, skipped: ats.length - (before - state.deployments.length) };
+    },
+    recordDeployment(entry) { state.deployments.push({ id: require('node:crypto').randomUUID(), at: now(), ...entry }); state.deployments = state.deployments.slice(-DEPLOY_LIMIT); save(); },
     reset(key) { if (!(key in DEFAULTS)) return { ok: false, error: 'INVALID_INPUT' }; return this.set(key, structuredClone(DEFAULTS[key])); },
   };
 }

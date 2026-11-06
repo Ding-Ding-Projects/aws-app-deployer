@@ -178,5 +178,28 @@
   };
   const errorText = code => ERRORS[code] || ('Stopped with code ' + code + '.');
 
-  return { STRINGS, t, funny, parseVocabulary, applyVocabulary, explainRegex, search, parseColor, toRgb, scheduledTheme, STAGES, stageIndex, errorText };
+  // Every setting explains what it does (not its label), with steps for a practice run.
+  const EXPLAIN = {
+    theme: { what: 'Chooses light or dark colours. System follows the Windows app mode and changes when Windows does.', steps: ['Pick Light or Dark on the practice control.', 'Pick System to follow Windows again.'] },
+    accent: { what: 'Sets the colour used for primary buttons, the selected destination and focus rings. Status colours never change.', steps: ['Type a colour such as teal or rgb(0, 128, 128).', 'The preview swatch shows the translated hex value.'] },
+    rainbow: { what: 'Cycles the accent through the colour wheel. With reduce motion on, it stays on one hue.', steps: ['Turn the practice switch on.', 'Turn reduce motion on to see it hold still.'] },
+    reduceMotion: { what: 'Makes every animation and transition finish instantly. Progress still updates and nothing is hidden. Windows\' own reduce-motion setting turns this on too.', steps: ['Toggle the practice switch.', 'Real progress bars still move when values change.'] },
+    displayName: { what: 'Renames how the app shows itself in its title bar and the taskbar. Files, settings and update channels keep the original name.', steps: ['Type a new name in the practice field.', 'Reset restores AWS App Deployer.'] },
+    schedule: { what: 'Switches to light at one time and dark at another, every day, overriding the theme while it is on.', steps: ['Set light from 07:00 and dark from 19:00.', 'Turn it off to return to your chosen theme.'] },
+    language: { what: 'Shows the interface in English, Hong Kong Cantonese, or both together. Commands and AWS names stay exact in every mode.', steps: ['Pick Both on the practice control.', 'Labels show English and Cantonese side by side.'] },
+    funnyLevel: { what: 'Changes how playful the wording is around results, from plain (1) to very playful (5). Facts, numbers and safety warnings never change.', steps: ['Move the practice slider.', 'Read how the sample message changes while its fact stays the same.'] },
+    emoji: { what: 'Adds an emoji to some success messages. Hidden entirely in School mode.', steps: ['Toggle the practice switch.'] },
+    narration: { what: 'Reads status changes aloud with a voice installed on this computer. Off by default, one message at a time.', steps: ['Turn the practice switch on.', 'Choose a voice once the real switch is on.'] },
+    voice: { what: 'Picks which installed voice reads status aloud. Choose automatically uses the system default.', steps: ['Pick a voice from the list.'] },
+    rate: { what: 'Sets how fast narration speaks, from half speed to double speed.', steps: ['Move the practice slider.'] },
+    sounds: { what: 'Plays short, quiet tones when a deployment starts, succeeds or stops.', steps: ['Toggle the practice switch.'] },
+    focus: { what: 'Hides side panels so each screen leads with one obvious next action. Nothing is disabled.', steps: ['Toggle the practice switch.'] },
+    calm: { what: 'Stops pulsing rings and looping highlights for a quieter screen. Progress still shows.', steps: ['Toggle the practice switch.'] },
+    school: { what: 'Hides playful extras everywhere: the dim sum surprise, the funny level, emoji and playful wording.', steps: ['Toggle the practice switch.'] },
+    vocabulary: { what: 'Replaces words in the interface with your own from a JSON file. It stays on this computer and applies all at once or not at all.', steps: ['Choose or drop a file shaped like {"version": 1, "entries": {"Deploy": "Ship"}}.', 'Clear restores the original words.'] },
+    a11y: { what: 'Text size, contrast, focus rings and target size from the accessibility tools menu.', steps: ['Open the accessibility button in the title bar.'] },
+  };
+  const SETTINGS_ON_SCREEN = ['theme', 'accent', 'rainbow', 'reduceMotion', 'displayName', 'schedule', 'language', 'funnyLevel', 'emoji', 'narration', 'voice', 'rate', 'sounds', 'focus', 'calm', 'school', 'vocabulary', 'a11y'];
+
+  return { EXPLAIN, SETTINGS_ON_SCREEN, STRINGS, t, funny, parseVocabulary, applyVocabulary, explainRegex, search, parseColor, toRgb, scheduledTheme, STAGES, stageIndex, errorText };
 });

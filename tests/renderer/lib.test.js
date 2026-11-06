@@ -60,3 +60,14 @@ test('every backend stage maps to a visible step', () => {
   assert.equal(Lib.stageIndex('complete'), Lib.STAGES.length);
   assert.equal(Lib.stageIndex('repository'), Lib.stageIndex('push'));
 });
+
+test('every setting on screen explains itself with real guided steps', () => {
+  const { DEFAULTS } = require('../../src/main/store');
+  for (const key of Lib.SETTINGS_ON_SCREEN) {
+    const ex = Lib.EXPLAIN[key];
+    assert.ok(ex, `missing explanation for ${key}`);
+    assert.ok(ex.what.length > 40, `${key} explanation restates its label`);
+    assert.ok(ex.steps.length >= 1, `${key} has no guided step`);
+    assert.ok(key in DEFAULTS, `${key} has no real default to show as provenance`);
+  }
+});
