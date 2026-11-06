@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Settings</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="./app.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400..700&amp;family=JetBrains+Mono:wght@400;500&amp;family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,300..600,0..1,0&amp;display=block">
+<style>
+body{margin:0}
+a{color:#6ea8ff}a:hover{color:#9fc2ff}
+.set{display:flex;align-items:center;gap:14px;padding:12px 0}
+.set + .set{border-top:1px solid var(--line)}
+.sw{width:28px;height:28px;border-radius:50%;border:0;flex:none}
+</style>
+</helmet>
+<div class="app {{themeClass}}">
+  <div class="titlebar"><span class="name">AWS App Deployer</span><span class="proto">Prototype · sample data</span><span class="grow"></span><div class="caption"><span><i class="ms">remove</i></span><span><i class="ms">crop_square</i></span><span><i class="ms">close</i></span></div></div>
+  <div class="body">
+    <nav class="rail" aria-label="Main">
+      <a class="fab" href="WizardSource.dc.html" aria-label="New deployment"><i class="ms lg" aria-hidden="true">add</i></a>
+      <a class="navi" href="Main.dc.html"><span class="pill"><i class="ms" aria-hidden="true">rocket_launch</i></span>Deploys</a>
+      <a class="navi" href="Connections.dc.html"><span class="pill"><i class="ms" aria-hidden="true">key</i></span>Accounts</a>
+      <a class="navi on" href="Settings.dc.html"><span class="pill"><i class="ms" aria-hidden="true">tune</i></span>Settings</a>
+      <span class="gap"></span>
+      <a class="navi" href="Onboarding.dc.html"><span class="pill"><i class="ms" aria-hidden="true">help</i></span>Help</a>
+    </nav>
+    <main class="main">
+      <header class="topbar">
+        <h1 class="rise">Settings</h1>
+        <span class="grow"></span>
+        <div class="field rise" style="--i:1; flex: 0 1 420px; position: relative">
+          <label for="st-q" style="position: absolute; left: -9999px">Search settings</label>
+          <input id="st-q" placeholder="Search settings" style="padding-left: 42px; padding-right: 52px; border-radius: 22px">
+          <i class="ms" style="position: absolute; left: 14px; top: 12px; color: var(--tx3)" aria-hidden="true">search</i>
+          <button class="badge mute mono" style="position: absolute; right: 10px; top: 10px; border: 0" aria-label="Regex search">.*</button>
+        </div>
+        <span class="small">Saved on this computer</span>
+      </header>
+      <div class="content">
+        <div class="cols">
+          <div class="wide" style="flex-direction: row; flex-wrap: wrap; align-items: flex-start">
+            <div class="card rise" style="--i:1; flex: 1 1 360px; gap: 0">
+              <span class="h2" style="padding-bottom: 6px">Appearance</span>
+              <div class="set"><span class="stack grow" style="flex: 1"><span class="t" style="font-weight: 600">Theme</span><span class="small">Follows Windows unless you pick one</span></span><span class="seg"><button>System</button><button>Light</button><button class="on">Dark</button></span></div>
+              <div class="set"><span class="stack grow" style="flex: 1"><span class="t" style="font-weight: 600">Accent colour</span><span class="small">Any colour, or type a hex, RGB or name</span></span><span class="row" style="gap: 8px"><button class="sw" style="background: #6ea8ff; box-shadow: 0 0 0 2px var(--s2), 0 0 0 4px #6ea8ff" aria-label="Blue, selected"></button><button class="sw" style="background: #4ade9a" aria-label="Green"></button><button class="sw" style="background: #f5b451" aria-label="Amber"></button><button class="sw" style="background: #ff8a8a" aria-label="Coral"></button><button class="sw" style="background: conic-gradient(red, yellow, lime, cyan, blue, magenta, red)" aria-label="Rainbow, cycles colours"></button></span></div>
+              <div class="set"><span class="stack grow" style="flex: 1"><span class="t" style="font-weight: 600">Reduce motion</span><span class="small">Replaces movement with simple fades</span></span><span class="toggle" role="switch" aria-checked="false" aria-label="Reduce motion"></span></div>
+              <div class="set"><span class="stack grow" style="flex: 1"><span class="t" style="font-weight: 600">App name</span><span class="small">Rename how this app shows itself</span></span><span class="row" style="gap: 6px"><span class="chip mono">AWS App Deployer</span><button class="btn text" style="padding: 0 8px">Reset</button></span></div>
+              <div class="set"><span class="stack grow" style="flex: 1"><span class="t" style="font-weight: 600">Schedule</span><span class="small">Light from 07:00, dark from 19:00, every day</span></span><span class="toggle on" role="switch" aria-checked="true" aria-label="Scheduled appearance"></span></div>
+            </div>
+            <div class="card rise" style="--i:2; flex: 1 1 360px; gap: 0">
+              <span class="h2" style="padding-bottom: 6px">Language and voice</span>
+              <div class="set"><span class="stack grow" style="flex: 1"><span class="t" style="font-weight: 600">Language</span></span><span class="seg"><button class="on">English</button><button>廣東話</button><button>Both</button></span></div>
+              <div class="set" style="flex-wrap: wrap"><span class="stack grow" style="flex: 1 1 170px"><span class="t" style="font-weight: 600">Funny level</span><span class="small">Changes the wording only, never the facts</span></span><input type="range" min="1" max="5" value="3" aria-label="Funny level" style="flex: 1 1 100px; min-width: 0; accent-color: var(--ac)"><span class="badge ac" style="width: 28px; justify-content: center; padding: 0">3</span>
+                <span class="card" style="flex: 1 1 100%; background: var(--s1); padding: 12px 14px; margin-top: 10px; gap: 2px"><span class="small">Preview</span><span>Deployed. Your app is out in the wild and behaving itself.</span></span></div>
+              <div class="set"><span class="stack grow" style="flex: 1"><span class="t" style="font-weight: 600">Emoji in messages</span></span><span class="toggle on" role="switch" aria-checked="true" aria-label="Emoji in messages"></span></div>
+              <div class="set"><span class="stack grow" style="flex: 1"><span class="t" style="font-weight: 600">Read status aloud</span><span class="small">Voice: Microsoft Aria · rate 1.0</span></span><span class="toggle" role="switch" aria-checked="false" aria-label="Narration"></span></div>
+              <div class="set"><span class="stack grow" style="flex: 1"><span class="t" style="font-weight: 600">Action sounds</span><span class="small">Soft cues for deploy, success and errors</span></span><span class="toggle on" role="switch" aria-checked="true" aria-label="Action sounds"></span></div>
+            </div>
+          </div>
+          <div class="side">
+            <div class="drop idle rise" style="--i:3; flex-direction: column; align-items: flex-start; gap: 12px; padding: 22px">
+              <div class="row"><span class="tile ac"><i class="ms fill" aria-hidden="true">dictionary</i></span><span class="stack"><span style="font-weight: 650">Personal wording</span><span class="small">Drop a vocabulary JSON anywhere in the app</span></span></div>
+              <span class="small">Stays on this computer. Applied all at once or not at all. Clear it to restore the original words.</span>
+              <span class="row" style="gap: 8px"><button class="btn tonal">Choose file</button><button class="btn text">Clear</button></span>
+            </div>
+            <div class="card rise" style="--i:4; gap: 0">
+              <span class="h2" style="padding-bottom: 6px">Focus and comfort</span>
+              <div class="set"><span class="stack grow" style="flex: 1"><span class="t" style="font-weight: 600">Focus mode</span><span class="small">One obvious next action per screen</span></span><span class="toggle" role="switch" aria-checked="false" aria-label="Focus mode"></span></div>
+              <div class="set"><span class="stack grow" style="flex: 1"><span class="t" style="font-weight: 600">Calm mode</span><span class="small">Fewer colours, no pulsing</span></span><span class="toggle" role="switch" aria-checked="false" aria-label="Calm mode"></span></div>
+              <div class="set"><span class="stack grow" style="flex: 1"><span class="t" style="font-weight: 600">School mode</span><span class="small">Hides playful extras everywhere</span></span><span class="toggle" role="switch" aria-checked="false" aria-label="School mode"></span></div>
+              <div class="set" style="flex-wrap: wrap"><span class="stack grow" style="flex: 1"><span class="t" style="font-weight: 600">Dim sum surprise</span><span class="small">A rare treat at launch</span></span><span class="toggle on" role="switch" aria-checked="true" aria-label="Dim sum surprise" style="animation: trollBack 2.8s var(--ease) 1.4s both"></span>
+                <span class="card pop" style="--i:8; flex: 1 1 100%; flex-direction: row; gap: 10px; align-items: center; padding: 10px 14px; margin-top: 10px; background: var(--warn-c)" role="status"><i class="ms fill" style="color: var(--warn)" aria-hidden="true">lock</i><span class="small" style="color: var(--tx)">Nice try. Dim sum surprise cannot be turned off.</span></span></div>
+            </div>
+            <span class="small rise" style="--i:5"><span class="mono">Ctrl+Shift+F</span> opens the command palette from anywhere.</span>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["dark","light"],"default":"dark"},"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+renderVals() {
+return { themeClass: (this.props.theme ?? 'dark') === 'light' ? 'light' : '' };
+}
+}
+</script>
+</body>
+</html>

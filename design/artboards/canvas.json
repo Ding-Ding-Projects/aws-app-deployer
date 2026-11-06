@@ -1,0 +1,209 @@
+{
+  "v": 3,
+  "createdOnFiles": {
+    "v": 1,
+    "at": "2026-11-06T19:40:00Z"
+  },
+  "title": "AWS App Deployer app",
+  "launch": {
+    "view": "canvas"
+  },
+  "pages": [],
+  "boards": {
+    "Onboarding.dc.html": {
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "expand": "fill",
+      "is_interactive": true,
+      "title": "1 \u00b7 First launch and prerequisite checks"
+    },
+    "Connect.dc.html": {
+      "x": 1520,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "expand": "fill",
+      "is_interactive": true,
+      "title": "2 \u00b7 AWS browser sign-in and return"
+    },
+    "Connections.dc.html": {
+      "x": 3040,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "expand": "fill",
+      "is_interactive": true,
+      "title": "3 \u00b7 Connections and profiles"
+    },
+    "Expired.dc.html": {
+      "x": 4560,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "expand": "fill",
+      "is_interactive": true,
+      "title": "4 \u00b7 Expired sign-in"
+    },
+    "Installer.dc.html": {
+      "x": 6080,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "expand": "fill",
+      "is_interactive": true,
+      "title": "4b \u00b7 One-click dependency installer"
+    },
+    "Main.dc.html": {
+      "x": 0,
+      "y": 1400,
+      "w": 1440,
+      "h": 900,
+      "expand": "fill",
+      "is_interactive": true,
+      "title": "5 \u00b7 Deployments overview"
+    },
+    "WizardSource.dc.html": {
+      "x": 1520,
+      "y": 1400,
+      "w": 1440,
+      "h": 900,
+      "expand": "fill",
+      "is_interactive": true,
+      "title": "6 \u00b7 Wizard: Dockerfile or Compose source"
+    },
+    "WizardReview.dc.html": {
+      "x": 3040,
+      "y": 1400,
+      "w": 1440,
+      "h": 900,
+      "expand": "fill",
+      "is_interactive": true,
+      "title": "7 \u00b7 Wizard: configure and review"
+    },
+    "Running.dc.html": {
+      "x": 4560,
+      "y": 1400,
+      "w": 1440,
+      "h": 900,
+      "expand": "fill",
+      "is_interactive": true,
+      "title": "8 \u00b7 Deployment running"
+    },
+    "Healthy.dc.html": {
+      "x": 0,
+      "y": 2800,
+      "w": 1440,
+      "h": 900,
+      "expand": "fill",
+      "is_interactive": true,
+      "title": "9 \u00b7 Healthy deployment"
+    },
+    "Failure.dc.html": {
+      "x": 1520,
+      "y": 2800,
+      "w": 1440,
+      "h": 900,
+      "expand": "fill",
+      "is_interactive": true,
+      "title": "10 \u00b7 Failure, repair and rollback"
+    },
+    "Settings.dc.html": {
+      "x": 3040,
+      "y": 2800,
+      "w": 1440,
+      "h": 900,
+      "expand": "fill",
+      "is_interactive": true,
+      "title": "11 \u00b7 Settings"
+    },
+    "Motion.dc.html": {
+      "x": 4560,
+      "y": 2800,
+      "w": 1440,
+      "h": 900,
+      "title": "12 \u00b7 Motion and tokens"
+    },
+    "Palette.dc.html": {
+      "x": 6080,
+      "y": 2800,
+      "w": 1440,
+      "h": 900,
+      "expand": "fill",
+      "title": "13 \u00b7 Command palette, regex builder and notifications"
+    },
+    "Features.dc.html": {
+      "x": 0,
+      "y": 4200,
+      "w": 1440,
+      "h": 1100,
+      "title": "14 \u00b7 Feature map"
+    },
+    "Landing.dc.html": {
+      "x": 1520,
+      "y": 4200,
+      "w": 1440,
+      "h": 4200,
+      "expand": "fill",
+      "title": "15 \u00b7 Landing page"
+    }
+  },
+  "order": [
+    "Main.dc.html",
+    "Onboarding.dc.html",
+    "Connect.dc.html",
+    "Connections.dc.html",
+    "Expired.dc.html",
+    "Installer.dc.html",
+    "WizardSource.dc.html",
+    "WizardReview.dc.html",
+    "Running.dc.html",
+    "Healthy.dc.html",
+    "Failure.dc.html",
+    "Settings.dc.html",
+    "Motion.dc.html",
+    "Palette.dc.html",
+    "Features.dc.html",
+    "Landing.dc.html"
+  ],
+  "notes": {
+    "rowConnect": {
+      "x": 0,
+      "y": -300,
+      "text": "Connect AWS: first launch, browser sign-in, profiles",
+      "kind": "title1",
+      "maxW": 6000
+    },
+    "rowDeploy": {
+      "x": 0,
+      "y": 1100,
+      "text": "Deploy: overview, wizard, live progress",
+      "kind": "title1",
+      "maxW": 6000
+    },
+    "rowResult": {
+      "x": 0,
+      "y": 2500,
+      "text": "Results, recovery, Settings and motion",
+      "kind": "title1",
+      "maxW": 6000
+    },
+    "rowSite": {
+      "x": 0,
+      "y": 3900,
+      "text": "Feature map and the landing page",
+      "kind": "title1",
+      "maxW": 3000
+    },
+    "protoNote": {
+      "x": -560,
+      "y": 0,
+      "w": 440,
+      "text": "Prototype only. Every account, URL, digest and status drawn here is sample data, never live infrastructure. Stage states come from backend events, never timers. Click the navigation rail, wizard buttons and status links in Play to walk the flow.",
+      "size": "m",
+      "fill": "orange"
+    }
+  },
+  "designSystems": []
+}

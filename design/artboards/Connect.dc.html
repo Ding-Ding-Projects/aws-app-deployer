@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>AWS browser sign-in</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="./app.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400..700&amp;family=JetBrains+Mono:wght@400;500&amp;family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,300..600,0..1,0&amp;display=block">
+<style>
+body{margin:0}
+a{color:#6ea8ff}a:hover{color:#9fc2ff}
+</style>
+</helmet>
+<div class="app {{themeClass}}">
+  <div class="titlebar"><span class="name">AWS App Deployer</span><span class="proto">Prototype · sample data</span><span class="grow"></span><div class="caption"><span><i class="ms">remove</i></span><span><i class="ms">crop_square</i></span><span><i class="ms">close</i></span></div></div>
+  <div class="body">
+    <nav class="rail" aria-label="Main">
+      <a class="fab" href="WizardSource.dc.html" aria-label="New deployment"><i class="ms lg" aria-hidden="true">add</i></a>
+      <a class="navi" href="Main.dc.html"><span class="pill"><i class="ms" aria-hidden="true">rocket_launch</i></span>Deploys</a>
+      <a class="navi on" href="Connections.dc.html"><span class="pill"><i class="ms" aria-hidden="true">key</i></span>Accounts</a>
+      <a class="navi" href="Settings.dc.html"><span class="pill"><i class="ms" aria-hidden="true">tune</i></span>Settings</a>
+      <span class="gap"></span>
+      <a class="navi" href="Onboarding.dc.html"><span class="pill"><i class="ms" aria-hidden="true">help</i></span>Help</a>
+    </nav>
+    <main class="main">
+      <header class="topbar">
+        <a class="btn text" href="Onboarding.dc.html" style="padding: 0 8px"><i class="ms" aria-hidden="true">arrow_back</i>Back</a>
+        <h1 class="rise">Connect team-dev</h1>
+        <span class="grow"></span>
+        <span class="badge ac rise" style="--i:1">Setup · step 2 of 3</span>
+      </header>
+      <div class="content" style="align-items: center; justify-content: center">
+        <div class="card raise rise" style="--i:1; width: min(760px, 100%); padding: 36px; gap: 28px; border: 1px solid var(--line)">
+          <div class="row" style="gap: 20px; align-items: flex-start">
+            <span class="tile ac" style="width: 64px; height: 64px; border-radius: 20px; position: relative"><i class="ms lg fill" aria-hidden="true">open_in_browser</i></span>
+            <span class="stack grow" style="gap: 6px">
+              <span style="font-size: 22px; font-weight: 650; letter-spacing: -.02em">Finish signing in from your browser</span>
+              <span class="sub">Your browser opened the AWS access portal. Approve the request there. This window comes back to the front by itself once AWS confirms who you are.</span>
+            </span>
+          </div>
+          <div class="steps" aria-live="polite">
+            <div class="step done rise" style="--i:2"><span class="n"><i class="ms sm" aria-hidden="true">check</i></span><span class="stack grow"><span class="t">Prerequisites checked</span><span class="m">AWS CLI v2, Docker Engine and Buildx are ready</span></span></div>
+            <div class="step done rise" style="--i:3"><span class="n"><i class="ms sm" aria-hidden="true">check</i></span><span class="stack grow"><span class="t">Browser opened</span><span class="m">AWS CLI handles the sign-in and keeps its own credential cache</span></span></div>
+            <div class="step now rise" style="--i:4"><span class="n">3</span><span class="stack grow"><span class="t">Waiting for you to approve in the browser</span><span class="m">Times out in <span class="mono">9:42</span></span></span><span class="spin" style="margin-top: 4px"></span></div>
+            <div class="step off rise" style="--i:5"><span class="n">4</span><span class="stack grow"><span class="t">Verify account</span><span class="m">Confirms account ID, role and region with AWS STS</span></span></div>
+            <div class="step off rise" style="--i:6"><span class="n">5</span><span class="stack grow"><span class="t">Connected</span></span></div>
+          </div>
+          <div class="divider"></div>
+          <div class="row" style="flex-wrap: wrap">
+            <button class="btn tonal"><i class="ms" aria-hidden="true">refresh</i>Reopen browser</button>
+            <a class="btn out" href="Onboarding.dc.html">Cancel sign-in</a>
+            <span class="grow"></span>
+            <a class="btn fillb" href="Connections.dc.html">Simulate success<i class="ms" aria-hidden="true">arrow_forward</i></a>
+          </div>
+          <span class="small" style="margin-top: -12px">"Simulate success" exists only in this prototype to walk the flow. Your sign-in tokens are never shown in this app.</span>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["dark","light"],"default":"dark"},"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+renderVals() {
+return { themeClass: (this.props.theme ?? 'dark') === 'light' ? 'light' : '' };
+}
+}
+</script>
+</body>
+</html>

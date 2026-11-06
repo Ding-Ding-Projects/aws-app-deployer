@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>New deployment: source</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="./app.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400..700&amp;family=JetBrains+Mono:wght@400;500&amp;family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,300..600,0..1,0&amp;display=block">
+<style>
+body{margin:0}
+a{color:#6ea8ff}a:hover{color:#9fc2ff}
+</style>
+</helmet>
+<div class="app {{themeClass}}">
+  <div class="titlebar"><span class="name">AWS App Deployer</span><span class="proto">Prototype · sample data</span><span class="grow"></span><div class="caption"><span><i class="ms">remove</i></span><span><i class="ms">crop_square</i></span><span><i class="ms">close</i></span></div></div>
+  <div class="body">
+    <nav class="rail" aria-label="Main">
+      <a class="fab" href="WizardSource.dc.html" aria-label="New deployment"><i class="ms lg" aria-hidden="true">add</i></a>
+      <a class="navi on" href="Main.dc.html"><span class="pill"><i class="ms" aria-hidden="true">rocket_launch</i></span>Deploys</a>
+      <a class="navi" href="Connections.dc.html"><span class="pill"><i class="ms" aria-hidden="true">key</i></span>Accounts</a>
+      <a class="navi" href="Settings.dc.html"><span class="pill"><i class="ms" aria-hidden="true">tune</i></span>Settings</a>
+      <span class="gap"></span>
+      <a class="navi" href="Onboarding.dc.html"><span class="pill"><i class="ms" aria-hidden="true">help</i></span>Help</a>
+    </nav>
+    <main class="main">
+      <header class="topbar">
+        <a class="btn text" href="Main.dc.html" style="padding: 0 8px" aria-label="Close wizard"><i class="ms" aria-hidden="true">close</i></a>
+        <h1 class="rise">New deployment</h1>
+        <span class="grow"></span>
+        <span class="small rise" style="--i:1"><i class="ms sm" aria-hidden="true">save</i> Draft saved · no secrets stored</span>
+      </header>
+      <div class="content">
+        <div class="cols">
+          <nav class="side" style="flex: 0 1 260px" aria-label="Wizard steps">
+            <div class="steps rise" style="--i:1">
+              <div class="step done"><span class="n"><i class="ms sm" aria-hidden="true">check</i></span><span class="stack"><span class="t">Account</span><span class="m mono">team-dev · us-east-1</span></span></div>
+              <div class="step now"><span class="n">2</span><span class="stack"><span class="t">Source</span><span class="m">Dockerfile or Compose</span></span></div>
+              <div class="step off"><span class="n">3</span><span class="stack"><span class="t">Configure</span><span class="m">Port, health, size</span></span></div>
+              <div class="step off"><span class="n">4</span><span class="stack"><span class="t">Review and deploy</span></span></div>
+            </div>
+          </nav>
+          <div class="wide">
+            <div class="drop idle rise" style="--i:2">
+              <span class="tile ac" style="width: 56px; height: 56px; border-radius: 18px"><i class="ms lg fill" aria-hidden="true">folder_open</i></span>
+              <span class="stack grow" style="flex: 1"><span style="font-size: 17px; font-weight: 650">C:\Projects\orders-api</span><span class="sub">Found <span class="mono">compose.yaml</span> · inspected 2 services</span></span>
+              <button class="btn out">Choose another folder</button>
+            </div>
+            <div class="row"><span class="h2">Detected services</span><span class="grow"></span><span class="small">Pick the one visitors open</span></div>
+            <div class="list">
+              <span class="li rise" style="--i:3; background: var(--ac-c); color: var(--on-ac-c)">
+                <i class="ms fill" aria-hidden="true">radio_button_checked</i>
+                <span class="stack grow" style="flex: 1"><span class="t">web</span><span class="m" style="color: inherit; opacity: .8">build ./web · port 8080 · public entry point</span></span>
+                <span class="badge ok"><i class="ms sm" aria-hidden="true">check</i>Supported</span>
+              </span>
+              <span class="li rise" style="--i:4">
+                <i class="ms" style="color: var(--tx3)" aria-hidden="true">radio_button_unchecked</i>
+                <span class="stack grow" style="flex: 1"><span class="t">db</span><span class="m">image postgres:16 · volume ./data:/var/lib/postgresql/data</span></span>
+                <span class="badge warn"><i class="ms sm" aria-hidden="true">block</i>Not supported yet</span>
+              </span>
+            </div>
+            <div class="card rise" style="--i:5; flex-direction: row; gap: 14px; align-items: flex-start; background: var(--warn-c)">
+              <i class="ms fill" style="color: var(--warn)" aria-hidden="true">warning</i>
+              <span class="stack grow" style="flex: 1; gap: 6px"><span style="font-weight: 650">This version deploys one Compose service.</span><span class="sub">The <span class="mono">db</span> service and its host bind mount would not be created. Point <span class="mono">web</span> at a managed database, or remove <span class="mono">db</span> to continue. Nothing is created in AWS until you press Deploy.</span></span>
+            </div>
+            <div class="row" style="justify-content: flex-end; gap: 8px">
+              <a class="btn out" href="Connections.dc.html">Back</a>
+              <a class="btn fillb" href="WizardReview.dc.html">Next: configure<i class="ms" aria-hidden="true">arrow_forward</i></a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["dark","light"],"default":"dark"},"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+renderVals() {
+return { themeClass: (this.props.theme ?? 'dark') === 'light' ? 'light' : '' };
+}
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Install missing tools</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="./app.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400..700&amp;family=JetBrains+Mono:wght@400;500&amp;family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,300..600,0..1,0&amp;display=block">
+<style>
+body{margin:0}
+a{color:#6ea8ff}a:hover{color:#9fc2ff}
+</style>
+</helmet>
+<div class="app {{themeClass}}">
+  <div class="titlebar"><span class="name">AWS App Deployer</span><span class="proto">Prototype · sample data</span><span class="grow"></span><div class="caption"><span><i class="ms">remove</i></span><span><i class="ms">crop_square</i></span><span><i class="ms">close</i></span></div></div>
+  <div class="body" style="justify-content: center; padding: 40px 24px; overflow: auto">
+    <div style="width: min(1040px, 100%); display: flex; flex-direction: column; gap: 24px">
+      <div class="row rise" style="gap: 8px">
+        <a class="btn text" href="Onboarding.dc.html" style="padding: 0 8px"><i class="ms" aria-hidden="true">arrow_back</i>Back</a>
+        <span class="badge ac">Setup · step 1 of 3</span>
+      </div>
+      <div class="row rise" style="--i:1; align-items: flex-end; flex-wrap: wrap; gap: 20px">
+        <div class="stack grow" style="gap: 8px; flex: 1 1 480px">
+          <h1 class="h1" style="font-size: 36px; letter-spacing: -.035em">Two tools are missing. Install them in one click.</h1>
+          <p class="sub" style="margin: 0; font-size: 15px">Press once. Each tool is downloaded from its publisher, its signature is checked, and it installs silently. Problems are fixed automatically. Windows asks for your permission once; this app never answers that prompt for you.</p>
+        </div>
+        <button class="btn fillb big" style="flex: none"><i class="ms fill" aria-hidden="true">download</i>Install everything</button>
+      </div>
+      <div class="card raise rise" style="--i:2; padding: 8px; gap: 0; border: 1px solid var(--line)">
+        <div class="li" style="padding: 18px">
+          <span class="tile ok"><svg class="check" width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 12.5l4.2 4.2L19 7" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"></path></svg></span>
+          <span class="stack grow" style="flex: 1"><span class="t">AWS CLI v2</span><span class="m">Amazon Web Services · <span class="mono">Amazon.AWSCLI</span> · signature verified</span></span>
+          <span class="badge ok">Installed 2.17.40</span>
+        </div>
+        <div class="divider" style="margin: 0 18px"></div>
+        <div class="li" style="padding: 18px">
+          <span class="tile ac"><span class="spin"></span></span>
+          <span class="stack grow" style="flex: 1; gap: 8px">
+            <span class="stack"><span class="t">Docker Desktop</span><span class="m">Docker Inc. · <span class="mono">Docker.DockerDesktop</span></span></span>
+            <span class="bar"><i style="width: 64%; animation: fillTo 2.4s var(--ease) both"></i></span>
+            <span class="m">Downloading 352 of 551 MB · includes Docker Engine and Buildx</span>
+          </span>
+          <span class="badge ac">64%</span>
+        </div>
+        <div class="divider" style="margin: 0 18px"></div>
+        <div class="li" style="padding: 18px">
+          <span class="tile"><i class="ms" aria-hidden="true">admin_panel_settings</i></span>
+          <span class="stack grow" style="flex: 1"><span class="t">Windows permission prompt</span><span class="m">Appears after the download. Approve it to continue, or cancel to skip Docker.</span></span>
+          <span class="badge mute">Next</span>
+        </div>
+        <div class="divider" style="margin: 0 18px"></div>
+        <div class="li" style="padding: 18px">
+          <span class="tile"><i class="ms" aria-hidden="true">restart_alt</i></span>
+          <span class="stack grow" style="flex: 1"><span class="t">Check again</span><span class="m">Docker may ask you to sign out of Windows once. Setup resumes where you left it.</span></span>
+          <span class="badge mute">Then</span>
+        </div>
+      </div>
+      <div class="cols" style="align-items: stretch">
+        <div class="wide">
+          <div class="log rise mono" style="--i:3; flex: 1" aria-label="Installer activity">
+            <div class="ln ok" style="--i:1"><time>14:22:03</time>Found Windows Package Manager 1.9</div>
+            <div class="ln ok" style="--i:2"><time>14:22:05</time>AWS CLI v2 installed, version check passed</div>
+            <div class="ln" style="--i:3"><time>14:22:06</time>Package manager source timed out, switched to publisher installer</div>
+            <div class="ln ok" style="--i:3"><time>14:22:07</time>Docker Desktop: publisher signature verified (Docker Inc)</div>
+            <div class="ln caret" style="--i:4"><time>14:22:41</time>Docker Desktop: downloading</div>
+          </div>
+        </div>
+        <div class="side">
+          <div class="card outline rise" style="--i:4">
+            <div class="row"><i class="ms" style="color: var(--tx3)" aria-hidden="true">build</i><span class="h2">Fixed automatically</span></div>
+            <span class="li" style="padding: 6px 0"><i class="ms sm" style="color: var(--ok)" aria-hidden="true">check</i><span class="small">Package manager missing: switches to the publisher's signed installer</span></span>
+            <span class="li" style="padding: 6px 0"><i class="ms sm" style="color: var(--ok)" aria-hidden="true">check</i><span class="small">Download interrupted: resumes and retries, up to 3 times</span></span>
+            <span class="li" style="padding: 6px 0"><i class="ms sm" style="color: var(--ok)" aria-hidden="true">check</i><span class="small">WSL not ready for Docker: enables and updates it</span></span>
+            <span class="li" style="padding: 6px 0"><i class="ms sm" style="color: var(--ok)" aria-hidden="true">check</i><span class="small">Installed but not found: refreshes PATH and checks again</span></span>
+            <span class="li" style="padding: 6px 0"><i class="ms sm" style="color: var(--ok)" aria-hidden="true">check</i><span class="small">Docker installed but stopped: starts it and waits for the engine</span></span>
+            <span class="small">Only a declined Windows prompt or a blocked company policy stops it, and then it says exactly which.</span>
+            <a class="btn out" href="Onboarding.dc.html" style="align-self: flex-start">Cancel install</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["dark","light"],"default":"dark"},"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+renderVals() {
+return { themeClass: (this.props.theme ?? 'dark') === 'light' ? 'light' : '' };
+}
+}
+</script>
+</body>
+</html>

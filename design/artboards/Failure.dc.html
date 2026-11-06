@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Deployment rolled back</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="./app.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400..700&amp;family=JetBrains+Mono:wght@400;500&amp;family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,300..600,0..1,0&amp;display=block">
+<style>
+body{margin:0}
+a{color:#6ea8ff}a:hover{color:#9fc2ff}
+</style>
+</helmet>
+<div class="app {{themeClass}}">
+  <div class="titlebar"><span class="name">AWS App Deployer</span><span class="proto">Prototype · sample data</span><span class="grow"></span><div class="caption"><span><i class="ms">remove</i></span><span><i class="ms">crop_square</i></span><span><i class="ms">close</i></span></div></div>
+  <div class="body">
+    <nav class="rail" aria-label="Main">
+      <a class="fab" href="WizardSource.dc.html" aria-label="New deployment"><i class="ms lg" aria-hidden="true">add</i></a>
+      <a class="navi on" href="Main.dc.html"><span class="pill"><i class="ms" aria-hidden="true">rocket_launch</i></span>Deploys</a>
+      <a class="navi" href="Connections.dc.html"><span class="pill"><i class="ms" aria-hidden="true">key</i></span>Accounts</a>
+      <a class="navi" href="Settings.dc.html"><span class="pill"><i class="ms" aria-hidden="true">tune</i></span>Settings</a>
+      <span class="gap"></span>
+      <a class="navi" href="Onboarding.dc.html"><span class="pill"><i class="ms" aria-hidden="true">help</i></span>Help</a>
+    </nav>
+    <main class="main">
+      <header class="topbar">
+        <a class="btn text" href="Main.dc.html" style="padding: 0 8px" aria-label="Back to deployments"><i class="ms" aria-hidden="true">arrow_back</i></a>
+        <span class="stack"><h1>docs-portal</h1><span class="small mono">operation op-2c18e4 · 1234 5678 9012 · us-east-1</span></span>
+        <span class="grow"></span>
+        <span class="badge warn">Rolled back</span>
+      </header>
+      <div class="content">
+        <div class="card rise" style="flex-direction: row; flex-wrap: wrap; gap: 18px; align-items: flex-start; padding: 24px; background: var(--warn-c)">
+          <span class="tile warn pop" style="width: 52px; height: 52px; border-radius: 16px; background: var(--s1)"><i class="ms lg fill" aria-hidden="true">history</i></span>
+          <span class="stack grow" style="flex: 1; gap: 6px">
+            <span style="font-size: 20px; font-weight: 650; letter-spacing: -.02em">The new release failed health checks, so the previous one stayed live.</span>
+            <span class="sub">Both new tasks returned HTTP 500 on <span class="mono">/healthz</span>. ECS rolled back automatically. Visitors kept getting the last working version the whole time.</span>
+          </span>
+          <a class="btn fillb" href="WizardReview.dc.html" style="flex: none"><i class="ms" aria-hidden="true">replay</i>Fix and redeploy</a>
+        </div>
+        <div class="cols">
+          <div class="wide">
+            <div class="row"><span class="h2">What happened and what was repaired</span><span class="grow"></span><span class="small">Retry budget: 2 of 5 used</span></div>
+            <div class="list">
+              <span class="li rise" style="--i:1"><span class="tile ok"><i class="ms fill" aria-hidden="true">autorenew</i></span><span class="stack grow" style="flex: 1"><span class="t">AWS throttled the request</span><span class="m">Repaired: waited 4 s and retried once. Succeeded.</span></span><span class="badge ok">Fixed</span></span>
+              <span class="li rise" style="--i:2"><span class="tile ok"><i class="ms fill" aria-hidden="true">sync_problem</i></span><span class="stack grow" style="flex: 1"><span class="t">Timed out waiting for the stack</span><span class="m">Repaired: read the stack state before retrying, found it already complete.</span></span><span class="badge ok">Fixed</span></span>
+              <span class="li rise" style="--i:3"><span class="tile err"><i class="ms fill" aria-hidden="true">heart_broken</i></span><span class="stack grow" style="flex: 1"><span class="t">Tasks unhealthy: HTTP 500 on /healthz</span><span class="m">The app itself returned errors. This cannot be fixed without changing its code or settings.</span></span><span class="badge err">Needs you</span></span>
+            </div>
+            <div class="log mono rise" style="--i:4" role="log" aria-label="Task log excerpt">
+              <div class="ln" style="--i:1"><time>14:12:40</time>task 1/2 started on port 8080</div>
+              <div class="ln err" style="--i:2"><time>14:12:44</time>Error: environment variable DATABASE_URL is not set</div>
+              <div class="ln err" style="--i:3"><time>14:13:10</time>Target unhealthy after 3 checks</div>
+              <div class="ln ok" style="--i:4"><time>14:14:02</time>Rollback complete, previous release serving</div>
+            </div>
+          </div>
+          <div class="side">
+            <div class="card raise rise" style="--i:2; border: 1px solid var(--line)">
+              <span class="h2">Smallest next step</span>
+              <span class="sub">Add <span class="mono">DATABASE_URL</span> as a Secrets Manager reference in Configure, then redeploy.</span>
+              <a class="btn tonal" href="WizardReview.dc.html" style="align-self: flex-start">Open Configure</a>
+            </div>
+            <div class="card outline rise" style="--i:3">
+              <span class="label">STILL RUNNING IN AWS</span>
+              <span class="li" style="padding: 6px 0"><i class="ms sm" style="color: var(--ok)" aria-hidden="true">check_circle</i><span class="small">Previous release, 2 healthy tasks</span></span>
+              <span class="li" style="padding: 6px 0"><i class="ms sm" style="color: var(--ok)" aria-hidden="true">check_circle</i><span class="small">Load balancer and public link</span></span>
+              <span class="small">Nothing was deleted. Your code and permissions were not changed.</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["dark","light"],"default":"dark"},"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+renderVals() {
+return { themeClass: (this.props.theme ?? 'dark') === 'light' ? 'light' : '' };
+}
+}
+</script>
+</body>
+</html>

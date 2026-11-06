@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Deployment healthy</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="./app.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400..700&amp;family=JetBrains+Mono:wght@400;500&amp;family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,300..600,0..1,0&amp;display=block">
+<style>
+body{margin:0}
+a{color:#6ea8ff}a:hover{color:#9fc2ff}
+</style>
+</helmet>
+<div class="app {{themeClass}}" style="position: relative">
+  <div class="titlebar"><span class="name">AWS App Deployer</span><span class="proto">Prototype · sample data</span><span class="grow"></span><div class="caption"><span><i class="ms">remove</i></span><span><i class="ms">crop_square</i></span><span><i class="ms">close</i></span></div></div>
+  <div class="body">
+    <nav class="rail" aria-label="Main">
+      <a class="fab" href="WizardSource.dc.html" aria-label="New deployment"><i class="ms lg" aria-hidden="true">add</i></a>
+      <a class="navi on" href="Main.dc.html"><span class="pill"><i class="ms" aria-hidden="true">rocket_launch</i></span>Deploys</a>
+      <a class="navi" href="Connections.dc.html"><span class="pill"><i class="ms" aria-hidden="true">key</i></span>Accounts</a>
+      <a class="navi" href="Settings.dc.html"><span class="pill"><i class="ms" aria-hidden="true">tune</i></span>Settings</a>
+      <span class="gap"></span>
+      <a class="navi" href="Onboarding.dc.html"><span class="pill"><i class="ms" aria-hidden="true">help</i></span>Help</a>
+    </nav>
+    <main class="main">
+      <header class="topbar">
+        <a class="btn text" href="Main.dc.html" style="padding: 0 8px" aria-label="Back to deployments"><i class="ms" aria-hidden="true">arrow_back</i></a>
+        <span class="stack"><h1>orders-api</h1><span class="small mono">operation op-7f3a91 · finished in 7 min 05 s</span></span>
+        <span class="grow"></span>
+        <button class="btn out"><i class="ms" aria-hidden="true">refresh</i>Refresh from AWS</button>
+      </header>
+      <div class="content">
+        <div class="card raise" style="padding: 32px; gap: 22px; border: 1px solid var(--line); align-items: flex-start">
+          <div class="row" style="gap: 18px">
+            <span class="tile ok pop" style="width: 64px; height: 64px; border-radius: 20px"><svg class="check" width="32" height="32" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 12.5l4.2 4.2L19 7" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"></path></svg></span>
+            <span class="stack rise" style="--i:2"><span style="font-size: 28px; font-weight: 650; letter-spacing: -.03em">Live and healthy</span><span class="sub">AWS finished the deployment, both targets passed health checks, and the link answered with HTTP 200.</span></span>
+          </div>
+          <div class="urlbox" style="width: 100%; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 16px 16px 16px 20px; border-radius: 16px; background: var(--bg); border: 1px solid var(--line2)">
+            <i class="ms fill" style="color: var(--ok)" aria-hidden="true">public</i>
+            <a class="mono" style="flex: 1 1 360px; min-width: 0; font-size: 16px; overflow-wrap: anywhere; text-decoration: none" href="#">http://orders-api-alb-5d8e2f.us-east-1.elb.amazonaws.com</a>
+            <button class="btn tonal"><i class="ms" aria-hidden="true">content_copy</i>Copy link</button>
+            <button class="btn fillb"><i class="ms" aria-hidden="true">open_in_new</i>Open</button>
+          </div>
+          <span class="small">Anyone with this link can open it. Add a custom domain with HTTPS any time from Advanced.</span>
+        </div>
+        <div class="cols">
+          <div class="wide" style="flex-direction: row; flex-wrap: wrap; align-items: stretch">
+            <div class="card rise" style="--i:3; flex: 1 1 220px">
+              <span class="label">HEALTHY TARGETS</span>
+              <span style="font-size: 40px; font-weight: 650; letter-spacing: -.04em; line-height: 1">2<span class="sub" style="font-size: 20px"> of 2</span></span>
+              <span class="row small" style="gap: 6px"><span class="badge ok">us-east-1a</span><span class="badge ok">us-east-1b</span></span>
+            </div>
+            <div class="card rise" style="--i:4; flex: 2 1 340px">
+              <span class="label">RELEASE</span>
+              <dl class="kv" style="margin: 0">
+                <dt>Image</dt><dd class="mono" style="overflow-wrap: anywhere">sha256:9be2c7d0…41c0</dd>
+                <dt>Source</dt><dd class="mono">C:\Projects\orders-api\web</dd>
+                <dt>Account</dt><dd class="mono">1234 5678 9012 · us-east-1</dd>
+                <dt>Rollback</dt><dd>Automatic if a future release fails health checks</dd>
+              </dl>
+            </div>
+          </div>
+          <div class="card rise" style="--i:5; flex: 1 1 100%; gap: 0; padding: 8px 20px">
+            <span class="li" style="padding: 12px 0"><span class="badge ok">Live</span><span class="grow mono">sha256:9be2…41c0</span><span class="small">Today 14:38</span></span>
+            <span class="li" style="padding: 12px 0; border-top: 1px solid var(--line)"><span class="badge mute">Replaced</span><span class="grow mono">sha256:51ad…7e03</span><span class="small">Yesterday</span></span>
+            <span class="li" style="padding: 12px 0; border-top: 1px solid var(--line)"><span class="badge warn">Rolled back</span><span class="grow mono">sha256:c03f…9a11</span><span class="small">Yesterday</span></span>
+          </div>
+          </div>
+          <div class="side">
+            <div class="card outline rise" style="--i:5">
+              <span class="h2">Next</span>
+              <span class="li" style="padding: 8px 0"><i class="ms" aria-hidden="true">sync</i><span class="stack grow" style="flex: 1"><span class="t">Automatic updates</span><span class="m">Not configured</span></span></span>
+              <span class="li" style="padding: 8px 0"><i class="ms" aria-hidden="true">lock</i><span class="stack grow" style="flex: 1"><span class="t">Custom domain and HTTPS</span><span class="m">Optional</span></span></span>
+              <span class="li" style="padding: 8px 0; color: var(--err)"><i class="ms" aria-hidden="true">delete</i><span class="stack grow" style="flex: 1"><span class="t">Delete deployment</span><span class="m">Separate confirmation flow</span></span></span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+  <div class="toast" role="status"><i class="ms fill" style="color: var(--ok)" aria-hidden="true">check_circle</i>Link copied<span class="btn text">Undo</span></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["dark","light"],"default":"dark"},"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+renderVals() {
+return { themeClass: (this.props.theme ?? 'dark') === 'light' ? 'light' : '' };
+}
+}
+</script>
+</body>
+</html>
