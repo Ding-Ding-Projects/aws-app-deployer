@@ -2,11 +2,11 @@
 const { spawn } = require('node:child_process');
 
 function createRunner(spawnProcess = spawn) {
-  return function run(command, args, { signal, timeoutMs = 30000, maxBytes = 1024 * 1024 } = {}) {
+  return function run(command, args, { signal, timeoutMs = 30000, maxBytes = 1024 * 1024, stdin, cwd } = {}) {
     return new Promise((resolve) => {
       if (signal?.aborted) return resolve({ ok: false, error: 'CANCELLED' });
       let child;
-      try { child = spawnProcess(command, args, { shell: false, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] }); }
+      try { child = spawnProcess(command, args, { shell: false, windowsHide: true, cwd, stdio: [stdin === undefined ? 'ignore' : 'pipe', 'pipe', 'pipe'] }); }
       catch { return resolve({ ok: false, error: 'UNAVAILABLE' }); }
       let settled = false, bytes = 0, stdout = '', stderr = '', timer, killTimer;
       const finish = (result) => {
@@ -33,9 +33,26 @@ function createRunner(spawnProcess = spawn) {
       };
       child.stdout.on('data', collect('stdout')); child.stderr.on('data', collect('stderr'));
       child.on('error', () => finish({ ok: false, error: 'UNAVAILABLE' }));
-      child.on('close', (code) => finish(code === 0 ? { ok: true, stdout, stderr } : { ok: false, error: 'COMMAND_FAILED', exitCode: Number.isInteger(code) ? code : null }));
+      child.on('close', (code) => {
+        let error = 'COMMAND_FAILED';
+        if (command === 'aws') {
+          if (/AccessDenied|UnauthorizedOperation|not authorized to perform/i.test(stderr)) error = 'AWS_PERMISSION_DENIED';
+          else if (/ExpiredToken|InvalidClientTokenId|SSO session.*expired|Token has expired/i.test(stderr)) error = 'AWS_LOGIN_REQUIRED';
+          else if (/ThrottlingException|RequestLimitExceeded|TooManyRequestsException/i.test(stderr)) error = 'AWS_THROTTLED';
+          else if (/ServiceUnavailable|InternalFailure|InternalServerError/i.test(stderr)) error = 'AWS_TRANSIENT';
+          else if (/RepositoryAlreadyExistsException/i.test(stderr)) error = 'ECR_REPOSITORY_EXISTS';
+          else if (args[0] === 'ecr' && /RepositoryNotFoundException/i.test(stderr)) error = 'ECR_REPOSITORY_NOT_FOUND';
+          else if (args[0] === 'cloudformation' && args[1] === 'describe-stacks' && /\(ValidationError\)/.test(stderr) && /Stack with id [^\r\n]+ does not exist/.test(stderr)) error = 'STACK_NOT_FOUND';
+          else if (/OptInRequired|SubscriptionRequired|account.*(?:suspended|not.*verified)/i.test(stderr)) error = 'AWS_ACCOUNT_SETUP_REQUIRED';
+        }
+        finish(code === 0 ? { ok: true, stdout, stderr } : { ok: false, error, exitCode: Number.isInteger(code) ? code : null });
+      });
       signal?.addEventListener('abort', cancel, { once: true });
       timer = setTimeout(() => { if (!settled) stop('TIMEOUT'); }, timeoutMs);
+      if (stdin !== undefined) {
+        child.stdin.on('error', () => {}); // EPIPE is reported through process failure.
+        child.stdin.end(stdin);
+      }
       if (signal?.aborted) cancel();
     });
   };
