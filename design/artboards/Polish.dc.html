@@ -14,8 +14,7 @@
 body{margin:0}
 .sw{width:28px;height:28px;border-radius:50%;flex:none}
 .scrolly{height:132px;overflow:auto;padding-right:4px}
-.demo-menu{position:absolute;z-index:2;right:28px;top:52px;animation:none}
-@media (max-width:720px){.demo-menu{position:static;width:100%;margin:8px 0 12px}}
+.demo-menu{position:static;width:100%;animation:none}
 .demo-toast{display:flex;align-items:center;gap:12px;padding:12px 14px 12px 18px;background:var(--tx);color:var(--bg);border-radius:var(--r2);font-weight:500;box-shadow:var(--shadow)}
 </style>
 </helmet>
@@ -39,8 +38,33 @@ body{margin:0}
         </div>
         <div class="cols">
           <div class="wide">
-            <div class="card" style="gap: 0; position: relative">
+            <div class="card" style="gap: 0">
               <span class="h2" style="padding-bottom: 6px">Appearance</span>
+              <div class="set"><span class="stack grow"><span style="font-weight: 600">Theme</span><span class="small">Follows Windows unless you pick one · set by you</span></span><span class="set-ctl"><button class="info" data-tip="About Theme" aria-label="About Theme: explanation and guided steps"><i class="ms sm" aria-hidden="true">info</i></button><span class="set-ctl-row"><span class="seg"><button>System</button><button>Light</button><button class="on">Dark</button></span></span></span></div>
+              <div class="set"><span class="stack grow"><span style="font-weight: 600">Accent colour</span><span class="small">Type a hex, rgb(), hsl() or colour name</span></span><span class="set-ctl"><button class="info" data-tip="About Accent colour" aria-label="About Accent colour: explanation and guided steps"><i class="ms sm" aria-hidden="true">info</i></button><span class="set-ctl-row"><span class="sw" style="background: #6ea8ff; box-shadow: 0 0 0 2px var(--s2), 0 0 0 4px var(--tx)"></span><span class="sw" style="background: #4ade9a"></span><span class="sw" style="background: #f5b451"></span><span class="sw" style="background: #ff8a8a"></span></span></span></div>
+              <div class="set"><span class="stack grow"><span style="font-weight: 600">App name</span><span class="small">Shown in the title bar and taskbar · default</span></span><span class="set-ctl"><button class="info" data-tip="About App name" aria-label="About App name: explanation and guided steps"><i class="ms sm" aria-hidden="true">info</i></button><span class="set-ctl-row"><input value="AWS App Deployer" aria-label="App name" style="width: 200px"><button class="btn text">Reset</button></span></span></div>
+              <div class="set"><span class="stack grow"><span style="font-weight: 600">Reduce motion</span><span class="small">Replaces movement with simple fades · default</span></span><span class="set-ctl"><button class="info" data-tip="About Reduce motion" aria-label="About Reduce motion: explanation and guided steps"><i class="ms sm" aria-hidden="true">info</i></button><span class="set-ctl-row"><button class="toggle" role="switch" aria-checked="false" aria-label="Reduce motion"></button></span></span></div>
+            </div>
+            <div class="card">
+              <span class="h2">Buttons and chips</span>
+              <div class="row" style="flex-wrap: wrap; gap: 8px"><button class="btn fillb"><i class="ms">rocket_launch</i>Deploy</button><button class="btn tonal">Pick</button><button class="btn out">Copy link</button><button class="btn text">Reset</button><button class="btn danger"><i class="ms">delete</i>Remove…</button><button class="btn fillb" disabled>Create server</button></div>
+              <div class="row" style="flex-wrap: wrap; gap: 8px"><span class="chip on">Pen</span><span class="chip">Highlighter</span><span class="chip">Eraser</span><span class="badge ok">Healthy</span><span class="badge warn">Starting</span><span class="badge err">Stopped</span><span class="badge mute">Waiting</span></div>
+            </div>
+
+            <div class="card">
+              <span class="h2">Recent activity</span>
+              <div class="scrolly list" style="padding: 4px">
+                <span class="li"><i class="ms sm">palette</i><span class="stack grow"><span class="t">Theme changed to Dark</span><span class="m">Today 15:52</span></span></span>
+                <span class="li"><i class="ms sm">colors</i><span class="stack grow"><span class="t">Accent changed</span><span class="m">Today 15:40</span></span></span>
+                <span class="li"><i class="ms sm">restore</i><span class="stack grow"><span class="t">Restored revision 37</span><span class="m">Today 14:58</span></span></span>
+                <span class="li"><i class="ms sm">delete</i><span class="stack grow"><span class="t">Removed 2 records</span><span class="m">Yesterday 18:20</span></span></span>
+              </div>
+            </div>
+
+            <div class="demo-toast"><i class="ms sm fill">check_circle</i><span style="flex: 1">Sorted! Settings saved.</span></div>
+          </div>
+          <div class="side">
+            <div class="stack" style="gap: 8px"><span class="label">RIGHT-CLICK MENU WITH LIVE CONTROLS</span>
               <div class="ctx demo-menu" role="menu" aria-label="Actions for Theme">
                 <div class="row ctx-f"><i class="ms sm">filter_list</i><input class="mono" placeholder="Filter" aria-label="Filter actions"><span class="badge mute mono">.*</span></div>
                 <div class="divider"></div>
@@ -54,35 +78,15 @@ body{margin:0}
                 <button class="mi"><i class="ms sm">restart_alt</i><span>Reset to default</span></button>
                 <button class="mi"><i class="ms sm">search</i><span>Command palette</span><span class="k">Ctrl+Shift+F</span></button>
               </div>
-              <div class="set"><span class="stack grow"><span style="font-weight: 600">Theme</span><span class="small">Follows Windows unless you pick one · set by you</span></span><span class="set-ctl"><button class="btn text" style="padding: 0 6px; height: 28px" aria-label="About Theme"><i class="ms sm">info</i></button><span class="seg"><button>System</button><button>Light</button><button class="on">Dark</button></span></span></div>
-              <div class="set"><span class="stack grow"><span style="font-weight: 600">Accent colour</span><span class="small">Type a hex, rgb(), hsl() or colour name</span></span><span class="set-ctl"><span class="sw" style="background: #6ea8ff; box-shadow: 0 0 0 2px var(--s2), 0 0 0 4px var(--tx)"></span><span class="sw" style="background: #4ade9a"></span><span class="sw" style="background: #f5b451"></span><span class="sw" style="background: #ff8a8a"></span></span></div>
-              <div class="set"><span class="stack grow"><span style="font-weight: 600">App name</span><span class="small">Shown in the title bar and taskbar · default</span></span><span class="set-ctl"><input value="AWS App Deployer" aria-label="App name" style="width: 200px"><button class="btn text">Reset</button></span></div>
-              <div class="set"><span class="stack grow"><span style="font-weight: 600">Reduce motion</span><span class="small">Replaces movement with simple fades · default</span></span><span class="set-ctl"><button class="toggle" role="switch" aria-checked="false" aria-label="Reduce motion"></button></span></div>
             </div>
-            <div class="card">
-              <span class="h2">Buttons and chips</span>
-              <div class="row" style="flex-wrap: wrap; gap: 8px"><button class="btn fillb"><i class="ms">rocket_launch</i>Deploy</button><button class="btn tonal">Pick</button><button class="btn out">Copy link</button><button class="btn text">Reset</button><button class="btn danger"><i class="ms">delete</i>Remove…</button><button class="btn fillb" disabled>Create server</button></div>
-              <div class="row" style="flex-wrap: wrap; gap: 8px"><span class="chip on">Pen</span><span class="chip">Highlighter</span><span class="chip">Eraser</span><span class="badge ok">Healthy</span><span class="badge warn">Starting</span><span class="badge err">Stopped</span><span class="badge mute">Waiting</span></div>
-            </div>
-          </div>
-          <div class="side">
             <div class="card">
               <span class="h2">Form controls</span>
               <div class="field"><label for="p-run">Runs on</label><select id="p-run"><option>This computer (process)</option></select></div>
               <div class="row" style="gap: 8px"><div class="field" style="flex: 1"><label for="p-from">From</label><input id="p-from" type="date" value="2026-11-01"></div><div class="field" style="flex: 1"><label for="p-port">Port</label><input id="p-port" type="number" value="25565"></div></div>
+              <div class="field"><label for="p-ver">Version</label><select id="p-ver" size="4"><option selected>26.3 · release</option><option>26.2 · release</option><option>26.1.2 · release</option><option>1.21.11 · release</option></select></div>
               <div class="field"><label for="p-mem">Memory: 2048 MB</label><input id="p-mem" type="range" min="512" max="16384" value="2048"></div>
               <label class="row" style="gap: 10px"><input type="checkbox" checked><span class="small" style="color: var(--tx)">I accept the Minecraft EULA</span></label>
             </div>
-            <div class="card">
-              <span class="h2">Recent activity</span>
-              <div class="scrolly list" style="padding: 4px">
-                <span class="li"><i class="ms sm">palette</i><span class="stack grow"><span class="t">Theme changed to Dark</span><span class="m">Today 15:52</span></span></span>
-                <span class="li"><i class="ms sm">colors</i><span class="stack grow"><span class="t">Accent changed</span><span class="m">Today 15:40</span></span></span>
-                <span class="li"><i class="ms sm">restore</i><span class="stack grow"><span class="t">Restored revision 37</span><span class="m">Today 14:58</span></span></span>
-                <span class="li"><i class="ms sm">delete</i><span class="stack grow"><span class="t">Removed 2 records</span><span class="m">Yesterday 18:20</span></span></span>
-              </div>
-            </div>
-            <div class="demo-toast"><i class="ms sm fill">check_circle</i><span style="flex: 1">Sorted! Settings saved.</span></div>
           </div>
         </div>
       </div>
@@ -90,7 +94,7 @@ body{margin:0}
   </div>
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["dark","light"],"default":"dark"},"$preview":{"width":1440,"height":1100}}'>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["dark","light"],"default":"dark"},"$preview":{"width":1440,"height":1500}}'>
 class Component extends DCLogic {
 renderVals() {
 return { themeClass: (this.props.theme ?? 'dark') === 'light' ? 'light' : '' };

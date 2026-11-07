@@ -270,6 +270,7 @@
     narration: { what: 'Reads status changes aloud with a voice installed on this computer. Off by default, one message at a time.', steps: ['Turn the practice switch on.', 'Choose a voice once the real switch is on.'] },
     voice: { what: 'Picks which installed voice reads status aloud. Choose automatically uses the system default.', steps: ['Pick a voice from the list.'] },
     rate: { what: 'Sets how fast narration speaks, from half speed to double speed.', steps: ['Move the practice slider.'] },
+    pitch: { what: 'Sets how high or low narration sounds, from half to double the voice\'s normal pitch. Speed is a separate setting.', steps: ['Move the practice slider.', 'Press Try this voice to hear the real setting.'] },
     sounds: { what: 'Plays short, quiet tones when a deployment starts, succeeds or stops.', steps: ['Toggle the practice switch.'] },
     focus: { what: 'Dims everything except the row or card you are on. Nothing is hidden: hover or move focus to bring anything forward.', steps: ['Toggle the practice switch.'] },
     calm: { what: 'Low stimulation: quieter colour, no extra motion, and only notifications that need you pop up. Everything still lands in the notification list.', steps: ['Toggle the practice switch.'] },
@@ -281,7 +282,7 @@
     vocabulary: { what: 'Replaces words in the interface with your own from a JSON file. It stays on this computer and applies all at once or not at all.', steps: ['Choose or drop a file shaped like {"version": 1, "entries": {"Deploy": "Ship"}}.', 'Clear restores the original words.'] },
     a11y: { what: 'Text size, contrast, focus rings and target size from the accessibility tools menu.', steps: ['Open the accessibility button in the title bar.'] },
   };
-  const SETTINGS_ON_SCREEN = ['theme', 'accent', 'rainbow', 'reduceMotion', 'displayName', 'schedule', 'language', 'funnyLevels', 'timeAware', 'oneThing', 'momentum', 'emoji', 'narration', 'voice', 'rate', 'sounds', 'focus', 'calm', 'school', 'vocabulary', 'a11y'];
+  const SETTINGS_ON_SCREEN = ['theme', 'accent', 'rainbow', 'reduceMotion', 'displayName', 'schedule', 'language', 'funnyLevels', 'timeAware', 'oneThing', 'momentum', 'emoji', 'narration', 'voice', 'rate', 'pitch', 'sounds', 'focus', 'calm', 'school', 'vocabulary', 'a11y'];
 
   // ---- Export in every format that can carry the data, stating any loss first ----
   const FORMATS = {

@@ -37,12 +37,13 @@
     faq_title: '部署之前。', docs_title: '同 app 入面一樣嘅說明。', dl_title: '直接下載安裝程式', cta: '今日就出你個 container。',
     dimsum_title: '點心驚喜',
   };
+  // The line under the headline adds to it at every funny level instead of repeating it.
   const FUNNY = [
-    ['From Dockerfile to a public link.', '由 Dockerfile 到公開連結。'],
-    ['From Dockerfile to a public link. One click.', '由 Dockerfile 到公開連結，一撳搞掂。'],
-    ['From Dockerfile to a public link, before your tea gets cold.', '由 Dockerfile 到公開連結，杯茶都未凍。'],
-    ['From Dockerfile to a public link, faster than the har gow trolley.', '由 Dockerfile 到公開連結，快過蝦餃車仔。'],
-    ['From Dockerfile to a public link. The load balancer did the heavy lifting; we just pointed.', '由 Dockerfile 到公開連結。粗重嘢 load balancer 做晒，我哋只係指一指。'],
+    ['Build, push, run and health check, in one go.', '建置、上傳、運行、健康檢查，一次過。'],
+    ['One click, and you get a link anyone can open.', '一撳，就有條人人都開到嘅連結。'],
+    ['Done before your tea gets cold.', '杯茶都未凍就搞掂。'],
+    ['Faster than the har gow trolley.', '快過蝦餃車仔。'],
+    ['The load balancer did the heavy lifting; we just pointed.', '粗重嘢 load balancer 做晒，我哋只係指一指。'],
   ];
   const originals = new Map();
   function applyLanguage() {
@@ -69,7 +70,7 @@
     if (P.low) app.classList.add('reduce');
     drawAttention();
     document.body.style.background = dark ? '#0b0d12' : '#f4f6fa';
-    if (P.accent && /^#[0-9a-f]{6}([0-9a-f]{2})?$/.test(P.accent)) app.style.setProperty('--ac', P.accent); else app.style.removeProperty('--ac');
+    if (P.accent && /^#[0-9a-f]{6}([0-9a-f]{2})?$/.test(P.accent)) app.style.setProperty('--acc', P.accent); else app.style.removeProperty('--acc');
     document.documentElement.style.fontSize = P.textSize + '%';
     app.style.zoom = P.textSize / 100;
     const t = document.querySelector('[data-act="theme"]'); if (t) { t.innerHTML = ic(dark ? 'dark_mode' : 'light_mode', 'sm'); t.setAttribute('aria-label', `Theme: ${P.theme}. Activate to change.`); }
@@ -121,7 +122,7 @@
   const SCHOOL_HIDDEN = ['lang', 'funnyEn', 'funnyYue'], SCHOOL_HIDDEN_DOCS = ['dim-sum-surprise', 'language-and-wording'];
   const visibleSetting = s => !(P.school.enabled && SCHOOL_HIDDEN.includes(s.id));
   function accentCtl() {
-    const hex = E.accent || getComputedStyle(app).getPropertyValue('--ac').trim() || '#6ea8ff', base = (Lib.parseColor(hex) || '#6ea8ff');
+    const hex = E.accent || getComputedStyle(app).getPropertyValue('--acc').trim() || '#6ea8ff', base = (Lib.parseColor(hex) || '#6ea8ff');
     const a = Lib.rgba(base).a, bg = app.classList.contains('light') ? '#f4f6fa' : '#0b0d12', ratio = Lib.contrast(base, bg);
     return `<span class="row" style="gap: 6px; flex-wrap: wrap"><input type="color" value="${base.slice(0, 7)}" data-accent="rgb" aria-label="Accent colour"><input type="range" min="10" max="100" value="${Math.round(a * 100)}" data-accent="alpha" aria-label="Accent opacity" style="width: 90px"><span class="badge ${ratio >= 4.5 ? 'ok' : ratio >= 3 ? 'warn' : 'err'} mono" title="Contrast against the page">${ratio} : 1</span><button class="chip" data-act="accent-reset" aria-label="Reset accent">↺</button></span>`;
   }
@@ -186,10 +187,12 @@
   let panel = null;
   function openPanel() { panel = { opener: document.activeElement }; drawPanel(); panel.host.querySelector('button')?.focus(); }
   function closePanel() { const o = panel?.opener; panel?.host.remove(); panel = null; o?.focus?.(); }
+  // "Name (what it does)" becomes a title with a quieter note under it, so long labels do not crowd their switch.
+  const splitLabel = l => { const m = /^(.*?)\s*\((.*)\)\s*$/.exec(l); return m ? [m[1], m[2].charAt(0).toUpperCase() + m[2].slice(1)] : [l, '']; };
   function drawPanel() {
     if (!panel.host) { panel.host = document.createElement('section'); panel.host.className = 'a11y-panel'; panel.host.setAttribute('role', 'dialog'); panel.host.setAttribute('aria-label', 'Accessibility and settings'); app.appendChild(panel.host); }
     panel.host.innerHTML = `<div class="row"><span class="h2" style="flex: 1">Accessibility and settings</span><button class="btn text" data-act="panel-close" aria-label="Close">${ic('close')}</button></div>
-      ${SETTINGS.filter(s => (s.a11y || s.attn || s.id === 'theme' || s.id === 'accent') && visibleSetting(s)).map(s => `<div class="set"><span class="grow">${esc(s.label)}</span>${s.ctl()}</div>`).join('')}
+      ${SETTINGS.filter(s => (s.a11y || s.attn || s.id === 'theme' || s.id === 'accent') && visibleSetting(s)).map(s => { const [title, note] = splitLabel(s.label); return `<div class="set${s.id === 'accent' ? ' set-stack' : ''}"><span class="stack grow"><span class="t">${esc(title)}</span>${note ? `<span class="small">${esc(note)}</span>` : ''}</span>${s.ctl()}</div>`; }).join('')}
       ${schoolBlock()}${schedBlock()}
       <button class="btn tonal" data-act="read">${ic('record_voice_over')}Read this page aloud</button>
       <button class="btn text" data-act="reset-a11y">Reset accessibility tools</button>`;
@@ -217,7 +220,7 @@
       { kind: 'choice', label: 'Language', icon: 'translate', options: [['en', 'English'], ['yue', '廣東話'], ['both', 'Both']], get: () => E.lang, set: v => setPref('lang', v), disabled: P.school.enabled, reason: `English only while ${P.school.name} is on` },
       { kind: 'level', label: 'Text size', icon: 'format_size', min: 80, max: 160, step: 10, format: v => v + '%', get: () => P.textSize, set: v => setPref('textSize', v) },
       { kind: 'toggle', label: 'Reduce motion', icon: 'motion_photos_off', get: () => !!P.reduce, set: v => setPref('reduce', v) },
-      { kind: 'swatch', label: 'Accent colour', icon: 'palette', get: () => E.accent || getComputedStyle(app).getPropertyValue('--ac').trim(), run: () => openPanel() },
+      { kind: 'swatch', label: 'Accent colour', icon: 'palette', get: () => E.accent || getComputedStyle(app).getPropertyValue('--acc').trim(), run: () => openPanel() },
     ].filter(Boolean);
     Kit.openMenu(items, { x, y, opener: target, title: 'Page actions' });
   }
@@ -317,6 +320,13 @@
     if (t.dataset.i !== undefined && palette && !e.target.closest('button')) { const it = palette.list[+t.dataset.i]; if (it?.run) it.run(); return; }
     switch (t.dataset.act) {
       case 'palette': return openPalette();
+      case 'sections': {
+        // Phones and narrow windows hide the section links, so this button lists them in a menu.
+        const icons = { how: 'route', aws: 'cloud', features: 'apps', docs: 'menu_book', faq: 'help' };
+        const items = [...document.querySelectorAll('.nav a.l')].map(a => ({ label: a.textContent.trim(), icon: icons[a.getAttribute('href').slice(1)] || 'chevron_right', run: () => { const el = document.querySelector(a.getAttribute('href')); el?.scrollIntoView({ behavior: app.classList.contains('reduce') ? 'auto' : 'smooth', block: 'start' }); history.replaceState(null, '', a.getAttribute('href')); } }));
+        const r = t.getBoundingClientRect();
+        return Kit.openMenu(items, { x: r.left, y: r.bottom + 6, opener: t, title: 'Sections' });
+      }
       case 'regex': palette.regex = !palette.regex; drawPalette(); return document.getElementById('pq').focus();
       case 'a11y': return panel ? closePanel() : openPanel();
       case 'panel-close': return closePanel();

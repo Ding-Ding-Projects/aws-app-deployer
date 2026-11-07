@@ -67,11 +67,11 @@ select { height: 40px; border-radius: var(--r2); border: 1px solid var(--line2);
 .slide-in::-webkit-slider-thumb { -webkit-appearance: none; width: 40px; height: 40px; border-radius: 20px; background: var(--err); cursor: grab; }
 .slide-in:disabled { opacity: .5; }
 .sc-done { animation: pop 600ms var(--ease) both; }
-.info { width: 28px; height: 28px; border-radius: 14px; border: 0; background: var(--s3); color: var(--ac); display: grid; place-items: center; cursor: pointer; flex: none; }
-.info:focus-visible { outline: 2px solid var(--ac); outline-offset: 2px; }
 .panel { position: fixed; z-index: 50; background: var(--s2); border: 1px solid var(--line2); border-radius: var(--r3); box-shadow: var(--shadow); display: flex; flex-direction: column; overflow: auto; resize: both; min-width: 260px; min-height: 160px; max-width: calc(100vw - 16px); max-height: calc(100vh - 54px); animation: dialogIn var(--d3) var(--ease) both; }
 .panel > header { display: flex; align-items: center; gap: 8px; padding: 12px 12px 8px 16px; cursor: move; position: sticky; top: 0; background: var(--s2); z-index: 1; }
 .panel > .pb { padding: 0 16px 16px; display: flex; flex-direction: column; gap: 10px; }
+/* Panel actions never scroll out of reach: the footer sticks to the panel's bottom edge while the body scrolls */
+.panel .pfoot { position: sticky; bottom: 0; z-index: 1; margin: 4px -16px -16px; padding: 12px 16px 16px; background: var(--s2); border-top: 1px solid var(--line); }
 .app.contrast { --tx2: var(--tx); --tx3: var(--tx); --line: var(--tx3); --line2: var(--tx2); }
 .app.focusring *:focus { outline: 2px solid var(--ac) !important; outline-offset: 2px; }
 .app.bigtargets .btn, .app.bigtargets .chip, .app.bigtargets .li, .app.bigtargets .mi { min-height: 48px; }
@@ -83,10 +83,13 @@ select { height: 40px; border-radius: var(--r2); border: 1px solid var(--line2);
 .sc.app { overflow: visible; }
 .ctx.app { width: 300px; }
 .sc.app { width: min(440px, calc(100% - 16px)); }
-.tabs { display: flex; align-items: flex-end; gap: 4px; padding: 6px 12px 0; background: var(--bg); border-bottom: 1px solid var(--line); overflow-x: auto; flex: none; }
+.tabs { position: relative; display: flex; align-items: flex-end; gap: 4px; padding: 6px 12px 0; background: var(--bg); border-bottom: 1px solid var(--line); overflow-x: auto; flex: none; }
 .tab { flex: none; display: flex; align-items: center; border-radius: 12px 12px 0 0; color: var(--tx2); }
 .tab.on { background: var(--s1); color: var(--tx); box-shadow: inset 0 2px 0 var(--ac); }
 .tab-b { display: flex; align-items: center; gap: 8px; height: 36px; padding: 0 8px 0 14px; border: 0; background: transparent; color: inherit; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
+.tab-l { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 180px; }
+/* New tab stays reachable at the right end however many tabs are open */
+.tab-new { position: sticky; right: 0; flex: none; display: flex; align-items: flex-end; padding: 0 0 3px 10px; margin-left: 2px; background: linear-gradient(to right, transparent, var(--bg) 10px); }
 .tab-x { width: 24px; height: 24px; margin-right: 6px; border-radius: 12px; border: 0; background: transparent; color: var(--tx3); display: grid; place-items: center; cursor: pointer; }
 .tab-x:hover { background: var(--s3); }
 .diff { font-family: "JetBrains Mono", monospace; font-size: 12.5px; border-radius: 10px; padding: 10px 12px; background: var(--bg); display: flex; flex-direction: column; gap: 4px; overflow-wrap: anywhere; }

@@ -68,8 +68,8 @@
     document.body.style.zoom = (a.textSize || 100) / 100;
     document.body.style.background = theme === 'light' ? '#f4f6fa' : '#0b0d12';
     clearInterval(rainbowTimer);
-    if (s.rainbow && !reduce) { let h = 210; rainbowTimer = setInterval(() => { h = (h + 2) % 360; root.style.setProperty('--ac', `hsl(${h} 90% 70%)`); }, 120); }
-    else root.style.setProperty('--ac', s.rainbow ? 'hsl(210 90% 70%)' : s.accent);
+    if (s.rainbow && !reduce) { let h = 210; rainbowTimer = setInterval(() => { h = (h + 2) % 360; root.style.setProperty('--acc', `hsl(${h} 90% 70%)`); }, 120); }
+    else root.style.setProperty('--acc', s.rainbow ? 'hsl(210 90% 70%)' : s.accent);
     document.title = s.displayName || 'AWS App Deployer';
     applyElementStyles();
   }
@@ -141,7 +141,9 @@
 
   // ---------- shell ----------
   function shell(content, { rail = true } = {}) {
-    const nav = (v, icon, key) => `<button class="navi ${S.view === v || (v === 'deploys' && ['wizard', 'run', 'result'].includes(S.view)) ? 'on' : ''}" data-go="${v}" data-menu="nav" ${S.view === v ? 'aria-current="page"' : ''}><span class="pill">${ic(icon)}</span>${T(key)}</button>`;
+    // On a utility tab the rail marks nothing: the tab strip shows where you are, and a rail click returns to the Workspace tab.
+    const inWs = S.active === 'ws', here = v => inWs && (S.view === v || (v === 'deploys' && ['wizard', 'run', 'result'].includes(S.view)));
+    const nav = (v, icon, key) => `<button class="navi ${here(v) ? 'on' : ''}" data-go="${v}" data-menu="nav" ${inWs && S.view === v ? 'aria-current="page"' : ''}><span class="pill">${ic(icon)}</span>${T(key)}</button>`;
     return `
     <div class="titlebar">${logoHtml(20)}<span class="name">${esc(S.settings?.displayName || 'AWS App Deployer')}</span><span class="small mono" title="Running version and build time">${esc(provLine())}</span>${S.settings?.timeAware ? `<span class="small mono" id="time-aware" aria-live="off">${esc(timeLine())}</span>` : ''}<span class="grow"></span>
       <button class="chip" style="height: 28px; -webkit-app-region: no-drag" data-act="palette" aria-label="${T('palette')}">${ic('search', 'sm')}<span class="kbd">Ctrl+Shift+F</span></button>
@@ -306,8 +308,9 @@
   const srcLabel = key => ({ scheduled: 'scheduled right now', external: 'from the external source', school: 'set by ' + (S.schoolState?.name || 'School mode') }[S.overlaid?.[key]] || (S.sources[key] === 'file' ? 'set by you' : 'default'));
   function viewSettings() {
     const s = S.settings;
-    const info = (key, label) => Lib.EXPLAIN[key] ? `<button class="info" data-info="${key}" aria-label="About ${esc(label)}: explanation and guided steps">${ic('info', 'sm')}</button>` : '';
-    const ctl = (key, label, control) => `<span class="set-ctl">${info(key, label)}${control}</span>`;
+    const info = (key, label, id) => Lib.EXPLAIN[key] ? `<button class="info" data-info="${key}"${id ? ` id="${id}"` : ''} data-tip="About ${esc(label)}" aria-label="About ${esc(label)}: explanation and guided steps">${ic('info', 'sm')}</button>` : '';
+    // The info button sits directly above the control it explains, in the same slot on every row.
+    const ctl = (key, label, control, id) => `<span class="set-ctl">${info(key, label, id)}<span class="set-ctl-row">${control}</span></span>`;
     const tog = (key, label, sub, extra = '') => `<div class="set" data-menu="setting" data-key="${key}" data-search="${esc(label + ' ' + sub)}"><span class="stack grow"><span class="t" style="font-weight: 600">${label}</span><span class="small">${sub} · ${srcLabel(key)}</span></span>${ctl(key, label, `<button class="toggle ${s[key] ? 'on' : ''}" role="switch" aria-checked="${!!s[key]}" aria-label="${label}" data-toggle="${key}"></button>`)}${extra}</div>`;
     const seg = (key, opts) => `<span class="seg" role="radiogroup">${opts.map(([v, l]) => `<button role="radio" aria-checked="${s[key] === v}" class="${s[key] === v ? 'on' : ''}" data-set="${key}" data-val="${v}">${l}</button>`).join('')}</span>`;
     const voices = 'speechSynthesis' in window ? speechSynthesis.getVoices() : [];
@@ -316,10 +319,10 @@
     `<div class="cols"><div class="wide settings-grid">
       <div class="card" style="flex: 1 1 360px; gap: 0"><span class="h2" style="padding-bottom: 6px">Appearance</span>
         <div class="set" data-menu="setting" data-key="theme" data-search="theme light dark system"><span class="stack grow"><span class="t" style="font-weight: 600">${T('theme')}</span><span class="small">Follows Windows unless you pick one</span></span>${ctl('theme', T('theme'), seg('theme', [['system', 'System'], ['light', 'Light'], ['dark', 'Dark']]))}</div>
-        <div class="set" data-menu="setting" data-key="accent" data-search="accent colour color"><span class="stack grow"><span class="t" style="font-weight: 600">${T('accent')}</span><span class="small">Type a hex, rgb(), hsl() or colour name</span></span><span class="row" style="gap: 8px">${info('accent', T('accent'))}${['#6ea8ff', '#4ade9a', '#f5b451', '#ff8a8a'].map(c => `<button class="sw ${!s.rainbow && s.accent === c ? 'on' : ''}" style="background: ${c}" data-act="accent" data-c="${c}" aria-label="Accent ${c}"></button>`).join('')}<button class="sw rainbow ${s.rainbow ? 'on' : ''}" data-act="rainbow" aria-label="Rainbow accent"></button></span></div>
-        <div class="set" data-search="accent custom colour"><span class="stack grow"><label class="t" for="acc" style="font-weight: 600">Custom colour</label><span class="small mono">${esc(s.accent)} · ${esc(Lib.toRgb(s.accent))}</span></span><input id="acc" class="mono" style="width: 150px; height: 40px" data-input="accentText" placeholder="#6ea8ff"><button class="btn tonal" data-act="pick-accent" aria-label="Open the colour picker">${ic('colorize')}Pick</button></div>
+        <div class="set" data-menu="setting" data-key="accent" data-search="accent colour color"><span class="stack grow"><span class="t" style="font-weight: 600">${T('accent')}</span><span class="small">Type a hex, rgb(), hsl() or colour name</span></span>${ctl('accent', T('accent'), `${['#6ea8ff', '#4ade9a', '#f5b451', '#ff8a8a'].map(c => `<button class="sw ${!s.rainbow && s.accent === c ? 'on' : ''}" style="background: ${c}" data-act="accent" data-c="${c}" aria-label="Accent ${c}"></button>`).join('')}<button class="sw rainbow ${s.rainbow ? 'on' : ''}" data-act="rainbow" aria-label="Rainbow accent"></button>`)}</div>
+        <div class="set" data-search="accent custom colour"><span class="stack grow"><label class="t" for="acc" style="font-weight: 600">Custom colour</label><span class="small mono"><span class="nw">${esc(s.accent)}</span> · <span class="nw">${esc(Lib.toRgb(s.accent))}</span></span></span>${ctl('accent', 'Custom colour', `<input id="acc" class="mono" style="width: 150px; height: 40px" data-input="accentText" placeholder="#6ea8ff"><button class="btn tonal" data-act="pick-accent" aria-label="Open the colour picker">${ic('colorize')}Pick</button>`, 'info-accent-custom')}</div>
         ${tog('reduceMotion', T('reduce_motion'), 'Replaces movement with simple fades')}
-        <div class="set" data-menu="setting" data-key="displayName" data-search="app name rename display"><span class="stack grow"><label class="t" for="dn" style="font-weight: 600">${T('app_title')}</label><span class="small">Shown in the title bar and taskbar</span></span>${info('displayName', T('app_title'))}<input id="dn" style="width: 180px; height: 40px" data-input="displayName" value="${esc(s.displayName)}" placeholder="AWS App Deployer"><button class="btn text" data-act="reset" data-key="displayName">${T('reset')}</button></div>
+        <div class="set" data-menu="setting" data-key="displayName" data-search="app name rename display"><span class="stack grow"><label class="t" for="dn" style="font-weight: 600">${T('app_title')}</label><span class="small">Shown in the title bar and taskbar</span></span>${ctl('displayName', T('app_title'), `<input id="dn" style="width: 180px; height: 40px" data-input="displayName" value="${esc(s.displayName)}" placeholder="AWS App Deployer"><button class="btn text" data-act="reset" data-key="displayName">${T('reset')}</button>`)}</div>
         <div class="set" data-menu="setting" data-key="schedule" data-search="schedule light dark time"><span class="stack grow"><span class="t" style="font-weight: 600">${T('schedule')}</span><span class="small">Light from ${esc(s.schedule.lightAt)}, dark from ${esc(s.schedule.darkAt)}, every day</span></span>${ctl('schedule', T('schedule'), `<button class="toggle ${s.schedule.enabled ? 'on' : ''}" role="switch" aria-checked="${s.schedule.enabled}" aria-label="${T('schedule')}" data-act="schedule"></button>`)}</div>
       </div>
       ${schedulesCard()}
@@ -330,11 +333,11 @@
           <span class="card" style="flex: 1 1 100%; background: var(--s1); padding: 12px 14px; margin-top: 10px; gap: 2px"><span class="small">Preview</span><span>${esc(Lib.funny('success', s.funnyLevels, s.language))}</span></span></div>`}
         ${s.school ? '' : tog('emoji', T('emoji'), 'Adds emoji to some messages')}
         ${tog('narration', T('narration'), voices.length ? 'Uses a voice installed on this computer' : 'No voices found on this computer')}
-        ${s.narration && voices.length ? [['en', 'English voice', /^en/i], ['yue', 'Cantonese voice', /^(yue|zh-HK)/i]].map(([k, l, re]) => { const list = voices.filter(v => re.test(v.lang)); return `<div class="set" data-search="voice ${l}"><label class="grow" for="vc-${k}">${l}</label>${list.length ? `<select id="vc-${k}" data-voice="${k}" style="max-width: 220px"><option value="">System default</option>${list.map(v => `<option ${v.name === s.voices?.[k] ? 'selected' : ''}>${esc(v.name)}</option>`).join('')}</select>` : `<span class="badge mute">No ${k === 'yue' ? 'Cantonese' : 'English'} voice installed</span>`}</div>`; }).join('') + `<div class="set" data-search="voice pitch speed rate"><label class="grow" for="vp">Pitch</label><input id="vp" type="range" min="0.5" max="2" step="0.1" value="${s.pitch}" data-range="pitch" style="width: 130px"><span class="badge ac mono">${s.pitch}</span></div><div class="set" data-search="voice speed rate"><label class="grow" for="vr">Speed</label><input id="vr" type="range" min="0.5" max="2" step="0.1" value="${s.rate}" data-range="rate" style="width: 130px"><span class="badge ac mono">${s.rate}</span></div><button class="btn text" data-act="voice-try" style="align-self: flex-start">${ic('play_arrow')}Try this voice</button>` : ''}
+        ${s.narration && voices.length ? [['en', 'English voice', /^en/i], ['yue', 'Cantonese voice', /^(yue|zh-HK)/i]].map(([k, l, re]) => { const list = voices.filter(v => re.test(v.lang)); return `<div class="set" data-search="voice ${l}"><label class="grow" for="vc-${k}">${l}</label>${ctl('voice', l, list.length ? `<select id="vc-${k}" data-voice="${k}" style="max-width: 220px"><option value="">System default</option>${list.map(v => `<option ${v.name === s.voices?.[k] ? 'selected' : ''}>${esc(v.name)}</option>`).join('')}</select>` : `<span class="badge mute">No ${k === 'yue' ? 'Cantonese' : 'English'} voice installed</span>`, 'info-voice-' + k)}</div>`; }).join('') + `<div class="set" data-search="voice pitch speed rate"><label class="grow" for="vp">Pitch</label>${ctl('pitch', 'Pitch', `<input id="vp" type="range" min="0.5" max="2" step="0.1" value="${s.pitch}" data-range="pitch" style="width: 130px"><span class="badge ac mono">${s.pitch}</span>`)}</div><div class="set" data-search="voice speed rate"><label class="grow" for="vr">Speed</label>${ctl('rate', 'Speed', `<input id="vr" type="range" min="0.5" max="2" step="0.1" value="${s.rate}" data-range="rate" style="width: 130px"><span class="badge ac mono">${s.rate}</span>`)}</div><button class="btn text" data-act="voice-try" style="align-self: flex-start">${ic('play_arrow')}Try this voice</button>` : ''}
         ${tog('sounds', T('sounds'), 'Soft cues for deploy, success and errors')}
       </div></div>
       <div class="side">
-        ${s.school ? '' : `<div class="drop idle" style="flex-direction: column; align-items: flex-start; gap: 12px; padding: 22px" data-menu="setting" data-key="vocabulary" data-search="personal wording vocabulary json"><div class="row" style="width: 100%; align-items: flex-start"><span class="tile ac">${ic('dictionary', 'fill')}</span><span class="stack grow" style="flex: 1; min-width: 0"><span style="font-weight: 650">${T('vocabulary')}</span><span class="small">${s.vocabulary ? Object.keys(s.vocabulary.entries).length + ' words active' : 'Drop a vocabulary JSON anywhere in the app'}</span></span>${info('vocabulary', T('vocabulary'))}</div><span class="small">Format: {"version": 1, "entries": {"Deploy": "Ship"}}. Stays on this computer. Applied all at once or not at all.</span><span class="row" style="gap: 8px"><label class="btn tonal" for="vf">Choose file</label><input id="vf" type="file" accept="application/json,.json" class="sr" data-file="vocab"><button class="btn text" data-act="vocab-clear" ${s.vocabulary ? '' : 'disabled'}>Clear</button></span></div>`}
+        ${s.school ? '' : `<div class="drop idle" style="flex-direction: column; align-items: flex-start; gap: 12px; padding: 22px" data-menu="setting" data-key="vocabulary" data-search="personal wording vocabulary json"><div class="row" style="width: 100%; align-items: flex-start"><span class="tile ac">${ic('dictionary', 'fill')}</span><span class="stack grow" style="flex: 1; min-width: 0"><span style="font-weight: 650">${T('vocabulary')}</span><span class="small">${s.vocabulary ? Object.keys(s.vocabulary.entries).length + ' words active' : 'Drop a vocabulary JSON anywhere in the app'}</span></span></div><span class="small">Format: {"version": 1, "entries": {"Deploy": "Ship"}}. Stays on this computer. Applied all at once or not at all.</span><span class="set-ctl" style="align-items: flex-start; margin-left: 0">${info('vocabulary', T('vocabulary'))}<span class="set-ctl-row"><label class="btn tonal" for="vf">Choose file</label><input id="vf" type="file" accept="application/json,.json" class="sr" data-file="vocab"><button class="btn text" data-act="vocab-clear" ${s.vocabulary ? '' : 'disabled'}>Clear</button></span></span></div>`}
         <div class="card" style="gap: 0"><span class="h2" style="padding-bottom: 6px">Focus and comfort</span>
           <span class="small" style="padding: 4px 0 6px">Attention modes: each is separate and off until you turn it on. Interface options only, not medical advice.</span>
           ${tog('focus', 'Focus', 'Dims everything except the row or card you are on')}${tog('calm', 'Low stimulation', 'Quieter colour, no extra motion, only notifications that need you')}${tog('timeAware', 'Time awareness', 'Time open and since the last change, in the title bar')}${tog('oneThing', 'One thing at a time', 'Keeps the next action you chose in view')}${tog('momentum', 'Momentum', 'A gentle note when a draft sits untouched')}${schoolCard()}
@@ -342,7 +345,7 @@
         </div>
         ${logoCard()}
         <div class="card" data-search="toy locks lock pin password totp support tickets"><span class="h2">Toy locks</span><span class="small">Right-click anything and choose Lock this element… Just for fun, never security.</span>${(S.lockState?.locks || []).map(l => `<div class="li static" style="padding: 6px 0">${ic('lock', 'sm')}<span class="stack grow"><span class="t">${esc(l.label)}</span><span class="m">${esc(POLICY_LABEL[l.policy])}${l.waitMs ? ' · waiting' : ''}</span></span></div>`).join('') || '<span class="small">No locks yet.</span>'}<span class="small" style="color: var(--tx)">${esc(recoveryLine())}</span><button class="btn text" data-go="support" style="align-self: flex-start">${ic('support_agent')}Support Tickets</button></div>
-        <div class="card" style="gap: 0" data-menu="setting" data-key="a11y" data-search="accessibility text size contrast focus targets read aloud button hidden"><div class="set">${info('a11y', 'Accessibility tools')}<span class="stack grow"><span class="t" style="font-weight: 600">Accessibility tools</span><span class="small">${s.a11y.hidden ? 'Title bar button hidden' : 'Button in the title bar'} · text ${s.a11y.textSize}%</span></span><button class="btn tonal" data-panel-open="a11y">Open</button>${s.a11y.hidden ? '<button class="btn text" data-act="a11y-show">Show button</button>' : ''}</div></div>
+        <div class="card" style="gap: 0" data-menu="setting" data-key="a11y" data-search="accessibility text size contrast focus targets read aloud button hidden"><div class="set"><span class="stack grow"><span class="t" style="font-weight: 600">Accessibility tools</span><span class="small">${s.a11y.hidden ? 'Title bar button hidden' : 'Button in the title bar'} · text ${s.a11y.textSize}%</span></span>${ctl('a11y', 'Accessibility tools', `<button class="btn tonal" data-panel-open="a11y">Open</button>${s.a11y.hidden ? '<button class="btn text" data-act="a11y-show">Show button</button>' : ''}`)}</div></div>
         <div class="row" style="gap: 6px; flex-wrap: wrap"><button class="btn text" data-panel-open="export:settings">${ic('download')}Export settings</button><button class="btn text" data-go="history">${ic('history')}Local history</button></div>
       </div></div>`);
   }
@@ -433,7 +436,7 @@
         <button class="btn tonal" data-cmd="keys">${ic('keyboard')}Keyboard help <span class="kbd">${Kit.keysFor('keys')}</span></button><button class="btn tonal" data-act="read-aloud">${ic('record_voice_over')}Read this screen aloud</button>
         <button class="btn text" data-act="a11y-reset">Reset accessibility tools</button><div class="divider"></div><button class="btn text" style="color: var(--tx3)" data-act="a11y-hide">${ic('visibility_off')}Hide this button…</button>`, right);
     }
-    if (P.id === 'a11y-hide') return panelFrame('a11y-hide', 'Hide the accessibility button?', `<span class="sub">The button leaves the title bar. Your accessibility choices stay on. Bring it back from Settings search, the command palette, or Reset accessibility tools.</span><div class="row" style="justify-content: flex-end"><button class="btn fillb" data-act="panel-close" data-autofocus="1">Cancel</button><button class="btn out" data-act="a11y-hide-yes">Hide it</button></div>`, right);
+    if (P.id === 'a11y-hide') return panelFrame('a11y-hide', 'Hide the accessibility button?', `<span class="sub">The button leaves the title bar. Your accessibility choices stay on. Bring it back from Settings search, the command palette, or Reset accessibility tools.</span><div class="row pfoot" style="justify-content: flex-end"><button class="btn fillb" data-act="panel-close" data-autofocus="1">Cancel</button><button class="btn out" data-act="a11y-hide-yes">Hide it</button></div>`, right);
     if (P.id === 'keys') return panelFrame('keys', 'Keyboard help', `<dl class="kv" style="margin: 0">${[['palette', 'Command palette with regex search'], ['new', 'New deployment'], ['settings', 'Settings'], ['keys', 'Keyboard help'], ['menu', 'Context menu for the focused element'], ['panelMove', 'Move a focused panel (add Shift to resize)']].map(([k, l]) => `<dt><span class="kbd">${esc(Kit.keysFor(k) || { menu: 'Shift+F10', panelMove: 'Alt+Arrows' }[k])}</span></dt><dd>${l}</dd>`).join('')}<dt><span class="kbd">Esc</span></dt><dd>Clear a filter, then close</dd></dl>`, 'top: 90px; left: max(8px, calc(50% - 220px)); width: 440px;');
     if (P.id === 'notes') {
       const r = Lib.search(S.notes.map(n => ({ ...n, label: n.text })), S.noteQ, { regex: S.noteRegex });
@@ -459,7 +462,7 @@
       return panelFrame('info', 'About this setting', `<span class="label">WHAT IT DOES</span><span>${esc(ex.what)}</span><span class="small mono">${esc(src)}</span>
         <span class="label" style="margin-top: 4px">TRY IT · STEP ${step + 1} OF ${ex.steps.length}</span><span>${esc(ex.steps[step])}</span>
         <div class="row" style="gap: 10px"><button class="toggle ${S.practice[key] ? 'on' : ''}" role="switch" aria-checked="${!!S.practice[key]}" aria-label="Practice switch" data-act="practice" data-key="${key}"></button><span class="small grow">Practice only: your real setting does not change.</span></div>
-        <div class="row" style="justify-content: flex-end"><button class="btn text" data-act="info-step" data-d="-1" ${step ? '' : 'disabled'}>${T('back')}</button><button class="btn tonal" data-act="info-step" data-d="1" ${step < ex.steps.length - 1 ? '' : 'disabled'}>${T('next')}</button></div>`, 'top: 120px; left: max(8px, calc(50% - 200px)); width: 400px;');
+        <div class="row pfoot" style="justify-content: flex-end"><button class="btn text" data-act="info-step" data-d="-1" ${step ? '' : 'disabled'}>${T('back')}</button><button class="btn tonal" data-act="info-step" data-d="1" ${step < ex.steps.length - 1 ? '' : 'disabled'}>${T('next')}</button></div>`, 'top: 120px; left: max(8px, calc(50% - 200px)); width: 400px;');
     }
     return '';
   }
@@ -553,8 +556,10 @@
     { view: 'accounts', label: 'Accounts', icon: 'key' }, { view: 'deploys', label: 'Deployments', icon: 'rocket_launch' },
   ];
   function tabStrip() {
-    return `<div class="tabs" role="tablist" aria-label="Open tabs">${S.tabs.map(t => { const c = t.id === 'ws' ? { label: 'Workspace', icon: 'rocket_launch' } : CATALOG.find(x => x.view === t.view); return `<span class="tab ${S.active === t.id ? 'on' : ''}" data-menu="tab" data-tab="${t.id}"><button class="tab-b" role="tab" aria-selected="${S.active === t.id}" data-tab-go="${t.id}">${ic(c.icon, 'sm')}${esc(c.label)}</button>${t.id === 'ws' ? '' : `<button class="tab-x" data-tab-close="${t.id}" aria-label="Close ${esc(c.label)} tab">${ic('close', 'sm')}</button>`}</span>`; }).join('')}<button class="chip" style="height: 30px; margin: 0 0 3px 6px; flex: none" data-panel-open="newtab">${ic('add', 'sm')}New tab</button></div>`;
+    return `<div class="tabs" role="tablist" aria-label="Open tabs">${S.tabs.map(t => { const c = t.id === 'ws' ? { label: 'Workspace', icon: 'rocket_launch' } : CATALOG.find(x => x.view === t.view); return `<span class="tab ${S.active === t.id ? 'on' : ''}" data-menu="tab" data-tab="${t.id}"><button class="tab-b" role="tab" aria-selected="${S.active === t.id}" data-tab-go="${t.id}" title="${esc(c.label)}">${ic(c.icon, 'sm')}<span class="tab-l">${esc(c.label)}</span></button>${t.id === 'ws' ? '' : `<button class="tab-x" data-tab-close="${t.id}" aria-label="Close ${esc(c.label)} tab">${ic('close', 'sm')}</button>`}</span>`; }).join('')}<span class="tab-new"><button class="chip" style="height: 30px; flex: none" data-panel-open="newtab">${ic('add', 'sm')}New tab</button></span></div>`;
   }
+  // The tab strip hides its scrollbar, so a mouse wheel over it scrolls it sideways; the active tab is kept in view.
+  document.addEventListener('wheel', e => { const strip = e.target.closest?.('.tabs'); if (!strip || Math.abs(e.deltaX) > Math.abs(e.deltaY) || strip.scrollWidth <= strip.clientWidth) return; strip.scrollLeft += e.deltaY; e.preventDefault(); }, { passive: false });
   function openTab(view) { const id = 't' + Math.random().toString(36).slice(2, 7); withTransition(() => { S.tabs.push({ id, view }); S.active = id; S.panel = null; render(); }); }
   function closeTabs(ids) { S.tabs = S.tabs.filter(t => t.id === 'ws' || !ids.includes(t.id)); if (!S.tabs.find(t => t.id === S.active)) S.active = 'ws'; render(); }
   function newTabPanel() {
@@ -622,7 +627,7 @@
     const label = { history: 'local history', deploys: 'deployment records', settings: 'settings' }[what] || what;
     return panelFrame('export', `Export ${label}`, `<span class="seg" role="radiogroup">${[...Object.keys(Lib.FORMATS), 'zip'].map(k => `<button role="radio" aria-checked="${fmt === k}" class="${fmt === k ? 'on' : ''}" data-act="exp-fmt" data-f="${k}">${k === 'zip' ? 'ZIP (all)' : Lib.FORMATS[k].label}</button>`).join('')}</span>
       <span class="small">${fmt === 'zip' ? 'A ZIP with deployments, history and settings, each as JSON, plus CSV copies. Relative paths only.' : `UTF-8, LF line endings, schema aws-app-deployer.${what}/1. ${F.loss || 'Nothing is lost; the file can be imported back.'}`}</span>
-      <div class="row" style="justify-content: flex-end"><button class="btn text" data-act="panel-close">${T('cancel')}</button><button class="btn fillb" data-act="exp-go" data-w="${what}" data-autofocus="1">${ic('download')}Save</button></div>`, 'top: 90px; right: 24px; width: 420px;');
+      <div class="row pfoot" style="justify-content: flex-end"><button class="btn text" data-act="panel-close">${T('cancel')}</button><button class="btn fillb" data-act="exp-go" data-w="${what}" data-autofocus="1">${ic('download')}Save</button></div>`, 'top: 90px; right: 24px; width: 420px;');
   }
   function exportRows(what) {
     if (what === 'history') return (S.history.history || []).map((h, i) => ({ revision: i + 1, at: h.at, key: h.key, before: h.before, after: h.after, label: (S.history.labels || {})[i] || '' }));
@@ -688,7 +693,7 @@
       ${need.includes('totp') ? (W.totp ? `<span class="label">SCAN WITH YOUR AUTHENTICATOR</span><div class="qr" aria-label="QR code for the authenticator">${W.totp.qr}</div><span class="small">Or enter this key: <span class="mono" style="overflow-wrap: anywhere">${esc(W.totp.secret.replace(/(.{4})/g, '$1 '))}</span></span>${fld('lw-code', 'Code from your authenticator', W.code, 'text', 'inputmode="numeric" maxlength="6"')}` : `<button class="btn tonal" data-act="lw-totp">${ic('qr_code_2')}Set up an authenticator</button>`) : ''}
       ${W.error ? `<span class="badge err">${esc(W.error)}</span>` : ''}
       <span class="small" style="color: var(--tx)">${esc(recoveryLine())}</span>
-      <div class="row" style="justify-content: flex-end"><button class="btn text" data-act="panel-close">${T('cancel')}</button><button class="btn fillb" data-act="lw-create">${ic('lock')}Lock it</button></div>`, 'top: 70px; left: max(8px, calc(50% - 230px)); width: 460px; height: 640px;');
+      <div class="row pfoot" style="justify-content: flex-end"><button class="btn text" data-act="panel-close">${T('cancel')}</button><button class="btn fillb" data-act="lw-create">${ic('lock')}Lock it</button></div>`, 'top: 70px; left: max(8px, calc(50% - 230px)); width: 460px;');
   }
   function unlockPanel() {
     const U = S.unlock, l = (S.lockState?.locks || []).find(x => x.id === U.key);
@@ -700,8 +705,8 @@
       ${U.error ? `<span class="badge err" role="alert">${esc(U.error)}</span>` : ''}
       ${l.waitMs ? `<button class="btn tonal" data-act="ladder-open">${ic('stairs')}Play the unlock ladder (${l.ladderLeft} left this hour)</button>` : ''}
       <span class="small" style="color: var(--tx)">${esc(recoveryLine())}</span>
-      <div class="row" style="justify-content: space-between; flex-wrap: wrap"><button class="btn text" data-act="go-support">Forgotten your password?</button><span class="row" style="gap: 6px"><button class="btn text" data-act="panel-close">${T('cancel')}</button><button class="btn fillb" data-act="ul-go" ${l.waitMs ? 'disabled' : ''}>${ic('lock_open')}Unlock</button></span></div>`;
-    return panelFrame('unlock', `Unlock "${U.label}"`, body, 'top: 70px; left: max(8px, calc(50% - 210px)); width: 420px; height: 620px;');
+      <div class="row pfoot" style="justify-content: space-between; flex-wrap: wrap"><button class="btn text" data-act="go-support">Forgotten your password?</button><span class="row" style="gap: 6px"><button class="btn text" data-act="panel-close">${T('cancel')}</button><button class="btn fillb" data-act="ul-go" ${l.waitMs ? 'disabled' : ''}>${ic('lock_open')}Unlock</button></span></div>`;
+    return panelFrame('unlock', `Unlock "${U.label}"`, body, 'top: 70px; left: max(8px, calc(50% - 210px)); width: 420px;');
   }
   function ladderHtml(l) {
     const L = S.unlock.ladder, mins = Math.ceil(l.waitMs / 60000);
@@ -846,15 +851,16 @@
   function schoolPanel() {
     const st = S.schoolState || {}, F = S.schoolForm || (S.schoolForm = { kind: 'pin', value: '', value2: '', name: st.name || '', error: null });
     const inp = (id, label, val, extra = '') => `<div class="field"><label for="${id}">${label}</label><input id="${id}" data-sf="${id}" value="${esc(val)}" autocomplete="off" ${extra}></div>`;
+    const note = `<span class="small" style="color: var(--tx)">A speed bump, not security. Forgot it? Delete the shared file: <span class="mono" style="overflow-wrap: anywhere">${esc(st.file || '')}</span></span>`;
     let body;
     if (st.enabled) body = `<span>${esc(st.name)} is on. Enter your ${st.credentialKind === 'password' ? 'password' : 'PIN'} to turn it off.</span>${inp('sf-value', st.credentialKind === 'password' ? 'Password' : 'PIN', F.value, `type="password" ${st.credentialKind === 'password' ? '' : 'inputmode="numeric"'}`)}
-      ${F.error ? `<span class="badge err" role="alert">${esc(F.error)}</span>` : ''}<div class="row" style="justify-content: flex-end"><button class="btn text" data-act="panel-close">Cancel</button><button class="btn fillb" data-act="school-off">Turn off</button></div>`;
+      ${F.error ? `<span class="badge err" role="alert">${esc(F.error)}</span>` : ''}${note}<div class="row pfoot" style="justify-content: flex-end"><button class="btn text" data-act="panel-close">Cancel</button><button class="btn fillb" data-act="school-off">Turn off</button></div>`;
     else body = `<span class="small">While on: English only, and funny levels, personal wording and everything dim sum disappear from every app on this computer. Your choices come back when you turn it off.</span>
       ${inp('sf-name', 'Name for this mode', F.name, 'maxlength="40"')}<button class="btn text" data-act="school-rename" style="align-self: flex-start">Save name</button>
       ${st.hasCredential ? `<span class="small">Turning it off will ask for your existing ${st.credentialKind === 'password' ? 'password' : 'PIN'}.</span>` : `<span class="label">SET HOW TO TURN IT OFF</span><div class="seg">${[['pin', 'PIN'], ['password', 'Password']].map(([k, l]) => `<button class="${F.kind === k ? 'on' : ''}" aria-pressed="${F.kind === k}" data-act="school-kind" data-k="${k}">${l}</button>`).join('')}</div>
       ${inp('sf-value', F.kind === 'pin' ? 'PIN (4 to 12 digits)' : 'Password (6 or more characters)', F.value, `type="password" ${F.kind === 'pin' ? 'inputmode="numeric"' : ''}`)}${inp('sf-value2', 'Repeat it', F.value2, 'type="password"')}`}
-      ${F.error ? `<span class="badge err" role="alert">${esc(F.error)}</span>` : ''}<div class="row" style="justify-content: flex-end"><button class="btn text" data-act="panel-close">Cancel</button><button class="btn fillb" data-act="school-on">Turn on</button></div>`;
-    return panelFrame('school', st.name || 'School mode', body + `<span class="small" style="color: var(--tx)">A speed bump, not security. Forgot it? Delete the shared file: <span class="mono" style="overflow-wrap: anywhere">${esc(st.file || '')}</span></span>`, 'top: 80px; left: max(8px, calc(50% - 220px)); width: 440px;');
+      ${F.error ? `<span class="badge err" role="alert">${esc(F.error)}</span>` : ''}${note}<div class="row pfoot" style="justify-content: flex-end"><button class="btn text" data-act="panel-close">Cancel</button><button class="btn fillb" data-act="school-on">Turn on</button></div>`;
+    return panelFrame('school', st.name || 'School mode', body, 'top: 80px; left: max(8px, calc(50% - 220px)); width: 440px;');
   }
 
   // ---------- scheduled settings and an external source ----------
@@ -906,8 +912,8 @@
       <label class="small" for="cp-a">Opacity ${Math.round(C.a * 100)}%</label><input id="cp-a" type="range" min="0" max="100" value="${Math.round(C.a * 100)}" data-cp="a" class="alpha-range" style="--c: ${hex.slice(0, 7)}">
       <div class="row" style="gap: 8px"><span class="sw" style="background: ${hex}; flex: none" aria-hidden="true"></span><label class="sr" for="cp-text">Colour value</label><input id="cp-text" class="mono" data-cp="text" value="${esc(C.text)}" style="flex: 1; min-width: 0; height: 38px"><span class="badge ${ratio >= 4.5 ? 'ok' : ratio >= 3 ? 'warn' : 'err'}" title="WCAG contrast against the page background">Contrast ${ratio} : 1</span></div>
       <span class="small mono">${esc(Lib.toRgb(hex))} · ${esc(Lib.toHsl(hex))}</span>
-      <span class="small">${ratio >= 4.5 ? 'Readable as text on this background.' : ratio >= 3 ? 'Fine for large text and icons; small text may be hard to read.' : 'Too faint on this background for text.'} Accepts hex with alpha, rgb(), rgba(), hsl(), hsla() and colour names.</span>
-      <div class="row" style="justify-content: flex-end"><button class="btn text" data-act="panel-close">Cancel</button><button class="btn fillb" data-act="cp-apply">Use this colour</button></div>`, 'top: 70px; left: max(8px, calc(50% - 200px)); width: 400px;');
+      <span class="small">${ratio >= 4.5 ? 'Readable as text on this background.' : ratio >= 3 ? 'Fine for large text and icons; small text may be hard to read.' : 'Too faint on this background for text.'} Buttons and links use a lighter or darker shade of the same hue when needed, so they stay readable in both themes. Accepts hex with alpha, rgb(), rgba(), hsl(), hsla() and colour names.</span>
+      <div class="row pfoot" style="justify-content: flex-end"><button class="btn text" data-act="panel-close">Cancel</button><button class="btn fillb" data-act="cp-apply">Use this colour</button></div>`, 'top: 70px; left: max(8px, calc(50% - 200px)); width: 400px;');
   }
   function cpFromPointer(e, box) { const r = box.getBoundingClientRect(); S.colour.s = Math.round(Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)) * 100); S.colour.v = Math.round(100 - Math.max(0, Math.min(1, (e.clientY - r.top) / r.height)) * 100); S.colour.text = pickerHex(); render(); }
   root.addEventListener('pointerdown', e => { const box = e.target.closest('[data-sv]'); if (!box) return; cpFromPointer(e, box); const mv = ev => cpFromPointer(ev, document.querySelector('[data-sv]')); const up = () => { removeEventListener('pointermove', mv); removeEventListener('pointerup', up); }; addEventListener('pointermove', mv); addEventListener('pointerup', up); });
@@ -1065,7 +1071,7 @@
       ${cat?.loading ? '<span class="small">Reading the official version list…</span>' : cat?.ok ? `<select data-mcf="version" aria-label="Version" size="6" >${shown.map(v => `<option value="${esc(v.id)}" ${v.id === F.version ? 'selected' : ''}>${esc(v.id)} · ${esc(v.type.replace('_', ' '))}</option>`).join('')}</select><span class="small">${vlist.length} versions from the ${F.flavour === 'vanilla' ? 'Mojang' : F.flavour === 'paper' ? 'PaperMC' : 'Fabric'} catalog${cat.stale ? ', last good copy (offline now)' : ''}, read ${new Date(cat.at).toLocaleTimeString()}. Versions without a published server say so when you create.</span>` : `<span class="badge err">${esc(mcErr(cat))}</span><button class="btn text" data-act="mc-catalog-retry">Try again</button>`}
       <div class="field"><label for="mc-target">Runs on</label><select id="mc-target" data-mcf="kind">${Object.entries(MC_TARGETS).map(([k, l]) => `<option value="${k}" ${F.kind === k ? 'selected' : ''}>${l}</option>`).join('')}</select></div>
       ${F.kind.startsWith('ssh') ? `<div class="field"><label for="mc-host">SSH host (user@host, key sign-in)</label><input id="mc-host" data-mcf="host" value="${esc(F.host)}" placeholder="me@server.example"></div>` : ''}
-      <div class="row" style="gap: 12px; flex-wrap: wrap"><div class="field" style="flex: 1 1 120px"><label for="mc-port">Port</label><input id="mc-port" type="number" min="1024" max="65535" data-mcf="port" value="${F.port}"></div><div class="field" style="flex: 2 1 180px"><label for="mc-mem">Memory: ${F.memoryMb} MB</label><input id="mc-mem" type="range" min="512" max="16384" step="256" data-mcf="memoryMb" value="${F.memoryMb}"></div></div>
+      <div class="row" style="gap: 12px; flex-wrap: wrap; align-items: flex-start"><div class="field" style="flex: 1 1 120px"><label for="mc-port">Port</label><input id="mc-port" type="number" min="1024" max="65535" data-mcf="port" value="${F.port}" style="height: 44px"></div><div class="field" style="flex: 2 1 180px"><label for="mc-mem">Memory: ${F.memoryMb} MB</label><input id="mc-mem" type="range" min="512" max="16384" step="256" data-mcf="memoryMb" value="${F.memoryMb}"></div></div>
       ${F.kind === 'local' && M.java && !M.java.java ? `<span class="small">Servers on this computer need Java.</span>${installBtn('java', 'Java 21')}${jobHtml('install-java')}` : ''}
       <label class="row" style="gap: 8px"><input type="checkbox" class="check" data-mcf="eula" ${F.eula ? 'checked' : ''}><span class="small">I accept the Minecraft End User License Agreement (minecraft.net/eula). The app writes eula=true only after this.</span></label>
       <button class="btn fillb" data-act="mc-create" style="align-self: flex-start" ${F.eula && F.version ? '' : 'disabled'}>${ic('add')}Create server</button>${jobHtml('mc-create')}</div>`;
@@ -1294,7 +1300,7 @@
   }
   function render() {
     if (!S.settings || (browser && !api.authenticated)) return;
-    const focusId = document.activeElement?.id, caret = document.activeElement?.selectionStart;
+    const focusId = document.activeElement?.id, caret = document.activeElement?.selectionStart, tabsLeft = root.querySelector('.tabs')?.scrollLeft || 0;
     const views = { setup: viewSetup, accounts: viewAccounts, deploys: viewDeploys, wizard: viewWizard, run: viewRun, result: viewResult, settings: viewSettings, help: viewHelp, history: viewHistory, changelog: viewChangelog, docs: viewDocs, support: viewSupport, tools: viewTools, servers: viewServers, ai: viewAi, sketch: viewSketch };
     const tab = S.tabs.find(t => t.id === S.active) || S.tabs[0];
     const v = tab.id === 'ws' ? S.view : tab.view;
@@ -1303,7 +1309,16 @@
     if (S.view === 'settings' && S.settingsQuery) { const q = S.settingsQuery.toLowerCase(); root.querySelectorAll('[data-search]').forEach(el => { el.hidden = !el.dataset.search.toLowerCase().includes(q); }); }
     vocabularize(root);
     decorateLocks();
+    keepTabInView(tabsLeft);
     if (focusId) { const el = document.getElementById(focusId); if (el) { el.focus(); if (caret != null && el.setSelectionRange) try { el.setSelectionRange(caret, caret); } catch { } } }
+  }
+  // A re-render rebuilds the tab strip, so restore where it was scrolled and nudge the active tab into view (clear of the pinned New tab).
+  function keepTabInView(left) {
+    const strip = root.querySelector('.tabs'); if (!strip) return;
+    strip.scrollLeft = left;
+    const on = strip.querySelector('.tab.on'), pin = strip.querySelector('.tab-new')?.offsetWidth || 0; if (!on) return;
+    if (on.offsetLeft < strip.scrollLeft) strip.scrollLeft = on.offsetLeft - 8;
+    else if (on.offsetLeft + on.offsetWidth > strip.scrollLeft + strip.clientWidth - pin) strip.scrollLeft = on.offsetLeft + on.offsetWidth - strip.clientWidth + pin + 8;
   }
   // Navigation crossfades the main area with a View Transition; reduced motion, calm mode and captures switch instantly.
   const motionOk = () => !(window.__capturing || S.settings?.reduceMotion || S.settings?.calm || matchMedia('(prefers-reduced-motion: reduce)').matches);
@@ -1353,7 +1368,7 @@
     if (t.dataset.tabClose) return closeTabs([t.dataset.tabClose]);
     if (t.dataset.docOpen || t.dataset.doc) { e.preventDefault(); S.docF.id = t.dataset.docOpen || t.dataset.doc; render(); return; }
     if (t.dataset.panelOpen) return S.panel?.id === t.dataset.panelOpen ? closePanel() : openPanel(t.dataset.panelOpen, `[data-panel-open="${t.dataset.panelOpen}"]`);
-    if (t.dataset.info) return openPanel('info:' + t.dataset.info, `[data-info="${t.dataset.info}"]`);
+    if (t.dataset.info) return openPanel('info:' + t.dataset.info, t.id ? '#' + t.id : `[data-info="${t.dataset.info}"]`);
     if (t.dataset.a11y) return setA11y({ [t.dataset.a11y]: !S.settings.a11y[t.dataset.a11y] });
     if (t.dataset.win) { const r = await api.window(t.dataset.win); S.maximized = r.maximized; return; }
     if (t.dataset.toggle) return set(t.dataset.toggle, !S.settings[t.dataset.toggle]);

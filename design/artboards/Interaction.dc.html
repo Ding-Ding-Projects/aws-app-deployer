@@ -22,7 +22,6 @@ body{margin:0}
 .slide{height:48px;border-radius:24px;background:var(--s1);border:1px solid var(--line2);position:relative;overflow:hidden}
 .slide i.f{position:absolute;inset:0 auto 0 0;width:62%;background:var(--err-c)}
 .slide b{position:absolute;top:4px;left:calc(62% - 44px);width:40px;height:40px;border-radius:20px;background:var(--err);display:grid;place-items:center;color:#2a0b0c}
-.info{width:28px;height:28px;border-radius:14px;border:0;background:var(--s3);color:var(--ac);display:grid;place-items:center}
 @media (max-width:720px){.demo-ctx{margin-left:0 !important;margin-top:8px !important;max-width:100%}.label{white-space:normal}}
 </style>
 </helmet>
@@ -58,8 +57,7 @@ body{margin:0}
         </div>
         <div class="row" style="align-items: flex-start; gap: 24px; flex-wrap: wrap">
           <div class="card" style="flex: 1 1 420px; gap: 0">
-            <div class="row" style="gap: 6px"><button class="info" aria-label="About Reduce motion: explanation and guided steps"><i class="ms sm" aria-hidden="true">info</i></button></div>
-            <div class="set" style="display: flex; align-items: center; gap: 14px; padding: 6px 0 12px"><span class="stack grow" style="flex: 1"><span style="font-weight: 600">Reduce motion</span><span class="small">From your settings file · default Off</span></span><span class="toggle on"></span></div>
+            <div class="set" style="padding: 6px 0 12px"><span class="stack grow"><span style="font-weight: 600">Reduce motion</span><span class="small">From your settings file · default Off</span></span><span class="set-ctl"><button class="info" data-tip="About Reduce motion" aria-label="About Reduce motion: explanation and guided steps" aria-expanded="true" style="background: var(--ac-c); color: var(--on-ac-c)"><i class="ms sm" aria-hidden="true">info</i></button><span class="set-ctl-row"><span class="toggle on"></span></span></span></div>
             <div class="card" style="background: var(--s1); gap: 8px"><span class="label">WHAT IT DOES</span><span class="small" style="color: var(--tx)">Every animation and transition finishes instantly. Progress still updates; nothing is hidden. Windows' own reduce-motion setting turns this on too.</span><span class="label" style="margin-top: 6px">TRY IT</span><span class="row small" style="gap: 10px"><span class="badge mute">Step 1 of 2</span>Toggle the practice switch below. Your real setting does not change.</span><span class="row" style="gap: 10px"><span class="toggle"></span><span class="small">Practice switch</span><span class="grow"></span><button class="btn text">Back</button><button class="btn tonal">Next</button></span></div>
           </div>
           <div class="menu" style="width: 340px" role="dialog" aria-label="Accessibility tools">

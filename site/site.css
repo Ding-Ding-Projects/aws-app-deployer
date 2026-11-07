@@ -56,4 +56,8 @@
    source link lives in the footer on phones so the toolbar stays one row. */
 .a11y-panel .set > .grow { flex: 1 1 160px; min-width: 0; }
 .a11y-panel .set > :last-child { margin-left: auto; }
+.a11y-panel .set .t { font-weight: 600; }
+.a11y-panel .set-stack { flex-direction: column; align-items: stretch; }
+.a11y-panel .set-stack > .grow { flex: none; }
+.a11y-panel .set-stack > :last-child { margin-left: 0; justify-content: flex-start; }
 @media (max-width: 720px) { .nav-src { display: none !important; } .tools { justify-content: space-between; } }

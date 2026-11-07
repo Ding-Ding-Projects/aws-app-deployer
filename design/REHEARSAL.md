@@ -74,3 +74,35 @@ A last modernization pass over every screen of the desktop app and the landing p
 | 8 | The phone navigation wrapped the source link onto a second row | The source link lives in the footer on phones |
 | 9 | Capture leftovers (a styled element and an open lock) bled into later frames | Capture mode restores every setting it changed and clears the appearance target |
 | 10 | Menu and confirmation captures showed nothing on a fresh install | They now open on the Settings theme row and the sketch clear confirmation |
+
+### Fresh-eye review
+
+A separate reviewer that had not seen the build judged only 36 final frames (boards, every app screen at desktop and narrow width, and the landing page at desktop and phone) against `review.md` and `verify.md`. It returned 19 findings:
+
+| # | Finding | Outcome |
+| --- | --- | --- |
+| 1 | The lock and unlock dialogs cut off their main action | Panel footers stick to the panel's bottom edge; those panels size to their content |
+| 2 | No way to reach the page sections on a phone | A Sections button lists them on narrow screens |
+| 3 | Landing page content cut under a blank band | Capture artefact, not a page fault: the frame was taken during a smooth scroll. Captures now scroll instantly |
+| 4 | The hero activity card covered the window's account chip | Moved above the window's top edge |
+| 5 | Two menu rows looked selected at once | Hover is a quiet state layer; only the keyboard cursor row is highlighted |
+| 6 | Info buttons sat in a different place on every row, and Custom colour had none | Every settings control has its info button directly above it, in the same slot on every row, with a 44 px touch target and a tooltip on hover and focus |
+| 7 | Blank space under short empty states | A whole-page empty state fills the pane and centres its content; the game server detail card matches the form's height |
+| 8 | New tab cut off when many tabs are open | New tab stays pinned at the right end; long tab names shorten with an ellipsis |
+| 9 | Port and Memory labels on different lines | Both fields share one label line and the same height |
+| 10 | The rail kept Deploys highlighted on utility tabs | The rail marks nothing while a utility tab is active |
+| 11 | The locked dim sum switch looked neither on nor off (board) | The board shows it on, with its lock note |
+| 12 | The line under the hero headline repeated it; the headline broke awkwardly | That line now adds a new point at every funny level; the headline wraps in balanced lines in a wider column |
+| 13 | The short language card left a blank block | It now holds a live language switch for the page |
+| 14 | Small, low-contrast captions | Raised to 14 to 15 px in the secondary text colour |
+| 15 | A crowded accessibility panel on the landing page | Long labels split into a title and a note; the accent row puts its controls under the label |
+| 16 | Pale links and buttons in the light theme | Every accent tone is derived per theme from the chosen accent, so text buttons and links stay readable; the light theme no longer reuses the dark theme's pale accent |
+| 17 | The custom colour value broke mid-value on a narrow window | The hex and rgb() values each stay whole |
+| 18 | The confirmation card sat flush against the window edge | Menus and confirmations are placed by layout size and keep an 8 px margin |
+| 19 | A lone info icon row on the Interaction board | The info button sits above its switch in the same row |
+
+Every fix was re-filmed: boards 17, 11 and 25 at both widths in both themes, every app screen again at 1320 px and 420 px, and the landing page at 1440 px and 390 px including the new Sections menu.
+
+### Not checked
+
+Hover and pressed states were reviewed in markup and a few hover frames, not filmed for every control. The landing page has no info buttons yet; that gap stays open in the feature audit. Windows captures from the release build are checked separately once the release run finishes.
