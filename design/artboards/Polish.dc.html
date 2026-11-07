@@ -65,18 +65,19 @@ body{margin:0}
           </div>
           <div class="side">
             <div class="stack" style="gap: 8px"><span class="label">RIGHT-CLICK MENU WITH LIVE CONTROLS</span>
-              <div class="ctx demo-menu" role="menu" aria-label="Actions for Theme">
-                <div class="row ctx-f"><i class="ms sm">filter_list</i><input class="mono" placeholder="Filter" aria-label="Filter actions"><span class="badge mute mono">.*</span></div>
+              <div class="ctx demo-menu" role="dialog" aria-label="Actions for Theme">
+                <div class="row ctx-f"><i class="ms sm" aria-hidden="true">filter_list</i><input class="mono" role="combobox" aria-expanded="true" aria-controls="demo-list" aria-activedescendant="demo-o0" placeholder="Filter" aria-label="Filter actions"><span class="badge mute mono">.*</span></div>
                 <div class="divider"></div>
-                <div class="mi mi-ctl on"><i class="ms sm">dark_mode</i><span class="lbl">Theme</span><span class="seg sm" role="radiogroup" aria-label="Theme"><button role="radio" aria-checked="false">System</button><button role="radio" aria-checked="false">Light</button><button class="on" role="radio" aria-checked="true">Dark</button></span></div>
-                <div class="mi mi-ctl"><i class="ms sm">format_size</i><span class="lbl">Text size</span><span class="stepper" role="slider" aria-label="Text size" aria-valuenow="110" aria-valuetext="110%"><button aria-hidden="true">−</button><span class="v">110%</span><button aria-hidden="true">+</button></span></div>
-                <div class="mi mi-ctl"><i class="ms sm">motion_photos_off</i><span class="lbl">Reduce motion</span><button class="toggle sm" role="switch" aria-checked="false" aria-label="Reduce motion"></button></div>
-                <div class="mi mi-ctl"><i class="ms sm">volume_up</i><span class="lbl">Action sounds</span><button class="toggle sm on" role="switch" aria-checked="true" aria-label="Action sounds"></button></div>
-                <div class="mi mi-ctl"><i class="ms sm">palette</i><span class="lbl">Accent colour<span class="why mono">#6ea8ff</span></span><span class="swatch" style="background: #6ea8ff"></span></div>
-                <div class="divider"></div>
-                <button class="mi"><i class="ms sm">info</i><span>About this setting</span></button>
-                <button class="mi"><i class="ms sm">restart_alt</i><span>Reset to default</span></button>
-                <button class="mi"><i class="ms sm">search</i><span>Command palette</span><span class="k">Ctrl+Shift+F</span></button>
+                <div class="ctx-list" id="demo-list" role="listbox" aria-label="Actions for Theme">
+                  <div class="mi mi-ctl on" role="option" id="demo-o0" aria-selected="true" aria-label="Theme: Dark"><i class="ms sm" aria-hidden="true">dark_mode</i><span class="lbl">Theme</span><span class="seg sm" aria-hidden="true"><span class="opt">System</span><span class="opt">Light</span><span class="opt on">Dark</span></span></div>
+                  <div class="mi mi-ctl" role="option" aria-selected="false" aria-label="Text size: 110%"><i class="ms sm" aria-hidden="true">format_size</i><span class="lbl">Text size</span><span class="stepper" aria-hidden="true"><span class="sb">−</span><span class="v">110%</span><span class="sb">+</span></span></div>
+                  <div class="mi mi-ctl" role="option" aria-selected="false" aria-checked="false"><i class="ms sm" aria-hidden="true">motion_photos_off</i><span class="lbl">Reduce motion</span><span class="toggle sm" aria-hidden="true"></span></div>
+                  <div class="mi mi-ctl" role="option" aria-selected="false" aria-checked="true"><i class="ms sm" aria-hidden="true">volume_up</i><span class="lbl">Action sounds</span><span class="toggle sm on" aria-hidden="true"></span></div>
+                  <div class="mi mi-ctl" role="option" aria-selected="false" aria-label="Accent colour: #6ea8ff"><i class="ms sm" aria-hidden="true">palette</i><span class="lbl">Accent colour<span class="why mono">#6ea8ff</span></span><span class="swatch" aria-hidden="true" style="background: #6ea8ff"></span></div>
+                  <div class="mi" role="option" aria-selected="false"><i class="ms sm" aria-hidden="true">info</i><span class="lbl">About this setting</span></div>
+                  <div class="mi" role="option" aria-selected="false"><i class="ms sm" aria-hidden="true">restart_alt</i><span class="lbl">Reset to default</span></div>
+                  <div class="mi" role="option" aria-selected="false" aria-keyshortcuts="Ctrl+Shift+F"><i class="ms sm" aria-hidden="true">search</i><span class="lbl">Command palette</span><span class="k" aria-hidden="true">Ctrl+Shift+F</span></div>
+                </div>
               </div>
             </div>
             <div class="card">

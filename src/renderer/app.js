@@ -563,6 +563,8 @@
     return `<nav class="tabbar" aria-label="Tabs"><div class="tabs" role="tablist" aria-label="Open tabs">${S.tabs.map(t => { const c = t.id === 'ws' ? { label: 'Workspace', icon: 'rocket_launch' } : CATALOG.find(x => x.view === t.view), on = S.active === t.id; return `<span class="tab ${on ? 'on' : ''}" data-menu="tab" data-tab="${t.id}"><button class="tab-b" role="tab" id="tab-${t.id}" aria-selected="${on}" tabindex="${on ? 0 : -1}" data-tab-go="${t.id}" title="${esc(c.label)}"${t.id === 'ws' ? '' : ' aria-keyshortcuts="Delete" aria-describedby="tab-hint"'}>${ic(c.icon, 'sm')}<span class="tab-l">${esc(c.label)}</span></button>${t.id === 'ws' ? '' : `<span class="tab-x" aria-hidden="true" data-tab-close="${t.id}" title="Close ${esc(c.label)}">${ic('close', 'sm')}</span>`}</span>`; }).join('')}</div><span class="sr" id="tab-hint">Delete closes this tab. Left and Right move between tabs.</span><span class="tab-new"><button class="chip" style="height: 30px; flex: none" data-panel-open="newtab">${ic('add', 'sm')}New tab</button></span></nav>`;
   }
   // The tab strip hides its scrollbar, so a mouse wheel over it scrolls it sideways; the active tab is kept in view.
+  document.addEventListener('scroll', e => { if (e.target.classList?.contains('tabs')) tabFade(e.target); }, true);
+  addEventListener('resize', () => { const strip = root.querySelector('.tabs'); if (strip) tabFade(strip); });
   document.addEventListener('wheel', e => { const strip = e.target.closest?.('.tabs'); if (!strip || Math.abs(e.deltaX) > Math.abs(e.deltaY) || strip.scrollWidth <= strip.clientWidth) return; strip.scrollLeft += e.deltaY; e.preventDefault(); }, { passive: false });
   // Tab keys: Left and Right move between tabs, Home and End jump to the ends, Delete closes a utility tab.
   function selectTab(id) { withTransition(() => { S.active = id; const tb = S.tabs.find(x => x.id === S.active); if (tb?.view) ensureData(tb.view); render(); document.getElementById('tab-' + S.active)?.focus(); }); }
@@ -1238,6 +1240,15 @@
     const r = c.getBoundingClientRect(), k = 1200 / r.width, x = (e.clientX - r.left) * k, y = (e.clientY - r.top) * k;
     const [, base] = PENS[S.sk.tool]; skCur = { s: { tool: S.sk.tool, color: S.sk.color, p: [[Math.round(x), Math.round(y), base * S.sk.size]] }, last: { x, y, t: performance.now() }, origin: { x, y } }; S.sk.redo = [];
   });
+  // Palette: the pointer moves the one highlighted command, as in menus, so hover never marks a second row.
+  root.addEventListener('pointermove', e => {
+    const P = S.palette; if (!P || e.pointerType === 'touch') return;
+    const row = e.target.closest?.('#pal-list [id^="pal-o-"]'); if (!row) return;
+    const n = +row.id.slice(6); if (n === P.sel) return;
+    P.sel = n;
+    document.querySelectorAll('#pal-list [id^="pal-o-"]').forEach(o => { const on = o === row; o.classList.toggle('sel', on); o.setAttribute('aria-selected', String(on)); });
+    document.getElementById('pq')?.setAttribute('aria-activedescendant', row.id);
+  });
   root.addEventListener('pointermove', e => {
     if (!skCur) return; const c = document.getElementById('sk-canvas'); if (!c) return;
     const r = c.getBoundingClientRect(), k = 1200 / r.width; let x = (e.clientX - r.left) * k, y = (e.clientY - r.top) * k;
@@ -1330,9 +1341,12 @@
     const strip = root.querySelector('.tabs'); if (!strip) return;
     strip.scrollLeft = left;
     const on = strip.querySelector('.tab.on'); if (!on) return;
-    if (on.offsetLeft < strip.scrollLeft) strip.scrollLeft = on.offsetLeft - 8;
-    else if (on.offsetLeft + on.offsetWidth > strip.scrollLeft + strip.clientWidth) strip.scrollLeft = on.offsetLeft + on.offsetWidth - strip.clientWidth + 8;
+    // 36 px clears the 32 px edge fade, so the active tab is never drawn faded.
+    if (on.offsetLeft - 36 < strip.scrollLeft) strip.scrollLeft = on.offsetLeft - 36;
+    else if (on.offsetLeft + on.offsetWidth + 36 > strip.scrollLeft + strip.clientWidth) strip.scrollLeft = on.offsetLeft + on.offsetWidth - strip.clientWidth + 36;
+    tabFade(strip);
   }
+  function tabFade(strip) { const max = strip.scrollWidth - strip.clientWidth; strip.classList.toggle('more-l', strip.scrollLeft > 1); strip.classList.toggle('more-r', strip.scrollLeft < max - 1); }
   // Navigation crossfades the main area with a View Transition; reduced motion, calm mode and captures switch instantly.
   const motionOk = () => !(window.__capturing || S.settings?.reduceMotion || S.settings?.calm || matchMedia('(prefers-reduced-motion: reduce)').matches);
   function withTransition(fn) { if (document.startViewTransition && motionOk()) document.startViewTransition(fn); else fn(); }

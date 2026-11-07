@@ -26,6 +26,30 @@ test('filtered context actions keep original indexes and execute by keyboard or 
     assert.deepEqual(ran, ['remove']);
   }
 });
+test('the pointer moves the one highlighted menu row instead of adding a second highlight', async () => {
+  const h = harness(); const ran = [];
+  h.kit.openMenu(['Copy', 'Paste', 'Cut'].map(label => ({ label, run: () => ran.push(label) })), { x: 10, y: 10 });
+  const host = h.hosts[0];
+  const drawn = [...host.innerHTML.matchAll(/role="option" id="(ctx-o-\d+-\d+)" aria-selected="(true|false)" data-n="(\d+)"/g)];
+  assert.deepEqual(drawn.map(m => m[2]), ['true', 'false', 'false'], 'the first row starts as the one highlight');
+  const rows = drawn.map(([, id, selected, n]) => {
+    const cls = new Set(selected === 'true' ? ['on'] : []), attrs = { 'aria-selected': selected };
+    return { id, host, attrs, dataset: { n }, classList: { toggle(c, on) { if (on) cls.add(c); else cls.delete(c); }, contains: c => cls.has(c) }, setAttribute(k, v) { attrs[k] = v; } };
+  });
+  let active = null;
+  host.querySelectorAll = () => rows;
+  host.querySelector = sel => (sel === 'input' ? { focus() {}, setAttribute(k, v) { if (k === 'aria-activedescendant') active = v; } } : null);
+  const on = () => rows.map(r => r.classList.contains('on'));
+  const over = (row, pointerType = 'mouse') => h.event('pointermove', { pointerType, target: { closest: () => row } });
+  await over(rows[2]);
+  assert.deepEqual(on(), [false, false, true]);
+  assert.deepEqual(rows.map(r => r.attrs['aria-selected']), ['false', 'false', 'true']);
+  assert.equal(active, rows[2].id, 'the combobox points at the row under the pointer');
+  await over(rows[1]); assert.deepEqual(on(), [false, true, false]);
+  await over(rows[0], 'touch'); assert.deepEqual(on(), [false, true, false], 'a touch does not move the highlight');
+  await h.event('keydown', { key: 'Enter' });
+  assert.deepEqual(ran, ['Paste'], 'Enter runs the row the pointer chose');
+});
 test('confirmation cannot commit with zero or one key, and commits only once after both', async () => {
   const h = harness(); let committed = 0;
   h.kit.superConfirm({ title: 'Remove', detail: 'Remove local history', onConfirm: () => committed++ });

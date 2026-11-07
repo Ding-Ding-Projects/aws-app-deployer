@@ -106,3 +106,61 @@ Every fix was re-filmed: boards 17, 11 and 25 at both widths in both themes, eve
 ### Not checked
 
 Hover and pressed states were reviewed in markup and a few hover frames, not filmed for every control. The landing page has no info buttons yet; that gap stays open in the feature audit. Windows captures from the release build are checked separately once the release run finishes.
+
+## Every-surface sweep, 2026-11-06
+
+After the polish pass, a script opened every surface and measured it, because eyes skip things a measurement does not. Board 26 on the canvas holds the score.
+
+### What was opened
+
+- The app: all 28 capture routes (screens, panels, menus and dialogs) at phone 390 x 844, tablet 820 x 1180, 960 x 540 (a 1080p screen at 200 percent) and desktop 1440 x 900, in light and dark, in English, Cantonese and both: 672 surfaces. The app runs from its own profile, so no saved settings leak in.
+- The landing page: the page, the command palette, the accessibility panel, the right-click menu, the Sections menu and the docs reader, at the same sizes, themes and languages: 138 surfaces. The page's two GitHub lookups answer with sample data, so a rate limit never counts as a finding.
+
+### What counts as a finding
+
+axe-core 4.10.3 with the WCAG 2.2 AA and best-practice rules; text cut by its box, pushed past the window edge, or overlapping other text in the same layer; console errors, page errors and blocked requests; and a keyboard walk with Tab that flags focus without a visible ring, focus on an unnamed control, focus on something hidden, and focus leaving an open modal dialog. Entrance animations and transitions are settled before anything is measured. The release rule is zero findings: `npm run sweep:app` and `npm run sweep:site` exit with an error on any.
+
+### Score
+
+Before is the released build v0.1.23 (`667b11a`) swept with the same checks. It could not shrink below 560 px tall, so its 960 x 540 pass ran at 560.
+
+| Check | Before | After |
+| --- | ---: | ---: |
+| Content outside any landmark | 11982 | 0 |
+| Lists missing their options | 714 | 0 |
+| Text contrast below 4.5:1 | 469 | 0 |
+| Controls nested inside other controls | 432 | 0 |
+| Page without a main landmark | 90 | 0 |
+| Focus without a visible ring | 88 | 0 |
+| Buttons without a name | 24 | 0 |
+| Lists and inputs without a name | 24 | 0 |
+| Targets too small or covered | 18 | 0 |
+| Clipped text | 16 | 0 |
+| Overlapping text | 6 | 0 |
+| **All checks** | **13863** | **0** |
+
+By surface set: the app went from 2712 findings with no clean surface to 672 of 672 clean; the landing page went from 11151 findings with no clean surface to 138 of 138 clean. One root cause usually shows on many surfaces, which is why the counts are large.
+
+### Root fixes
+
+Each was fixed once, in the shared token or component:
+
+1. Landmarks: the update banner is a labelled section, the tab strip is a labelled navigation, panel headers no longer pose as page banners, and the landing page has one main landmark.
+2. Menus and palettes: a filter box drives a list of options, and live controls are drawn as pictures inside their options instead of real buttons nested in them. Left and Right change a value, Enter and Space act, Escape clears and then closes.
+3. Tabs: close marks sit beside each tab, arrows, Home and End move between tabs, Delete closes one, and New tab sits outside the tab list.
+4. Contrast: second-language text takes its control's own colour, step labels and disabled rows stay readable, and accent tones are derived per theme.
+5. Focus: every field rings its whole box on focus, including date and time fields whose picker takes focus, and the range slider has its own ring. The app palette and the landing page accessibility panel keep Tab inside while open.
+6. Names and targets: icon buttons and lists carry names, and info buttons keep a 44 px touch target.
+7. Size: viewport heights and panel sizes are divided by the text size zoom, so large text no longer pushes the window or panels past the screen, and the window can shrink to 480 px tall.
+8. Windows title bar: the window uses the platform title-bar overlay, so Windows draws its own caption buttons and Snap layouts work; the overlay colours follow the theme over a validated call.
+
+### Corrections to the sweep itself
+
+- Overlap and clipping are measured on the part of a box that can actually be seen, cut by every clipping ancestor, and the body of a closed disclosure is skipped. Without this, scrolled lists reported text overlapping text that was scrolled out of view.
+- Capture and sweep runs closed a confirmation by removing its element but left it open in the kit's state, so every later key press was ignored and the keyboard walk saw nothing. They now close it through the kit.
+
+### Not checked
+
+- The real Windows caption buttons and Snap layouts: they need a Windows desktop. The release run's Windows captures are the next look.
+- What a screen reader actually says: axe checks names, roles and states, not speech.
+- Extension support is a new requirement and has not been started; the feature audit records it as missing.

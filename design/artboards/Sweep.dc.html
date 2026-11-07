@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Every-surface sweep</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="./app.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400..700&amp;family=JetBrains+Mono:wght@400;500&amp;family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,300..600,0..1,0&amp;display=block">
+<style>
+body{margin:0}
+.score{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:0;border-radius:var(--r2);overflow:hidden;border:1px solid var(--line)}
+.score > *{padding:9px 14px;border-top:1px solid var(--line);font-variant-numeric:tabular-nums;display:flex;align-items:center;gap:8px}
+.score > .hd{border-top:0;background:var(--s3);font-weight:600;font-size:12px;color:var(--tx2);letter-spacing:.02em}
+.score .n{justify-content:flex-end;font-family:"JetBrains Mono",monospace;font-size:13px}
+.score > .hd.n{font-family:inherit;font-size:12px}
+.how{display:flex;flex-direction:column;gap:0}
+.how > div{display:grid;grid-template-columns:164px minmax(0,1fr);gap:12px;align-items:start;padding:10px 0}
+.how > div > .ms{justify-self:start;margin-top:1px}
+.how > div + div{border-top:1px solid var(--line)}
+.how .mono{justify-self:start;padding:3px 8px;border-radius:8px;background:var(--s3);color:var(--tx)}
+@media (max-width:720px){.how > div{grid-template-columns:minmax(0,1fr);gap:6px}}
+.how .ms{color:var(--tx2)}
+.score .zero{color:var(--ok);font-weight:600}
+.score .tot{background:var(--s3);font-weight:700}
+.big-n{font-size:40px;font-weight:700;letter-spacing:-.03em;font-variant-numeric:tabular-nums;line-height:1}
+.matrix{display:flex;flex-wrap:wrap;gap:6px}
+.matrix .chip{height:28px;font-size:12px}
+.pat{display:flex;gap:10px;align-items:flex-start;padding:8px 0}
+.pat + .pat{border-top:1px solid var(--line)}
+.pat .ms{color:var(--ok)}
+.shots{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.shots figure{margin:0;display:flex;flex-direction:column;gap:6px}
+.shots img{width:100%;border-radius:12px;border:1px solid var(--line);display:block}
+.shots figcaption{font-size:12px;color:var(--tx2)}
+@media (max-width:720px){.shots{grid-template-columns:minmax(0,1fr)}}
+</style>
+</helmet>
+<div class="app {{themeClass}}" style="min-height: 0; padding: 44px 48px; gap: 22px; background: var(--s1); overflow: visible">
+  <div class="row" style="align-items: flex-end; flex-wrap: wrap; gap: 16px">
+    <div class="stack grow" style="flex: 1 1 520px"><span class="label">AWS APP DEPLOYER · RELEASE CHECK</span><span class="h1" style="font-size: 34px">Every-surface sweep</span><span class="sub">Every screen, panel and menu of the app, and every overlay of the landing page, opened by a script at four sizes, in both themes and all three languages. Fixed at the shared token or component, then filmed again.</span></div>
+    <div class="row" style="gap: 28px; flex-wrap: wrap">
+      <div class="stack"><span class="label">BEFORE</span><span class="big-n">13863</span><span class="small">findings, same matrix</span></div>
+      <div class="stack"><span class="label">AFTER</span><span class="big-n" style="color: var(--ok)">0</span><span class="small">findings: the release check passes</span></div>
+    </div>
+  </div>
+  <div class="card" style="gap: 12px">
+    <span class="h2">What was opened</span>
+    <div class="matrix"><span class="chip">Phone 390 x 844</span><span class="chip">Tablet 820 x 1180</span><span class="chip">1080p at 200% · 960 x 540</span><span class="chip">Desktop 1440 x 900</span><span class="chip">Light</span><span class="chip">Dark</span><span class="chip">English</span><span class="chip">廣東話</span><span class="chip">Both</span></div>
+    <span class="small">App: 672 surfaces (28 screens, panels and menus). Landing page: 138 surfaces (the page, palette, accessibility panel, right-click menu, Sections menu and docs reader). Before is the released build v0.1.23 (667b11a) swept with the same checks; it could not shrink to 540 px tall, so its 960 x 540 pass ran at 560.</span>
+  </div>
+  <div class="cols" style="align-items: flex-start">
+    <div class="wide">
+      <div class="card" style="gap: 12px">
+        <span class="h2">Score by check</span>
+        <div class="score">
+          <span class="hd">Check</span><span class="hd n">Before</span><span class="hd n">After</span>
+          <span>Content outside any landmark</span><span class="n">11982</span><span class="n zero">0</span>
+          <span>Lists missing their options</span><span class="n">714</span><span class="n zero">0</span>
+          <span>Text contrast below 4.5:1</span><span class="n">469</span><span class="n zero">0</span>
+          <span>Controls nested inside other controls</span><span class="n">432</span><span class="n zero">0</span>
+          <span>Page without a main landmark</span><span class="n">90</span><span class="n zero">0</span>
+          <span>Focus without a visible ring</span><span class="n">88</span><span class="n zero">0</span>
+          <span>Buttons without a name</span><span class="n">24</span><span class="n zero">0</span>
+          <span>Lists and inputs without a name</span><span class="n">24</span><span class="n zero">0</span>
+          <span>Targets too small or covered</span><span class="n">18</span><span class="n zero">0</span>
+          <span>Clipped text</span><span class="n">16</span><span class="n zero">0</span>
+          <span>Overlapping text</span><span class="n">6</span><span class="n zero">0</span>
+          <span class="tot">All checks</span><span class="n tot">13863</span><span class="n tot zero">0</span>
+        </div>
+        <span class="small">Counts are findings across every surface; one root cause usually shows on many surfaces, so each was fixed once at the shared token or component. Animations are settled before checking, and the page's two GitHub lookups use sample data so rate limits never count as findings.</span>
+      </div>
+      <div class="card" style="gap: 6px">
+        <span class="h2">How it runs</span>
+        <div class="how">
+          <div><span class="mono">npm run sweep:app</span><span class="small">Opens every route of the built app from a fresh profile, settles motion, runs the checks, then walks the keyboard with Tab. Exits with an error on any finding.</span></div>
+          <div><span class="mono">npm run sweep:site</span><span class="small">Opens the landing page and each overlay in Chromium. The two GitHub lookups answer with sample data, so a rate limit is never a finding.</span></div>
+          <div><i class="ms sm" aria-hidden="true">rule</i><span class="small">What counts: axe-core 4.10 WCAG 2.2 AA and best practice, clipped, off-screen and overlapping text, console errors, blocked requests, and focus with no ring, no name, on something hidden, or outside an open dialog.</span></div>
+          <div><i class="ms sm" aria-hidden="true">block</i><span class="small">Release rule: zero findings, or no release. A fix lands in the shared token or component, never in one screen.</span></div>
+          <div><i class="ms sm" aria-hidden="true">visibility_off</i><span class="small">Not checked here: the real Windows caption buttons and Snap layouts need a Windows desktop, and axe checks names and roles, not what a screen reader actually says.</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="side">
+      <div class="card" style="gap: 4px">
+        <span class="h2" style="padding-bottom: 6px">Known patterns checked</span>
+        <div class="pat"><i class="ms sm fill" aria-hidden="true">check_circle</i><span class="stack"><span style="font-weight: 600">Icon names read aloud</span><span class="small">Every glyph carries aria-hidden; controls are named by their words.</span></span></div>
+        <div class="pat"><i class="ms sm fill" aria-hidden="true">check_circle</i><span class="stack"><span style="font-weight: 600">Tab roles on the bottom bar</span><span class="small">Rail and bottom bar are navigation buttons with aria-current.</span></span></div>
+        <div class="pat"><i class="ms sm fill" aria-hidden="true">check_circle</i><span class="stack"><span style="font-weight: 600">A text field inside a menu</span><span class="small">Menus and palettes are a combobox driving a listbox through aria-activedescendant; values are drawn inside options.</span></span></div>
+        <div class="pat"><i class="ms sm fill" aria-hidden="true">check_circle</i><span class="stack"><span style="font-weight: 600">Close buttons inside tabs</span><span class="small">Close marks sit beside the tab, Delete closes, arrows, Home and End move, New tab is outside the tab list.</span></span></div>
+        <div class="pat"><i class="ms sm fill" aria-hidden="true">check_circle</i><span class="stack"><span style="font-weight: 600">Faded second-language text</span><span class="small">Second-language text takes its control&#x27;s own colour.</span></span></div>
+        <div class="pat"><i class="ms sm fill" aria-hidden="true">check_circle</i><span class="stack"><span style="font-weight: 600">Search boxes that only change tone</span><span class="small">Every field rings the whole box on focus, including date and time fields.</span></span></div>
+        <div class="pat"><i class="ms sm fill" aria-hidden="true">check_circle</i><span class="stack"><span style="font-weight: 600">Text size cutting off the window</span><span class="small">Viewport heights and widths are divided by the zoom.</span></span></div>
+        <div class="pat"><i class="ms sm fill" aria-hidden="true">check_circle</i><span class="stack"><span style="font-weight: 600">Settings labels squeezed to one word</span><span class="small">Rows stack the control under the label below 160 px.</span></span></div>
+        <div class="pat"><i class="ms sm fill" aria-hidden="true">check_circle</i><span class="stack"><span style="font-weight: 600">Chart labels inside a scaled image</span><span class="small">Chart labels are page text.</span></span></div>
+        <div class="pat"><i class="ms sm fill" aria-hidden="true">check_circle</i><span class="stack"><span style="font-weight: 600">Landing page buttons in grey and dialogs that let Tab leave</span><span class="small">Every page button is styled; the palette and the accessibility panel keep Tab inside.</span></span></div>
+        <div class="pat"><i class="ms sm fill" aria-hidden="true">check_circle</i><span class="stack"><span style="font-weight: 600">The Windows caption buttons</span><span class="small">The platform title-bar overlay draws them, so Snap layouts work; colours follow the theme over a validated call.</span></span></div>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["dark","light"],"default":"dark"},"$preview":{"width":1440,"height":1440}}'>
+class Component extends DCLogic {
+renderVals() {
+return { themeClass: (this.props.theme ?? 'dark') === 'light' ? 'light' : '' };
+}
+}
+</script>
+</body>
+</html>

@@ -8,7 +8,7 @@ This is the design delivery the root [handoff](../HANDOFF.md) asks for. Start wi
 | --- | --- |
 | `DESIGN.md` | Tokens, motion, task flows, component states, keyboard and responsive rules |
 | `artboards/canvas.json` | Canvas index: frame positions, titles and notes |
-| `artboards/*.dc.html` | One screen per file, 26 artboards |
+| `artboards/*.dc.html` | One screen per file, 27 artboards |
 | `artboards/app.css` | Shared tokens, shell, components and motion |
 | `frames/` | Prototype renders of every artboard at 1440 px and 390 px (Features and Motion are desktop-only reference sheets) |
 | `REHEARSAL.md` | How the pass was filmed and reviewed, and every finding fixed |
@@ -41,6 +41,7 @@ This is the design delivery the root [handoff](../HANDOFF.md) asks for. Start wi
 23. School mode, scheduled settings, colour picker with alpha, funny level on every message
 24. Converters, game server manager, local AI and sketching
 25. Polish system: controls, menus with live controls, empty states, scrollbars
+26. Every-surface sweep: the before and after score, what was opened, how it runs
 
 ## Rules the implementation must keep
 
@@ -52,6 +53,8 @@ This is the design delivery the root [handoff](../HANDOFF.md) asks for. Start wi
 - The dim sum surprise switch always springs back on; School mode hides the surprise entirely.
 - Every select shows its chevron; every context menu row that holds a control changes the real setting in place and keeps the menu open; only the keyboard cursor row is strongly highlighted.
 - Panels and menus stay inside the window at every width, and page changes cross-fade only when motion is allowed.
+- Menus and palettes are a filter box driving a list of options; a value inside an option is drawn, not a nested control. Tabs close with Delete and move with the arrow keys, and New tab sits outside the tab list.
+- The every-surface sweep comes back with zero findings before an interface release (`npm run sweep:app`, `npm run sweep:site`). A finding is fixed in the shared token or component.
 
 ## Stageshow record
 

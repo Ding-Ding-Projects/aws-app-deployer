@@ -64,6 +64,19 @@ window.Kit = (() => {
     return '';
   }
   const refocus = () => menu?.host.querySelector('input')?.focus();
+  // The pointer moves the one highlighted row instead of adding a second highlight, so the row under the
+  // pointer and the keyboard cursor are always the same row. Marks only; the menu is not redrawn under the pointer.
+  function mark() {
+    const id = optId(menu.sel);
+    menu.host.querySelectorAll('[role="option"][data-n]').forEach(o => { const on = o.id === id; o.classList.toggle('on', on); o.setAttribute('aria-selected', String(on)); });
+    menu.host.querySelector('input')?.setAttribute('aria-activedescendant', id);
+  }
+  document.addEventListener('pointermove', e => {
+    if (!menu || e.pointerType === 'touch') return;
+    const row = e.target.closest?.('[role="option"][data-n]');
+    if (!row || !menu.host.contains(row) || +row.dataset.n === menu.sel) return;
+    menu.sel = +row.dataset.n; mark();
+  });
   async function change(i, value) {
     if (!i || i.disabled) return;
     await i.set(value);

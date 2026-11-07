@@ -30,6 +30,8 @@ button { font: inherit; }
 .list .li { width: 100%; border: 0; background: transparent; text-align: left; font: inherit; color: inherit; cursor: pointer; }
 .list .li.static { cursor: default; }
 .li.sel { background: var(--ac-c); color: var(--on-ac-c); }
+/* In a list of options the pointer moves the selection itself (app.js), so a plain hover layer would mark a second row. */
+[role="listbox"] > .li:not(.sel):hover { background: transparent; }
 /* Secondary text inside a selected row takes the row's own text colour, not the page's muted grey */
 .li.sel .m, .li.sel .small, .li.sel .why { color: var(--on-ac-c); opacity: .85; }
 .toggle { cursor: pointer; padding: 0; }
@@ -191,6 +193,10 @@ select { height: 40px; border-radius: var(--r2); border: 1px solid var(--line2);
 .sk-stage { border-radius: 14px; background: #fff center / cover no-repeat; overflow: hidden; }
 #sk-canvas { display: block; width: 100%; height: auto; aspect-ratio: 1200 / 750; touch-action: none; cursor: crosshair; }
 .tabs { scrollbar-width: none; } .tabs::-webkit-scrollbar { display: none; }
+/* The strip has no scrollbar, so an edge fades when more tabs lie that way (app.js marks .more-l and .more-r). */
+.tabs.more-l { mask-image: linear-gradient(to right, transparent, #000 32px); }
+.tabs.more-r { mask-image: linear-gradient(to left, transparent, #000 32px); }
+.tabs.more-l.more-r { mask-image: linear-gradient(to right, transparent, #000 32px, #000 calc(100% - 32px), transparent); }
 
 /* Final polish pass */
 .settings-grid { display: grid !important; grid-template-columns: repeat(auto-fill, minmax(min(460px, 100%), 1fr)); gap: 20px; align-items: start; }

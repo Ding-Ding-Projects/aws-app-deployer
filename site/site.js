@@ -357,6 +357,14 @@
     if (el.dataset.accent) { const box = el.closest('.row'), rgb = box.querySelector('[data-accent="rgb"]').value, a = +box.querySelector('[data-accent="alpha"]').value / 100; setPref('accent', a >= 1 ? rgb : rgb + Math.round(a * 255).toString(16).padStart(2, '0')); }
   });
   document.addEventListener('input', e => { if (e.target.id === 'pq') { palette.q = e.target.value; palette.sel = 0; drawPalette(); } });
+  // The pointer moves the one highlighted row, as in the menus, so hover never marks a second row.
+  document.addEventListener('pointermove', e => {
+    if (!palette || e.pointerType === 'touch') return;
+    const row = e.target.closest?.('#pl > .pr[data-i]'); if (!row || +row.dataset.i === palette.sel) return;
+    palette.sel = +row.dataset.i;
+    document.querySelectorAll('#pl > .pr[data-i]').forEach(o => { const on = o === row; o.classList.toggle('on', on); o.setAttribute('aria-selected', String(on)); });
+    document.getElementById('pq')?.setAttribute('aria-activedescendant', row.id);
+  });
   document.addEventListener('click', e => {
     const t = e.target.closest('button, a, [data-pref], [data-flip], [data-step], [data-act], [data-i]'); if (!t) { if (e.target.id === 'palette') closePalette(); return; }
     if (t.dataset.pref) return setPref(t.dataset.pref, isNaN(+t.dataset.v) ? t.dataset.v : +t.dataset.v);
