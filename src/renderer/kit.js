@@ -197,5 +197,5 @@ window.Kit = (() => {
     savePanel(el); return true;
   }
 
-  return { bind, keysFor, dispatch, openMenu, closeMenu, menuOpen: () => !!menu, superConfirm, confirmOpen: () => !!sc, panelStyle, watchPanels, nudgePanel };
+  return { bind, keysFor, dispatch, openMenu, closeMenu, menuOpen: () => !!menu, superConfirm, closeConfirm, confirmOpen: () => !!sc, panelStyle, watchPanels, nudgePanel };
 })();

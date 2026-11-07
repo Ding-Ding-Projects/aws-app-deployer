@@ -1364,7 +1364,8 @@
   const __goInner = window.__go;
   // Captures leave nothing behind: undo the capture-only style, lock and schedule before the next screen.
   window.__go = v => {
-    window.__capturing = true; S.panel = null; S.ap = null; Kit.closeMenu(false); document.querySelector('.sc')?.remove();
+    // Close an open confirmation through the kit, so its state ends too (removing only the element left keys blocked).
+    window.__capturing = true; S.panel = null; S.ap = null; Kit.closeMenu(false); Kit.closeConfirm(false);
     if (S.capAppearance !== undefined) { apCommit(S.capAppearance, { record: false }); S.capAppearance = undefined; }
     if (S.capSchedules) { S.capSchedules = false; S.settings.schedules = []; applyOverlays(); applyAppearance(); }
     if (S.capLock) { const k = S.capLock; S.capLock = null; S.unlocked = {}; api.lockRemove(k, { pin: '2468' }).then(() => refreshLocks()).then(() => render()); }

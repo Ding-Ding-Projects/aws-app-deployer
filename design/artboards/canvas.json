@@ -234,6 +234,15 @@
       "expand": "fill",
       "is_interactive": true,
       "title": "25 · Polish system: controls, menus with live controls, empty states, scrollbars"
+    },
+    "Sweep.dc.html": {
+      "x": 7640,
+      "y": 10100,
+      "w": 1440,
+      "h": 1300,
+      "expand": "fill",
+      "is_interactive": true,
+      "title": "26 · Every-surface sweep: before and after scores, every check and the known patterns"
     }
   },
   "order": [
