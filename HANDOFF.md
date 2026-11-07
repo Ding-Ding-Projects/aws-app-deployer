@@ -114,7 +114,7 @@ Current Compose support accepts exactly one application service with a simple lo
 
 The backend's automatic repair currently covers bounded retries of classified transient read-only AWS failures and ECS deployment circuit-breaker rollback. It does not yet install prerequisites, fix source code, change IAM permissions, repair billing, or implement general self-healing. Custom-domain HTTPS needs an existing matching ACM certificate and DNS directed to the ALB; the normal HTTP path needs neither. Do not claim a working endpoint or native desktop release without live evidence.
 
-## Browser companion handoff — 2026-11-06
+## Browser companion handoff, 2026-11-06
 
 The approved test route is the existing renderer served by `src/web/server.js`, with `src/renderer/browser.js` adapting the named desktop API to authenticated HTTP. Coordinate against the actual filenames and API below; preserve Electron behavior. The browser uses AWS console `aws login --remote`, not the desktop SSO callback.
 

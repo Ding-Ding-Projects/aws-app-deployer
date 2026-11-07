@@ -159,6 +159,20 @@ Each was fixed once, in the shared token or component:
 - Overlap and clipping are measured on the part of a box that can actually be seen, cut by every clipping ancestor, and the body of a closed disclosure is skipped. Without this, scrolled lists reported text overlapping text that was scrolled out of view.
 - Capture and sweep runs closed a confirmation by removing its element but left it open in the kit's state, so every later key press was ignored and the keyboard walk saw nothing. They now close it through the kit.
 
+### After the sweep: what the eyes found
+
+The sweep settles every animation and measures still frames, so three things only showed up by looking at fresh captures and by using the app:
+
+1. Two highlighted rows in the light theme. In a menu, the row under a resting pointer took a hover layer that looked stronger than the real keyboard cursor. Menus and both command palettes now have one highlight: the pointer moves it, lists of options have no separate hover layer, and a touch does not move it. A unit test pins the menu behaviour and was watched failing with the fix removed; a browser check on the landing page and an Electron check in the app confirmed one highlight in both themes.
+2. Entrance animations replayed on every key press. Each render rebuilt the screen, so the command palette faded and slid in again on every arrow key and letter, and headings and cards rose again while typing in a search box. Rendering now carries each animation's progress over to the same element in the new screen; opening something or navigating still plays its entrance. `npm run sweep:motion` checks this: with the fix switched off it reported the palette, the page and the rail pill replaying, and with it on it passes.
+3. On a narrow window the tab strip cut a tab mid-word at its edge, with no sign that more tabs were there. The strip's edges now fade where tabs are hidden, and the active tab is kept clear of the fade. Board 18 draws the current tab strip.
+
+Both sweeps were run again on the final code: the app at `f18f2aa` came back with 672 of 672 surfaces clean, and the landing page at `df615f4` (unchanged since) with 138 of 138 clean. `npm run sweep:motion` passes on the final code.
+
+### Browser companion access screen
+
+Checked by hand with the same checks at the four sizes in both themes: no axe, geometry or keyboard findings, and one console line on every surface, the browser's own log of the 401 answer to the request the page makes before sign-in. Left as is, because 401 is the correct answer to an unauthenticated request. The screen is not yet part of the sweep script.
+
 ### Not checked
 
 - The real Windows caption buttons and Snap layouts: they need a Windows desktop. The release run's Windows captures are the next look.

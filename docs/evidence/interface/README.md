@@ -6,7 +6,7 @@ Current captures of the desktop app and the landing page after the final polish 
 
 - App: the app's own capture mode (`electron . --screenshots=<dir>`), Electron 45.2.3, run from source on Linux under a virtual display (`xvfb-run`), at a 1320 x 860 window for desktop frames and 420 x 860 for narrow frames, scale 1, light theme (the capture machine has no theme preference, so System resolves to light). The capture mode uses a fresh profile, so no saved settings leak in.
 - Landing page: `site/` served locally and opened in headless Chromium through Playwright 1.63.0, at 1440 x 900 and 390 x 844, with the dark colour scheme.
-- Source: commit `df615f4`. The app and landing page sources (`src/`, `site/`) did not change between that commit and the commit that adds these files.
+- Source: the app frames were captured at commit `f18f2aa` and the landing page frames at `df615f4`; the landing page did not change between the two. The app frames came out byte for byte the same as a capture taken at `df615f4`, because the capture mode turns motion off and the change between them only concerns motion. Neither source (`src/`, `site/`) changed before the commit that adds these files.
 - Linux draws no Windows caption buttons, so the right end of the app's title bar is empty in these frames. On Windows the system draws minimise, maximise and close there, with Snap layouts. Release builds are captured on a Windows runner by the release workflow.
 
 ## Files

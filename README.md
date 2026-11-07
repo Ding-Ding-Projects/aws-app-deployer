@@ -38,6 +38,8 @@ On Windows, `download-dependencies.bat`, `build.bat` (tests, then run) and `buil
 
 `npm run sweep:site` does the same for the landing page and its overlays (palette, accessibility panel, right-click menu, Sections menu, docs reader). Serve `site/` first, for example `python3 -m http.server 8765 -d site`; it needs Playwright with Chromium. The page's GitHub lookups are answered from sample data so the sweep never depends on rate limits.
 
+`npm run sweep:motion` checks what the sweep cannot, because the sweep settles animations first: it launches the app with a throwaway profile, presses keys in the command palette, the settings search and a settings panel, and fails if any entrance animation plays again on a key press, or if opening the palette does not play its entrance. It needs Playwright and, on Linux, a display such as `xvfb-run`.
+
 `SWEEP_ROUTES`, `SWEEP_SIZES`, `SWEEP_LANGS` (and `SWEEP_SURFACES` for the site) narrow a run; `SWEEP_SHOTS=1` saves a capture of each English surface. Fix findings at the shared token or component, not per screen, then look at the captures as well: the sweep finds what eyes skip, and eyes find what it cannot measure.
 
 ## What a deployment creates

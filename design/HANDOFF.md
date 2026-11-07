@@ -54,7 +54,7 @@ This is the design delivery the root [handoff](../HANDOFF.md) asks for. Start wi
 - Every select shows its chevron; every context menu row that holds a control changes the real setting in place and keeps the menu open; only the keyboard cursor row is strongly highlighted.
 - Panels and menus stay inside the window at every width, and page changes cross-fade only when motion is allowed.
 - Menus and palettes are a filter box driving a list of options; a value inside an option is drawn, not a nested control. Tabs close with Delete and move with the arrow keys, and New tab sits outside the tab list.
-- The every-surface sweep comes back with zero findings before an interface release (`npm run sweep:app`, `npm run sweep:site`). A finding is fixed in the shared token or component.
+- The every-surface sweep comes back with zero findings before an interface release (`npm run sweep:app`, `npm run sweep:site`), and `npm run sweep:motion` passes: entrances play when something opens and never replay on a key press. A finding is fixed in the shared token or component.
 
 ## Stageshow record
 
