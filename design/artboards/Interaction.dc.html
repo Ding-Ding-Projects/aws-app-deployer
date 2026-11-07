@@ -23,6 +23,7 @@ body{margin:0}
 .slide i.f{position:absolute;inset:0 auto 0 0;width:62%;background:var(--err-c)}
 .slide b{position:absolute;top:4px;left:calc(62% - 44px);width:40px;height:40px;border-radius:20px;background:var(--err);display:grid;place-items:center;color:#2a0b0c}
 .info{width:28px;height:28px;border-radius:14px;border:0;background:var(--s3);color:var(--ac);display:grid;place-items:center}
+@media (max-width:720px){.demo-ctx{margin-left:0 !important;margin-top:8px !important;max-width:100%}.label{white-space:normal}}
 </style>
 </helmet>
 <div class="app {{themeClass}}" style="position: relative">
@@ -36,7 +37,7 @@ body{margin:0}
           <div class="stack" style="gap: 10px; flex: 1 1 520px">
             <span class="label">RIGHT-CLICK ANY ELEMENT · SHIFT+F10 OR THE MENU KEY ON KEYBOARD</span>
             <div class="list"><span class="li" style="outline: 2px solid var(--ac); outline-offset: -2px"><span class="tile ok"><i class="ms fill" aria-hidden="true">deployed_code</i></span><span class="stack grow" style="flex: 1"><span class="t">storefront-web</span><span class="m">us-east-1 · Healthy at deploy</span></span><span class="badge ok">Healthy</span></span><span class="li"><span class="tile warn"><i class="ms fill" aria-hidden="true">history</i></span><span class="stack grow" style="flex: 1"><span class="t">docs-portal</span><span class="m">Stopped at health checks</span></span></span></div>
-            <div class="menu" role="menu" aria-label="storefront-web actions" style="margin-left: 180px; margin-top: -60px">
+            <div class="menu demo-ctx" role="menu" aria-label="storefront-web actions" style="margin-left: 180px; margin-top: -60px">
               <div class="row" style="padding: 4px 4px 6px; gap: 8px"><i class="ms sm" aria-hidden="true">filter_list</i><span class="mono grow" style="flex: 1; font-size: 13px">^(open|copy)</span><span class="badge ac mono" style="height: 22px">.*</span></div>
               <span class="row small" style="padding: 0 8px 6px; gap: 6px; flex-wrap: wrap"><span class="badge mute mono" style="height: 20px">^</span>start <span class="badge mute mono" style="height: 20px">(|)</span>either</span>
               <div class="divider"></div>

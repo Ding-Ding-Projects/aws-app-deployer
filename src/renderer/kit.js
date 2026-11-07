@@ -41,14 +41,38 @@ window.Kit = (() => {
     menu.host.innerHTML = `<div class="row ctx-f"><label class="sr" for="ctxq">Filter actions</label>${ic('filter_list', 'sm')}<input id="ctxq" class="mono" autocomplete="off" placeholder="Filter" value="${esc(menu.q)}"><button class="badge ${menu.regex ? 'ac' : 'mute'} mono" data-ctx="regex" aria-pressed="${menu.regex}" title="Regex">.*</button></div>
       ${menu.regex && menu.q ? `<div class="row small ctx-x">${v.ok ? v.parts.map(p => `<span class="row" style="gap: 4px; white-space: nowrap"><span class="badge mute mono">${esc(p.token)}</span>${esc(p.meaning)}</span>`).join('') : `<span class="badge err">${esc(v.error)}</span>`}</div>` : ''}
       <div class="divider"></div>
-      ${v.list.map((i, n) => `<button class="mi ${n === menu.sel ? 'on' : ''} ${i.danger ? 'danger' : ''}" role="menuitem" data-ctx-i="${menu.items.indexOf(i)}" ${i.disabled ? 'disabled' : ''}>${ic(i.icon || 'chevron_right', 'sm')}<span>${esc(i.label)}</span>${i.shortcut ? `<span class="k" aria-keyshortcuts="${esc(keysFor(i.shortcut))}">${esc(keysFor(i.shortcut))}</span>` : ''}</button>`).join('') || '<span class="small" style="padding: 8px 10px">No matching actions</span>'}
+      ${v.list.map((i, n) => i.kind ? ctlRow(i, n) : `<button class="mi ${n === menu.sel ? 'on' : ''} ${i.danger ? 'danger' : ''}" role="menuitem" tabindex="-1" data-n="${n}" data-ctx-i="${menu.items.indexOf(i)}" ${i.disabled ? 'disabled' : ''}>${ic(i.icon || 'chevron_right', 'sm')}<span>${esc(i.label)}</span>${i.shortcut ? `<span class="k" aria-keyshortcuts="${esc(keysFor(i.shortcut))}">${esc(keysFor(i.shortcut))}</span>` : ''}</button>`).join('') || '<span class="small" style="padding: 8px 10px">No matching actions</span>'}
       ${menu.q ? `<span class="small" style="padding: 6px 10px" aria-live="polite">${v.list.length} of ${menu.items.length} match${hiddenDestructive.length ? ' · hidden items keep their shortcuts' : ''}</span>` : ''}`;
   }
+  // A value in a menu shows its live control: a switch, a choice, a stepper or a swatch. The control
+  // changes the real setting through the item's own set(), and the menu stays open for the next one.
+  function ctlRow(i, n) {
+    const idx = menu.items.indexOf(i), dis = i.disabled ? 'disabled' : '', why = i.disabled && i.reason ? `<span class="why">${esc(i.reason)}</span>` : '';
+    let ctl = '';
+    if (i.kind === 'toggle') { const on = !!i.get(); ctl = `<button class="toggle sm ${on ? 'on' : ''}" role="switch" aria-checked="${on}" aria-label="${esc(i.label)}" tabindex="-1" data-n="${n}" data-ctl="toggle" ${dis}></button>`; }
+    if (i.kind === 'choice') { const v = i.get(); ctl = `<span class="seg sm" role="radiogroup" aria-label="${esc(i.label)}">${i.options.map(([ov, ol]) => `<button role="radio" tabindex="-1" aria-checked="${ov === v}" class="${ov === v ? 'on' : ''}" ${ov === v ? `data-n="${n}"` : ''} data-ctl="choice" data-v="${esc(JSON.stringify(ov))}" ${dis}>${esc(ol)}</button>`).join('')}</span>`; }
+    if (i.kind === 'level') { const v = i.get(), f = i.format ? i.format(v) : String(v); ctl = `<span class="stepper" role="slider" tabindex="-1" data-n="${n}" aria-label="${esc(i.label)}" aria-valuemin="${i.min}" aria-valuemax="${i.max}" aria-valuenow="${v}" aria-valuetext="${esc(f)}" ${i.disabled ? 'aria-disabled="true"' : ''}><button tabindex="-1" aria-hidden="true" data-ctl="dec" ${dis || (v <= i.min ? 'disabled' : '')}>−</button><span class="v">${esc(f)}</span><button tabindex="-1" aria-hidden="true" data-ctl="inc" ${dis || (v >= i.max ? 'disabled' : '')}>+</button></span>`; }
+    if (i.kind === 'swatch') { const c = i.get(); return `<button class="mi mi-ctl ${n === menu.sel ? 'on' : ''}" role="menuitem" tabindex="-1" data-n="${n}" data-ctx-i="${idx}" ${dis}>${ic(i.icon || 'palette', 'sm')}<span class="lbl">${esc(i.label)}<span class="why mono">${esc(c)}</span></span><span class="swatch" aria-hidden="true" style="background: ${esc(c)}"></span></button>`; }
+    return `<div class="mi mi-ctl ${n === menu.sel ? 'on' : ''} ${i.disabled ? 'dis' : ''}" role="none" data-ctx-c="${idx}">${ic(i.icon || 'tune', 'sm')}<span class="lbl">${esc(i.label)}${why}</span>${ctl}</div>`;
+  }
+  function focusSel() { const t = menu.host.querySelector(`[data-n="${menu.sel}"]`); (t || menu.host.querySelector('input'))?.focus(); }
+  async function change(i, value) {
+    if (!i || i.disabled) return;
+    await i.set(value);
+    if (!menu) return;
+    draw(); focusSel();
+  }
+  function step(i, dir) {
+    if (i.kind === 'choice') { const vals = i.options.map(o => o[0]), at = vals.indexOf(i.get()); return change(i, vals[Math.max(0, Math.min(vals.length - 1, at + dir))]); }
+    if (i.kind === 'level') return change(i, Math.max(i.min, Math.min(i.max, i.get() + dir * (i.step || 1))));
+  }
   function place(el, x, y) {
-    const r = el.getBoundingClientRect(), w = innerWidth, h = innerHeight;
-    el.style.left = Math.max(8, Math.min(x, w - r.width - 8)) + 'px';
-    el.style.top = Math.max(8, Math.min(y, h - r.height - 8)) + 'px';
+    const w = innerWidth, h = innerHeight;
     el.style.maxHeight = (h - 16) + 'px';
+    // Layout size, not the on-screen box: the entrance animation starts scaled down, which made menus land partly off-screen.
+    const r = el.getBoundingClientRect(), mw = el.offsetWidth || r.width, mh = el.offsetHeight || r.height;
+    el.style.left = Math.max(8, Math.min(x, w - mw - 8)) + 'px';
+    el.style.top = Math.max(8, Math.min(y, h - mh - 8)) + 'px';
   }
   function run(i) { const item = menu.items[i]; const opener = menu.opener; closeMenu(true); item?.run?.(opener); }
   function closeMenu(returnFocus = true) {
@@ -58,6 +82,14 @@ window.Kit = (() => {
   }
   document.addEventListener('click', e => {
     if (!menu) return;
+    const c = e.target.closest('[data-ctl]');
+    if (c?.dataset?.ctl && menu.host.contains(c)) {
+      e.preventDefault(); const row = c.closest('[data-ctx-c]'), i = menu.items[+row?.dataset?.ctxC]; if (!i) return;
+      menu.sel = visible().list.indexOf(i);
+      if (c.dataset.ctl === 'toggle') return change(i, !i.get());
+      if (c.dataset.ctl === 'choice') return change(i, JSON.parse(c.dataset.v));
+      return step(i, c.dataset.ctl === 'inc' ? 1 : -1);
+    }
     const b = e.target.closest('[data-ctx-i]'); if (b && menu.host.contains(b)) return run(+b.dataset.ctxI);
     if (e.target.closest('[data-ctx="regex"]')) { menu.regex = !menu.regex; draw(); menu.host.querySelector('input').focus(); return; }
     if (!menu.host.contains(e.target)) closeMenu(false);
@@ -67,8 +99,20 @@ window.Kit = (() => {
     if (!menu) return;
     const v = visible().list;
     if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); if (menu.q) { menu.q = ''; draw(); menu.host.querySelector('input').focus(); } else closeMenu(true); return; }
-    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); menu.sel = (menu.sel + (e.key === 'ArrowDown' ? 1 : v.length - 1)) % Math.max(1, v.length); draw(); menu.host.querySelector('input').focus(); return; }
-    if (e.key === 'Enter') { e.preventDefault(); const it = v[menu.sel]; if (it && !it.disabled) run(menu.items.indexOf(it)); }
+    const inFilter = e.target.id === 'ctxq', it = v[menu.sel];
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      if (inFilter) menu.sel = e.key === 'ArrowDown' ? 0 : v.length - 1;
+      else if (e.key === 'ArrowUp' && menu.sel === 0) { draw(); menu.host.querySelector('input').focus(); return; }
+      else menu.sel = (menu.sel + (e.key === 'ArrowDown' ? 1 : v.length - 1)) % Math.max(1, v.length);
+      draw(); focusSel(); return;
+    }
+    if (e.key === 'Home' || e.key === 'End') { if (!inFilter) { e.preventDefault(); menu.sel = e.key === 'Home' ? 0 : v.length - 1; draw(); focusSel(); } return; }
+    if (e.key === 'Tab') { e.preventDefault(); if (inFilter) focusSel(); else menu.host.querySelector('input').focus(); return; }
+    if (!inFilter && (e.key === 'ArrowLeft' || e.key === 'ArrowRight') && (it?.kind === 'choice' || it?.kind === 'level')) { e.preventDefault(); step(it, e.key === 'ArrowRight' ? 1 : -1); return; }
+    if (e.key === ' ' && !inFilter) { e.preventDefault(); if (it?.kind === 'toggle') change(it, !it.get()); else if (it && !it.kind && !it.disabled) run(menu.items.indexOf(it)); else if (it?.kind === 'swatch' && it.run) run(menu.items.indexOf(it)); return; }
+    if (e.key === 'Enter') { e.preventDefault(); if (!it || it.disabled) return; if (it.kind === 'toggle') change(it, !it.get()); else if (!it.kind || it.run) run(menu.items.indexOf(it)); return; }
+    if (!inFilter && e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) { e.preventDefault(); menu.q += e.key; menu.sel = 0; draw(); const i = menu.host.querySelector('input'); i.focus(); i.setSelectionRange(menu.q.length, menu.q.length); }
   }, true);
 
   // ---- Super confirmation: two independent keys, then a full-range slider ----
@@ -114,7 +158,8 @@ window.Kit = (() => {
   // ---- Anchored panels: drag by header, resize from edges, persisted per surface ----
   function panelStyle(id, saved, anchor) {
     const p = saved?.[id];
-    if (p) return `left:${p.x}px;top:${p.y}px;width:${p.w}px;height:${p.h}px`;
+    // A saved spot can sit off-screen after the window shrinks, so keep at least the panel's corner reachable.
+    if (p) return `left:clamp(8px, ${p.x}px, calc(100vw - ${Math.min(p.w, 260)}px - 8px));top:clamp(46px, ${p.y}px, calc(100vh - 120px));width:${p.w}px;height:${p.h}px`;
     return anchor || '';
   }
   let drag = null, sizing = null;

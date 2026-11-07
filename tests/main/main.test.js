@@ -218,6 +218,7 @@ test('the unlock ladder grades in the main process with single-use nonces and ca
 test('landing page shares the app library and bundles every feature article', () => {
   const root = path.join(__dirname, '../..');
   assert.equal(fs.readFileSync(path.join(root, 'site/lib.js'), 'utf8'), fs.readFileSync(path.join(root, 'src/renderer/lib.js'), 'utf8'), 'run node scripts/build-site.mjs');
+  assert.equal(fs.readFileSync(path.join(root, 'site/kit.js'), 'utf8'), fs.readFileSync(path.join(root, 'src/renderer/kit.js'), 'utf8'), 'run node scripts/build-site.mjs');
   const docs = JSON.parse(fs.readFileSync(path.join(root, 'site/docs.json'), 'utf8'));
   const files = fs.readdirSync(path.join(root, 'docs/features')).filter(f => f.endsWith('.md')).map(f => f.replace(/\.md$/, '')).sort();
   assert.deepEqual(docs.articles.map(a => a.id), files);

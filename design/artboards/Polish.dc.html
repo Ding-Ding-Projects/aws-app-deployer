@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Polish system</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="./app.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400..700&amp;family=JetBrains+Mono:wght@400;500&amp;family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,300..600,0..1,0&amp;display=block">
+<style>
+body{margin:0}
+.sw{width:28px;height:28px;border-radius:50%;flex:none}
+.scrolly{height:132px;overflow:auto;padding-right:4px}
+.demo-menu{position:absolute;z-index:2;right:28px;top:52px;animation:none}
+@media (max-width:720px){.demo-menu{position:static;width:100%;margin:8px 0 12px}}
+.demo-toast{display:flex;align-items:center;gap:12px;padding:12px 14px 12px 18px;background:var(--tx);color:var(--bg);border-radius:var(--r2);font-weight:500;box-shadow:var(--shadow)}
+</style>
+</helmet>
+<div class="app {{themeClass}}">
+  <div class="titlebar"><span class="name">AWS App Deployer</span><span class="small mono" style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0">v0.1.20 · Crab Roe Siu Mai · 蟹籽燒賣</span><span class="grow"></span><div class="caption"><span><i class="ms">remove</i></span><span><i class="ms">crop_square</i></span><span><i class="ms">close</i></span></div></div>
+  <div class="body">
+    <nav class="rail" aria-label="Main"><a class="fab" href="#" aria-label="New deployment"><i class="ms">add</i></a><a class="navi on" href="#"><span class="pill"><i class="ms">rocket_launch</i></span>Deploys</a><a class="navi" href="#"><span class="pill"><i class="ms">key</i></span>Accounts</a><a class="navi" href="#"><span class="pill"><i class="ms">tune</i></span>Settings</a><span class="gap"></span><a class="navi" href="#"><span class="pill"><i class="ms">help</i></span>Help</a></nav>
+    <main class="main">
+      <header class="topbar"><h1 class="rise">Deployments</h1><span class="grow"></span><span class="chip"><i class="ms sm">key_off</i>Not signed in</span></header>
+      <div class="content">
+        <div class="card empty rise" style="--i: 1">
+          <span class="tile ac"><i class="ms fill lg">rocket_launch</i></span>
+          <span class="h2">No deployments yet</span>
+          <span class="sub">Pick a Dockerfile or Compose file and press Deploy. You get a public link when AWS says it is healthy.</span>
+          <button class="btn fillb"><i class="ms">add</i>New deployment</button>
+          <div class="empty-steps">
+            <div><span class="n">1</span><span class="stack"><span style="font-weight: 600">Sign in</span><span class="small">Your AWS profile, in the browser</span></span></div>
+            <div><span class="n">2</span><span class="stack"><span style="font-weight: 600">Choose a source</span><span class="small">A Dockerfile or Compose file</span></span></div>
+            <div><span class="n">3</span><span class="stack"><span style="font-weight: 600">Get the link</span><span class="small">Checked healthy before it is shown</span></span></div>
+          </div>
+        </div>
+        <div class="cols">
+          <div class="wide">
+            <div class="card" style="gap: 0; position: relative">
+              <span class="h2" style="padding-bottom: 6px">Appearance</span>
+              <div class="ctx demo-menu" role="menu" aria-label="Actions for Theme">
+                <div class="row ctx-f"><i class="ms sm">filter_list</i><input class="mono" placeholder="Filter" aria-label="Filter actions"><span class="badge mute mono">.*</span></div>
+                <div class="divider"></div>
+                <div class="mi mi-ctl on"><i class="ms sm">dark_mode</i><span class="lbl">Theme</span><span class="seg sm" role="radiogroup" aria-label="Theme"><button role="radio" aria-checked="false">System</button><button role="radio" aria-checked="false">Light</button><button class="on" role="radio" aria-checked="true">Dark</button></span></div>
+                <div class="mi mi-ctl"><i class="ms sm">format_size</i><span class="lbl">Text size</span><span class="stepper" role="slider" aria-label="Text size" aria-valuenow="110" aria-valuetext="110%"><button aria-hidden="true">−</button><span class="v">110%</span><button aria-hidden="true">+</button></span></div>
+                <div class="mi mi-ctl"><i class="ms sm">motion_photos_off</i><span class="lbl">Reduce motion</span><button class="toggle sm" role="switch" aria-checked="false" aria-label="Reduce motion"></button></div>
+                <div class="mi mi-ctl"><i class="ms sm">volume_up</i><span class="lbl">Action sounds</span><button class="toggle sm on" role="switch" aria-checked="true" aria-label="Action sounds"></button></div>
+                <div class="mi mi-ctl"><i class="ms sm">palette</i><span class="lbl">Accent colour<span class="why mono">#6ea8ff</span></span><span class="swatch" style="background: #6ea8ff"></span></div>
+                <div class="divider"></div>
+                <button class="mi"><i class="ms sm">info</i><span>About this setting</span></button>
+                <button class="mi"><i class="ms sm">restart_alt</i><span>Reset to default</span></button>
+                <button class="mi"><i class="ms sm">search</i><span>Command palette</span><span class="k">Ctrl+Shift+F</span></button>
+              </div>
+              <div class="set"><span class="stack grow"><span style="font-weight: 600">Theme</span><span class="small">Follows Windows unless you pick one · set by you</span></span><span class="set-ctl"><button class="btn text" style="padding: 0 6px; height: 28px" aria-label="About Theme"><i class="ms sm">info</i></button><span class="seg"><button>System</button><button>Light</button><button class="on">Dark</button></span></span></div>
+              <div class="set"><span class="stack grow"><span style="font-weight: 600">Accent colour</span><span class="small">Type a hex, rgb(), hsl() or colour name</span></span><span class="set-ctl"><span class="sw" style="background: #6ea8ff; box-shadow: 0 0 0 2px var(--s2), 0 0 0 4px var(--tx)"></span><span class="sw" style="background: #4ade9a"></span><span class="sw" style="background: #f5b451"></span><span class="sw" style="background: #ff8a8a"></span></span></div>
+              <div class="set"><span class="stack grow"><span style="font-weight: 600">App name</span><span class="small">Shown in the title bar and taskbar · default</span></span><span class="set-ctl"><input value="AWS App Deployer" aria-label="App name" style="width: 200px"><button class="btn text">Reset</button></span></div>
+              <div class="set"><span class="stack grow"><span style="font-weight: 600">Reduce motion</span><span class="small">Replaces movement with simple fades · default</span></span><span class="set-ctl"><button class="toggle" role="switch" aria-checked="false" aria-label="Reduce motion"></button></span></div>
+            </div>
+            <div class="card">
+              <span class="h2">Buttons and chips</span>
+              <div class="row" style="flex-wrap: wrap; gap: 8px"><button class="btn fillb"><i class="ms">rocket_launch</i>Deploy</button><button class="btn tonal">Pick</button><button class="btn out">Copy link</button><button class="btn text">Reset</button><button class="btn danger"><i class="ms">delete</i>Remove…</button><button class="btn fillb" disabled>Create server</button></div>
+              <div class="row" style="flex-wrap: wrap; gap: 8px"><span class="chip on">Pen</span><span class="chip">Highlighter</span><span class="chip">Eraser</span><span class="badge ok">Healthy</span><span class="badge warn">Starting</span><span class="badge err">Stopped</span><span class="badge mute">Waiting</span></div>
+            </div>
+          </div>
+          <div class="side">
+            <div class="card">
+              <span class="h2">Form controls</span>
+              <div class="field"><label for="p-run">Runs on</label><select id="p-run"><option>This computer (process)</option></select></div>
+              <div class="row" style="gap: 8px"><div class="field" style="flex: 1"><label for="p-from">From</label><input id="p-from" type="date" value="2026-11-01"></div><div class="field" style="flex: 1"><label for="p-port">Port</label><input id="p-port" type="number" value="25565"></div></div>
+              <div class="field"><label for="p-mem">Memory: 2048 MB</label><input id="p-mem" type="range" min="512" max="16384" value="2048"></div>
+              <label class="row" style="gap: 10px"><input type="checkbox" checked><span class="small" style="color: var(--tx)">I accept the Minecraft EULA</span></label>
+            </div>
+            <div class="card">
+              <span class="h2">Recent activity</span>
+              <div class="scrolly list" style="padding: 4px">
+                <span class="li"><i class="ms sm">palette</i><span class="stack grow"><span class="t">Theme changed to Dark</span><span class="m">Today 15:52</span></span></span>
+                <span class="li"><i class="ms sm">colors</i><span class="stack grow"><span class="t">Accent changed</span><span class="m">Today 15:40</span></span></span>
+                <span class="li"><i class="ms sm">restore</i><span class="stack grow"><span class="t">Restored revision 37</span><span class="m">Today 14:58</span></span></span>
+                <span class="li"><i class="ms sm">delete</i><span class="stack grow"><span class="t">Removed 2 records</span><span class="m">Yesterday 18:20</span></span></span>
+              </div>
+            </div>
+            <div class="demo-toast"><i class="ms sm fill">check_circle</i><span style="flex: 1">Sorted! Settings saved.</span></div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["dark","light"],"default":"dark"},"$preview":{"width":1440,"height":1100}}'>
+class Component extends DCLogic {
+renderVals() {
+return { themeClass: (this.props.theme ?? 'dark') === 'light' ? 'light' : '' };
+}
+}
+</script>
+</body>
+</html>

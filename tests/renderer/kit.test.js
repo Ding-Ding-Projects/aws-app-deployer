@@ -38,3 +38,31 @@ test('confirmation cannot commit with zero or one key, and commits only once aft
   target.value = '100'; await h.event('input', { target }); assert.equal(committed, 1);
   await h.event('input', { target }); assert.equal(committed, 1);
 });
+
+test('menu rows for values carry live controls that change the setting and keep the menu open', async () => {
+  const h = harness(); let sounds = false, theme = 'dark', size = 100;
+  h.kit.openMenu([
+    { kind: 'toggle', label: 'Action sounds', get: () => sounds, set: v => { sounds = v; } },
+    { kind: 'choice', label: 'Theme', options: [['system', 'System'], ['light', 'Light'], ['dark', 'Dark']], get: () => theme, set: v => { theme = v; } },
+    { kind: 'level', label: 'Text size', min: 80, max: 160, step: 10, format: v => v + '%', get: () => size, set: v => { size = v; } },
+    { kind: 'choice', label: 'Language', options: [['en', 'English']], get: () => 'en', set: () => {}, disabled: true, reason: 'English only while Study time is on' },
+    { label: 'Copy', run: () => {} },
+  ], { x: 10, y: 10 });
+  const host = h.hosts[0];
+  assert.match(host.innerHTML, /role="switch" aria-checked="false" aria-label="Action sounds"/);
+  assert.match(host.innerHTML, /role="radiogroup" aria-label="Theme"/);
+  assert.match(host.innerHTML, /role="slider"[^>]*aria-valuenow="100" aria-valuetext="100%"/);
+  assert.match(host.innerHTML, /English only while Study time is on/);
+  const ctl = (kind, rowIdx, extra = {}) => { const row = { dataset: { ctxC: String(rowIdx) } }; const t = { host, dataset: { ctl: kind, ...extra }, closest: sel => (sel === '[data-ctl]' ? t : sel === '[data-ctx-c]' ? row : null) }; return t; };
+  await h.event('click', { target: ctl('toggle', 0) }); assert.equal(sounds, true);
+  await h.event('click', { target: ctl('choice', 1, { v: '"light"' }) }); assert.equal(theme, 'light');
+  await h.event('click', { target: ctl('inc', 2) }); assert.equal(size, 110);
+  assert.equal(h.kit.menuOpen(), true, 'menu stays open after changing values');
+  await h.event('keydown', { key: 'ArrowDown', target: { id: 'ctxq', closest: () => null } });
+  await h.event('keydown', { key: ' ', target: { closest: () => null } }); assert.equal(sounds, false, 'Space toggles the focused switch');
+  await h.event('keydown', { key: 'ArrowDown', target: { closest: () => null } });
+  await h.event('keydown', { key: 'ArrowLeft', target: { closest: () => null } }); assert.equal(theme, 'system', 'Left changes the focused choice');
+  await h.event('keydown', { key: 'ArrowDown', target: { closest: () => null } });
+  await h.event('keydown', { key: 'ArrowRight', target: { closest: () => null } }); assert.equal(size, 120, 'Right steps the focused level');
+  await h.event('click', { target: ctl('choice', 3, { v: '"en"' }) });
+});

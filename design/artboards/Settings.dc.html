@@ -16,6 +16,7 @@ a{color:#6ea8ff}a:hover{color:#9fc2ff}
 .set{display:flex;align-items:center;gap:14px;padding:12px 0}
 .set + .set{border-top:1px solid var(--line)}
 .sw{width:28px;height:28px;border-radius:50%;border:0;flex:none}
+.settings-grid{display:grid !important;grid-template-columns:repeat(auto-fill,minmax(min(460px,100%),1fr));gap:20px;align-items:start}
 </style>
 </helmet>
 <div class="app {{themeClass}}">
@@ -43,7 +44,7 @@ a{color:#6ea8ff}a:hover{color:#9fc2ff}
       </header>
       <div class="content">
         <div class="cols">
-          <div class="wide" style="flex-direction: row; flex-wrap: wrap; align-items: flex-start">
+          <div class="wide settings-grid">
             <div class="card rise" style="--i:1; flex: 1 1 360px; gap: 0">
               <span class="h2" style="padding-bottom: 6px">Appearance</span>
               <div class="set"><span class="stack grow" style="flex: 1"><span class="t" style="font-weight: 600">Theme</span><span class="small">Follows Windows unless you pick one</span></span><span class="seg"><button>System</button><button>Light</button><button class="on">Dark</button></span></div>

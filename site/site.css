@@ -16,10 +16,6 @@
 .pr .k { font-size: 12px; color: var(--tx3); }
 .pr.on .k { color: inherit; opacity: .8; }
 .pr .chip { height: 28px; cursor: pointer; }
-.ctx { position: fixed; z-index: 90; width: 280px; background: var(--s3); border: 1px solid var(--line2); border-radius: 14px; box-shadow: 0 20px 50px rgba(0, 0, 0, .45); padding: 6px; display: flex; flex-direction: column; gap: 2px; }
-.mi { display: flex; align-items: center; gap: 12px; padding: 9px 10px; border-radius: 9px; font: inherit; font-size: 13.5px; border: 0; background: transparent; color: var(--tx); text-align: left; cursor: pointer; width: 100%; }
-.mi .k { margin-left: auto; font-family: "JetBrains Mono", monospace; font-size: 11.5px; color: var(--tx3); }
-.mi:hover, .mi:focus-visible { background: var(--ac-c); color: var(--on-ac-c); outline: none; }
 .a11y-panel { position: fixed; z-index: 85; top: 76px; right: 16px; width: min(380px, calc(100% - 32px)); max-height: calc(100vh - 96px); overflow: auto; background: var(--s2); border: 1px solid var(--line2); border-radius: 24px; box-shadow: 0 24px 64px rgba(0, 0, 0, .5); padding: 18px; display: flex; flex-direction: column; gap: 10px; animation: rise 280ms var(--ease) both; }
 .flash { animation: flash 1.2s var(--ease) 1; border-radius: 12px; }
 @keyframes flash { 0%, 40% { box-shadow: 0 0 0 4px var(--ac); } 100% { box-shadow: 0 0 0 0 transparent; } }
@@ -53,3 +49,11 @@
 .app.attn-low .wrap { filter: saturate(.65); }
 .sched select, .sched input { height: 34px; border-radius: 10px; border: 1px solid var(--line2); background: var(--s1); color: var(--tx); padding: 0 8px; font: inherit; font-size: 13px; }
 [hidden] { display: none !important; }
+/* The shared menu kit floats outside the page root and carries its theme classes. */
+.ctx.app, .sc.app { z-index: 90; width: 320px; height: auto; min-height: 0; overflow: auto; flex-direction: column; font-size: 14px; }
+.sc.app { width: min(440px, calc(100vw - 16px)); }
+/* Final polish: settings rows wrap their control under the label instead of squeezing it; the
+   source link lives in the footer on phones so the toolbar stays one row. */
+.a11y-panel .set > .grow { flex: 1 1 160px; min-width: 0; }
+.a11y-panel .set > :last-child { margin-left: auto; }
+@media (max-width: 720px) { .nav-src { display: none !important; } .tools { justify-content: space-between; } }

@@ -201,26 +201,26 @@
   }
 
   // ---------- context menu ----------
-  let menu = null;
+
+  // The page's right-click menu is the app's own menu kit (kit.js): filter, regex, keyboard, and live
+  // controls for values that change the real preference and keep the menu open.
+  Kit.bind('site-palette', 'Ctrl+Shift+F', () => {});
   function openMenu(x, y, target) {
-    closeMenu();
     const sec = target.closest('section[id]'), sel = String(getSelection() || '').trim(), text = (target.closest('p, h1, h2, .h2, .h3, summary, .card, li, span') || target).innerText?.trim();
     const items = [
       sel || text ? { label: sel ? 'Copy selected text' : 'Copy this text', icon: 'content_copy', run: () => copy(sel || text) } : null,
       sec ? { label: 'Copy link to this section', icon: 'link', run: () => copy(location.origin + location.pathname + '#' + sec.id) } : null,
-      { label: 'Search and settings', icon: 'search', k: 'Ctrl+Shift+F', run: () => openPalette() },
-      { label: 'Accessibility tools', icon: 'accessibility_new', run: () => openPanel() },
+      { label: 'Search and settings', icon: 'search', shortcut: 'site-palette', run: () => openPalette() },
+      { label: 'Accessibility and settings', icon: 'accessibility_new', run: () => openPanel() },
       { label: 'Download the installer', icon: 'download', run: () => document.querySelector('[data-download]')?.click() },
+      { kind: 'choice', label: 'Theme', icon: 'dark_mode', options: [['system', 'System'], ['light', 'Light'], ['dark', 'Dark']], get: () => E.theme, set: v => setPref('theme', v) },
+      { kind: 'choice', label: 'Language', icon: 'translate', options: [['en', 'English'], ['yue', '廣東話'], ['both', 'Both']], get: () => E.lang, set: v => setPref('lang', v), disabled: P.school.enabled, reason: `English only while ${P.school.name} is on` },
+      { kind: 'level', label: 'Text size', icon: 'format_size', min: 80, max: 160, step: 10, format: v => v + '%', get: () => P.textSize, set: v => setPref('textSize', v) },
+      { kind: 'toggle', label: 'Reduce motion', icon: 'motion_photos_off', get: () => !!P.reduce, set: v => setPref('reduce', v) },
+      { kind: 'swatch', label: 'Accent colour', icon: 'palette', get: () => E.accent || getComputedStyle(app).getPropertyValue('--ac').trim(), run: () => openPanel() },
     ].filter(Boolean);
-    menu = { items, opener: target, host: document.createElement('div') };
-    menu.host.className = 'ctx'; menu.host.setAttribute('role', 'menu');
-    menu.host.innerHTML = items.map((it, i) => `<button class="mi" role="menuitem" data-mi="${i}">${ic(it.icon, 'sm')}${esc(it.label)}${it.k ? `<span class="k">${it.k}</span>` : ''}</button>`).join('');
-    app.appendChild(menu.host);
-    const r = menu.host.getBoundingClientRect();
-    menu.host.style.left = Math.min(x, innerWidth - r.width - 8) + 'px'; menu.host.style.top = Math.min(y, innerHeight - r.height - 8) + 'px';
-    menu.host.querySelector('button').focus();
+    Kit.openMenu(items, { x, y, opener: target, title: 'Page actions' });
   }
-  function closeMenu(refocus) { if (!menu) return; const o = menu.opener; menu.host.remove(); menu = null; if (refocus) o?.focus?.(); }
   async function copy(t) { try { await navigator.clipboard.writeText(t); say('Copied'); } catch { say('Copy was blocked by the browser'); } }
   document.addEventListener('contextmenu', e => { if (e.target.closest('input, textarea')) return; e.preventDefault(); openMenu(e.clientX, e.clientY, e.target); });
 
@@ -291,13 +291,7 @@
   document.addEventListener('keydown', e => {
     if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 'f') { e.preventDefault(); palette ? closePalette() : openPalette(); return; }
     if (e.key === 'F10' && e.shiftKey) { e.preventDefault(); const t = document.activeElement || document.body, r = t.getBoundingClientRect(); openMenu(r.left + 12, r.bottom + 4, t); return; }
-    if (menu) {
-      const btns = [...menu.host.querySelectorAll('button')], i = btns.indexOf(document.activeElement);
-      if (e.key === 'Escape') { e.preventDefault(); closeMenu(true); }
-      if (e.key === 'ArrowDown') { e.preventDefault(); btns[(i + 1) % btns.length].focus(); }
-      if (e.key === 'ArrowUp') { e.preventDefault(); btns[(i - 1 + btns.length) % btns.length].focus(); }
-      return;
-    }
+    if (Kit.menuOpen()) return;
     if (palette) {
       if (e.key === 'Escape') { e.preventDefault(); if (palette.q) { palette.q = ''; document.getElementById('pq').value = ''; drawPalette(); } else closePalette(); }
       if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); palette.sel = Math.max(0, Math.min(palette.list.length - 1, palette.sel + (e.key === 'ArrowDown' ? 1 : -1))); drawPalette(); }
@@ -314,9 +308,7 @@
   });
   document.addEventListener('input', e => { if (e.target.id === 'pq') { palette.q = e.target.value; palette.sel = 0; drawPalette(); } });
   document.addEventListener('click', e => {
-    if (menu && !e.target.closest('.ctx')) closeMenu(false);
     const t = e.target.closest('button, a, [data-i]'); if (!t) { if (e.target.id === 'palette') closePalette(); return; }
-    if (t.dataset.mi !== undefined) { const it = menu.items[+t.dataset.mi]; closeMenu(false); it.run(); return; }
     if (t.dataset.pref) return setPref(t.dataset.pref, isNaN(+t.dataset.v) ? t.dataset.v : +t.dataset.v);
     if (t.dataset.setLang) return setPref('lang', t.dataset.setLang);
     if (t.dataset.flip) return setPref(t.dataset.flip, !P[t.dataset.flip]);
