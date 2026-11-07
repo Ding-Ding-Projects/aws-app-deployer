@@ -344,6 +344,12 @@
       return;
     }
     if (panel && e.key === 'Escape') { e.preventDefault(); closePanel(); }
+    // Tab stays inside the accessibility panel while focus is in it; Escape closes it.
+    if (panel?.host && e.key === 'Tab' && panel.host.contains(document.activeElement)) {
+      const f = [...panel.host.querySelectorAll('button, input, select, textarea, a[href], [tabindex]:not([tabindex="-1"])')].filter(el => !el.disabled && el.offsetParent !== null);
+      const i = f.indexOf(document.activeElement);
+      if (e.shiftKey && i <= 0) { e.preventDefault(); f[f.length - 1]?.focus(); } else if (!e.shiftKey && i === f.length - 1) { e.preventDefault(); f[0]?.focus(); }
+    }
   });
   document.addEventListener('change', e => {
     const el = e.target;

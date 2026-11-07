@@ -395,10 +395,10 @@
     const r = Lib.search(COMMANDS, P.q, { regex: P.regex });
     const items = r.ok ? r.items : [];
     P.items = items; P.sel = Math.min(P.sel, Math.max(0, items.length - 1));
-    return `<div class="overlay"><div class="scrim" data-act="close-palette" style="align-items: start; padding-top: 72px"><div class="dialog" role="dialog" aria-label="${T('palette')}" style="width: min(680px, 100%); padding: 10px; gap: 0" data-stop="1">
-      <div class="row" style="padding: 8px 10px; gap: 10px; flex-wrap: wrap">${ic('search')}<label for="pq" class="sr">Command</label><input id="pq" class="mono" data-input="paletteQ" value="${esc(P.q)}" autocomplete="off" style="flex: 1 1 200px; min-width: 0; height: 40px; border: 0; background: transparent; color: var(--tx); font-size: 16px; outline: none"><button class="badge ${P.regex ? 'ac' : 'mute'} mono" style="border: 0; cursor: pointer" aria-pressed="${P.regex}" data-act="regex">.* Regex</button></div>
+    return `<div class="overlay"><div class="scrim" data-act="close-palette" style="align-items: start; padding-top: 72px"><div class="dialog" role="dialog" aria-modal="true" aria-label="${T('palette')}" style="width: min(680px, 100%); padding: 10px; gap: 0" data-stop="1">
+      <div class="row" style="padding: 8px 10px; gap: 10px; flex-wrap: wrap">${ic('search')}<label for="pq" class="sr">Command</label><input id="pq" class="mono" data-input="paletteQ" value="${esc(P.q)}" autocomplete="off" role="combobox" aria-expanded="true" aria-controls="pal-list" aria-autocomplete="list" aria-activedescendant="${items.length ? 'pal-o-' + P.sel : 'pal-none'}" style="flex: 1 1 200px; min-width: 0; height: 40px; border: 0; background: transparent; color: var(--tx); font-size: 16px; outline: none"><button class="badge ${P.regex ? 'ac' : 'mute'} mono" style="border: 0; cursor: pointer" aria-pressed="${P.regex}" data-act="regex">.* Regex</button></div>
       ${P.regex && P.q ? `<div class="row small" style="padding: 4px 12px 10px; gap: 8px; flex-wrap: wrap">${r.ok ? (r.parts || []).map(p => `<span class="row" style="gap: 6px; white-space: nowrap"><span class="badge mute mono">${esc(p.token)}</span>${esc(p.meaning)}</span>`).join('') + `<span class="badge ok">${ic('check', 'sm')}valid · ${items.length} matches</span>` : `<span class="badge err">${esc(r.error)}</span>`}</div>` : ''}
-      <div class="divider"></div><div class="list" style="background: transparent" role="listbox" aria-label="Commands">${items.map((c, i) => `<button class="li ${i === P.sel ? 'sel' : ''}" role="option" aria-selected="${i === P.sel}" data-cmd="${c.id}">${esc(c.label)}${isLocked('go:' + c.id) || isLocked('panel:' + c.id) ? ` <span class="badge warn">${ic('lock', 'sm')}Locked</span>` : ''}</button>`).join('') || '<span class="small" style="padding: 12px">No matches</span>'}</div>
+      <div class="divider"></div><div class="list" id="pal-list" style="background: transparent" role="listbox" aria-label="Commands">${items.map((c, i) => `<div class="li ${i === P.sel ? 'sel' : ''}" role="option" id="pal-o-${i}" aria-selected="${i === P.sel}" data-cmd="${c.id}">${esc(c.label)}${isLocked('go:' + c.id) || isLocked('panel:' + c.id) ? ` <span class="badge warn">${ic('lock', 'sm')}Locked</span>` : ''}</div>`).join('') || '<div class="li" role="option" id="pal-none" aria-selected="true" aria-disabled="true"><span class="small">No matches</span></div>'}</div>
       <div class="row small" style="padding: 8px 12px; gap: 14px"><span><span class="kbd">↑↓</span> move</span><span><span class="kbd">Enter</span> run</span><span><span class="kbd">Esc</span> close</span></div></div></div></div>`;
   }
   function drawerHtml() {
@@ -1624,10 +1624,11 @@
     if (Kit.nudgePanel(e)) return;
     if ((e.shiftKey && e.key === 'F10') || e.key === 'ContextMenu') { e.preventDefault(); menuFromKeyboard(); return; }
     if (e.key === 'Escape') { if (S.palette) { S.palette = null; render(); } else if (S.panel) closePanel(); return; }
+    if (S.palette && e.key === 'Tab') { e.preventDefault(); const pq = document.getElementById('pq'); (document.activeElement === pq ? document.querySelector('.dialog [data-act="regex"]') : pq)?.focus(); return; }
     if (S.palette && ['ArrowDown', 'ArrowUp', 'Enter'].includes(e.key)) {
       e.preventDefault(); const P = S.palette;
       if (e.key === 'Enter') { const c = P.items?.[P.sel]; S.palette = null; render(); c?.run(); return; }
-      P.sel = Math.max(0, Math.min((P.items?.length || 1) - 1, P.sel + (e.key === 'ArrowDown' ? 1 : -1))); render(); document.getElementById('pq')?.focus(); return;
+      P.sel = Math.max(0, Math.min((P.items?.length || 1) - 1, P.sel + (e.key === 'ArrowDown' ? 1 : -1))); render(); document.getElementById('pq')?.focus(); document.getElementById('pal-o-' + P.sel)?.scrollIntoView({ block: 'nearest' }); return;
     }
     { const map = { palette: 'act:palette', new: 'go:wizard', settings: 'go:settings', keys: 'panel:keys' }; const combo = [e.ctrlKey && 'Ctrl', e.altKey && 'Alt', e.shiftKey && 'Shift', e.key.length === 1 ? e.key.toUpperCase() : e.key].filter(Boolean).join('+'); const hit = Object.entries(map).find(([id]) => Kit.keysFor(id) === combo); if (hit && isLocked(hit[1])) { e.preventDefault(); guard(hit[1]); return; } }
     Kit.dispatch(e);
