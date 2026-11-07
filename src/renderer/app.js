@@ -1322,13 +1322,44 @@
     const walker = document.createTreeWalker(node, NodeFilter.SHOW_TEXT, { acceptNode: n => (n.parentElement.closest('.ms, .mono, input, textarea, script, style') ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT) });
     for (let n; (n = walker.nextNode());) { const next = Lib.applyVocabulary(n.nodeValue, v); if (next !== n.nodeValue) n.nodeValue = next; }
   }
+  // Every render rebuilds the DOM, and a rebuilt element starts its CSS animations again, so entrance motion
+  // (rise, fade, dialog and panel entrances, log lines, the rail pill) replayed on every key press. Each animation
+  // carries its progress over to the element in the same place in the new DOM. Page content is matched only
+  // within the same tab and view, so navigating still plays the entrance; floating layers and the window chrome
+  // are matched across views. A new element has nothing to match and animates in as usual.
+  const LAYERS = '.overlay, .panel, .drawer, .dimsum, .party, .banner, .titlebar, .tabbar, .rail';
+  function placeOf(el) {
+    const parts = [];
+    for (let n = el; n && n !== root; n = n.parentElement) {
+      let i = 0; for (let s = n.previousElementSibling; s; s = s.previousElementSibling) if (s.tagName === n.tagName) i++;
+      parts.push(n.id ? '#' + n.id : n.dataset?.panel ? '[' + n.dataset.panel + ']' : n.tagName + i + '.' + (n.classList[0] || ''));
+    }
+    return parts.reverse().join('/');
+  }
+  function animKey(a, view) {
+    const el = a.effect?.target; if (!el || !root.contains(el)) return null;
+    return (el.closest(LAYERS) ? 'layer' : view) + '|' + a.animationName + '|' + (a.effect.pseudoElement || '') + '|' + placeOf(el);
+  }
+  const cssAnims = () => (document.getAnimations ? document.getAnimations() : []).filter(a => typeof CSSAnimation !== 'undefined' && a instanceof CSSAnimation);
+  let animView = null;
+  function animSnapshot(view) {
+    const was = animView, m = new Map(); animView = view;
+    for (const a of cssAnims()) { const k = animKey(a, was); if (k && a.currentTime != null) m.set(k, a.currentTime); }
+    return { view, m };
+  }
+  function animRestore({ view, m }) {
+    if (!m.size) return;
+    for (const a of cssAnims()) { const k = animKey(a, view); if (k && m.has(k)) a.currentTime = m.get(k); }
+  }
   function render() {
     if (!S.settings || (browser && !api.authenticated)) return;
     const focusId = document.activeElement?.id, caret = document.activeElement?.selectionStart, tabsLeft = root.querySelector('.tabs')?.scrollLeft || 0;
     const views = { setup: viewSetup, accounts: viewAccounts, deploys: viewDeploys, wizard: viewWizard, run: viewRun, result: viewResult, settings: viewSettings, help: viewHelp, history: viewHistory, changelog: viewChangelog, docs: viewDocs, support: viewSupport, tools: viewTools, servers: viewServers, ai: viewAi, sketch: viewSketch };
     const tab = S.tabs.find(t => t.id === S.active) || S.tabs[0];
     const v = tab.id === 'ws' ? S.view : tab.view;
+    const motion = animSnapshot(tab.id + ':' + v);
     root.innerHTML = shell((views[v] || viewDeploys)(), { rail: v !== 'setup' }) + paletteHtml() + panelHtml() + dimsumHtml() + partyHtml();
+    animRestore(motion);
     Kit.watchPanels(root, (id, box) => { const ui = S.settings.ui || { filtersOpen: {}, panels: {} }; api.setSetting('ui', { ...ui, panels: { ...ui.panels, [id]: box } }).then(r => r.ok && (S.settings.ui = r.value)); });
     if (S.view === 'settings' && S.settingsQuery) { const q = S.settingsQuery.toLowerCase(); root.querySelectorAll('[data-search]').forEach(el => { el.hidden = !el.dataset.search.toLowerCase().includes(q); }); }
     vocabularize(root);

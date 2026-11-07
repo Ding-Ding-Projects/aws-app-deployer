@@ -6,6 +6,15 @@ Connect an AWS IAM Identity Center profile through browser sign-in, choose a Doc
 
 Landing page: https://ding-ding-projects.github.io/aws-app-deployer/ (source in [`site/`](site/)). Design: [`design/`](design/).
 
+## Screens
+
+| | |
+| --- | --- |
+| ![Deployments with no deployments yet, and the three steps to the first one](docs/evidence/interface/deployments-desktop.png) | ![Settings with the right-click menu open: theme, text size and switches change in place](docs/evidence/interface/settings-menu-desktop.png) |
+| ![Command palette searching for "dep"](docs/evidence/interface/command-palette-desktop.png) | ![Landing page hero in the dark theme](docs/evidence/interface/landing-desktop-dark.png) |
+
+Captured on 2026-11-06 from source with sample data; no AWS account is connected. How they were taken, sizes and hashes: [docs/evidence/interface](docs/evidence/interface/README.md). Release builds are captured on Windows by the release workflow.
+
 ## Status
 
 Early development. Every push to `main` runs the tests, builds a Windows installer, captures screenshots of that build on a Windows runner, and publishes a tagged release. Releases have passed automated tests only; no release has been verified against a live AWS account yet. See [ROADMAP.md](ROADMAP.md) for what is shipped, partial and not started.

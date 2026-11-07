@@ -12,6 +12,7 @@
     "screenshots": "electron . --screenshots=screenshots",
     "sweep:app": "electron . --sweep=sweep-out",
     "sweep:site": "node scripts/sweep/site.cjs sweep-out",
+    "sweep:motion": "node scripts/sweep/motion.cjs",
     "dist:win": "electron-builder --win --publish never",
     "icons": "node scripts/build-icons.mjs",
     "web:start": "node src/web/server.js"
