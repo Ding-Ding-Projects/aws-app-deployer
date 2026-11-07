@@ -21,11 +21,19 @@ function provenance() {
 const isSquirrel = process.platform === 'win32' && app.isPackaged && fs.existsSync(path.resolve(path.dirname(process.execPath), '..', 'Update.exe'));
 
 const screenshotDir = (process.argv.find(a => a.startsWith('--screenshots=')) || '').split('=')[1];
+// --sweep=<folder> runs the every-surface sweep (scripts/sweep) in its own profile so it never touches real settings.
+const sweepDir = (process.argv.find(a => a.startsWith('--sweep=')) || '').split('=')[1];
+if (sweepDir) app.setPath('userData', path.resolve(sweepDir, 'profile'));
+const CAPTURE_ROUTES = ['setup', 'deploys', 'accounts', 'wizard', 'settings', 'help', 'palette', 'a11y', 'info', 'menu', 'confirm', 'history', 'docs', 'changelog', 'tabs', 'export', 'lockwiz', 'unlock', 'support', 'appearance', 'tools', 'party', 'school', 'colour', 'schedules', 'servers', 'ai', 'sketch'];
 let win;
+// Windows draws its own caption buttons over the title bar (so Snap layouts keep working); the renderer reports
+// only whether the theme is dark, and the colours come from this fixed palette.
+const overlayFor = dark => ({ color: dark ? '#0b0d12' : '#f4f6fa', symbolColor: dark ? '#e8ebf2' : '#121722', height: 38 });
 
 function createWindow() {
   win = new BrowserWindow({
-    width: 1320, height: 860, minWidth: 380, minHeight: 560, frame: false, show: false,
+    width: 1320, height: 860, minWidth: 380, minHeight: 480, show: false,
+    titleBarStyle: 'hidden', titleBarOverlay: overlayFor(nativeTheme.shouldUseDarkColors),
     backgroundColor: nativeTheme.shouldUseDarkColors ? '#0b0d12' : '#f4f6fa',
     title: 'AWS App Deployer',
     icon: path.join(__dirname, '..', 'renderer', 'icon.png'),
@@ -41,11 +49,14 @@ function createWindow() {
     win.webContents.on('console-message', (_e, level, message) => console.log('[renderer]', message));
     win.webContents.once('did-finish-load', () => captureScreenshots(screenshotDir).catch(err => { console.error(err); app.exit(1); }));
   }
+  if (sweepDir) win.webContents.once('did-finish-load', () => require(path.join(__dirname, '..', '..', 'scripts', 'sweep', 'app-driver.js'))(win, path.resolve(sweepDir), CAPTURE_ROUTES)
+    .then(sum => { console.log(`sweep: ${sum.surfaces} surfaces, ${sum.clean} clean, ${sum.total} findings`); app.exit(sum.total ? 2 : 0); })
+    .catch(err => { console.error(err); app.exit(1); }));
 }
 
 async function captureScreenshots(dir) {
   fs.mkdirSync(dir, { recursive: true });
-  const routes = ['setup', 'deploys', 'accounts', 'wizard', 'settings', 'help', 'palette', 'a11y', 'info', 'menu', 'confirm', 'history', 'docs', 'changelog', 'tabs', 'export', 'lockwiz', 'unlock', 'support', 'appearance', 'tools', 'party', 'school', 'colour', 'schedules', 'servers', 'ai', 'sketch'];
+  const routes = CAPTURE_ROUTES;
   for (let i = 0; i < 90 && !(await win.webContents.executeJavaScript('!!(window.__ready && window.__ready())')); i++) await new Promise(res => setTimeout(res, 1000));
   for (const [w, tag] of [[1320, 'desktop'], [420, 'narrow']]) {
     win.setSize(w, 860);
@@ -215,6 +226,11 @@ if (!squirrelEvent) app.whenReady().then(() => {
     return { ok: true };
   });
   handle('open-external', url => (bridge.canOpen(url) ? shell.openExternal(url).then(() => ({ ok: true })) : { ok: false, error: 'BLOCKED_URL' }));
+  handle('title-bar', o => {
+    if (!o || typeof o !== 'object' || typeof o.dark !== 'boolean') return { ok: false, error: 'INVALID' };
+    try { win.setTitleBarOverlay?.(overlayFor(o.dark)); } catch { return { ok: false, error: 'UNSUPPORTED' }; }
+    return { ok: true };
+  });
   handle('window', action => {
     if (action === 'minimize') win.minimize();
     else if (action === 'maximize') (win.isMaximized() ? win.unmaximize() : win.maximize());

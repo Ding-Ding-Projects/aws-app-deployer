@@ -10,12 +10,15 @@
     "start": "electron .",
     "test": "node --test tests/backend/*.test.js tests/main/*.test.js tests/renderer/*.test.js tests/web/*.test.js",
     "screenshots": "electron . --screenshots=screenshots",
+    "sweep:app": "electron . --sweep=sweep-out",
+    "sweep:site": "node scripts/sweep/site.cjs sweep-out",
     "dist:win": "electron-builder --win --publish never",
     "icons": "node scripts/build-icons.mjs",
     "web:start": "node src/web/server.js"
   },
   "devDependencies": {
     "@resvg/resvg-js": "^2.6.2",
+    "axe-core": "^4.10.3",
     "electron": "^45.2.0",
     "electron-builder": "^26.0.12",
     "electron-builder-squirrel-windows": "^26.18.0",

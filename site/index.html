@@ -24,7 +24,7 @@ html{scroll-behavior:smooth}@media (prefers-reduced-motion:reduce){html{scroll-b
 
 <style>
 body{margin:0}
-a{color:#6ea8ff}a:hover{color:#9fc2ff}
+a{color:var(--ac)}a:hover{color:color-mix(in srgb,var(--ac) 80%,var(--tx))}
 .wrap{width:min(1200px,100% - 32px);margin:0 auto}
 .nav{display:flex;align-items:center;gap:24px;padding:18px 0;flex-wrap:wrap}
 .nav a.l{color:var(--tx2);text-decoration:none;font-weight:500}
@@ -86,6 +86,7 @@ details p{margin:10px 0 0;color:var(--tx2)}
       <span class="tools"><button class="chip" data-act="palette" aria-label="Search and settings" aria-keyshortcuts="Control+Shift+F"><i class="ms sm" aria-hidden="true">search</i><span class="kbd">Ctrl+Shift+F</span></button><span class="seg" role="group" aria-label="Language" data-school-hide><button data-set-lang="en">English</button><button data-set-lang="yue" lang="zh-HK">廣東話</button><button data-set-lang="both">Both</button></span><button class="chip" data-act="a11y" aria-label="Accessibility tools"><i class="ms sm" aria-hidden="true">accessibility_new</i></button><button class="chip" data-act="theme" aria-label="Theme"><i class="ms sm" aria-hidden="true">dark_mode</i></button></span>
       <a class="chip nav-src" style="height: 36px" href="https://github.com/Ding-Ding-Projects/aws-app-deployer" aria-label="Source on GitHub"><i class="ms sm" aria-hidden="true">code</i></a>
     </nav>
+    <main id="main">
     <section class="hero">
       <div class="copy">
         <span class="badge warn rise" style="align-self: flex-start">Early development · unsigned Windows builds</span>
@@ -216,6 +217,7 @@ details p{margin:10px 0 0;color:var(--tx2)}
       <div class="stack grow" style="flex: 1 1 380px; gap: 8px"><span class="h3" style="color: var(--on-ac-c)" data-i18n="cta">Ship your container today.</span><span style="color: var(--on-ac-c); opacity: .85">Windows 10 or 11 and an AWS account. The app installs the rest.</span></div>
       <a class="btn fillb big" href="https://github.com/Ding-Ding-Projects/aws-app-deployer/releases/latest" data-download="1" data-teleport-el="Download button"><i class="ms fill" aria-hidden="true">download</i><span data-i18n="download">Download for Windows</span></a>
     </section>
+    </main>
     <footer class="row small" style="padding: 48px 0 56px; flex-wrap: wrap; gap: 20px"><span>AWS App Deployer is an independent project, not affiliated with Amazon Web Services.</span><span style="flex: 1"></span><a href="https://github.com/Ding-Ding-Projects/aws-app-deployer/releases">Changelog</a><a href="https://github.com/Ding-Ding-Projects/aws-app-deployer">Source</a></footer>
   </div>
 </div>

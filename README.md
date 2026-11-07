@@ -23,6 +23,14 @@ On Windows, `download-dependencies.bat`, `build.bat` (tests, then run) and `buil
 
 `npm run screenshots` launches the app, saves a PNG of each main screen into `screenshots/`, and quits.
 
+### Every-surface sweep (before each interface release)
+
+`npm run sweep:app` opens every screen, panel and menu of the app at phone (390 x 844), tablet (820 x 1180), 960 x 540 (a 1080p screen at 200 percent) and desktop (1440 x 900) sizes, in light and dark, in English, Cantonese and both. On each one it records axe-core WCAG 2.2 AA and best-practice violations, console errors, clipped, off-screen and overlapping text, and, with a keyboard walk, focus on hidden or unnamed controls, focus without a visible ring, and focus escaping a modal dialog. It uses its own profile, so your settings are not touched, and writes `sweep-out/sweep-app.md` and `.json`. It exits with code 2 when there are findings.
+
+`npm run sweep:site` does the same for the landing page and its overlays (palette, accessibility panel, right-click menu, Sections menu, docs reader). Serve `site/` first, for example `python3 -m http.server 8765 -d site`; it needs Playwright with Chromium. The page's GitHub lookups are answered from sample data so the sweep never depends on rate limits.
+
+`SWEEP_ROUTES`, `SWEEP_SIZES`, `SWEEP_LANGS` (and `SWEEP_SURFACES` for the site) narrow a run; `SWEEP_SHOTS=1` saves a capture of each English surface. Fix findings at the shared token or component, not per screen, then look at the captures as well: the sweep finds what eyes skip, and eyes find what it cannot measure.
+
 ## What a deployment creates
 
 A VPC across two availability zones, a public Application Load Balancer, one NAT gateway, two Fargate tasks in private subnets, an ECR repository with an immutable image, and CloudWatch logs. These are billed by AWS until you delete them. Closing the app never deletes infrastructure.

@@ -100,6 +100,8 @@ Real AWS sign-in and deployment require a user-connected AWS profile and access 
 - The design handoff is in `design/` (artboards, tokens, prototype renders, review record).
 - Desktop integration now exists: `src/main/` exposes the backend through a named preload bridge with operation IDs and scoped events, adds a one-click Windows dependency installer and a local settings store, and `src/renderer/` implements the designed screens. Every push to `main` builds a Windows installer, captures source-launched Electron screenshots on a Windows runner, and publishes a tagged release. See `ROADMAP.md` for the exact shipped, partial and not-started list.
 - Full multi-service Compose support, comprehensive automatic repair, cloud update pipelines, code signing, and live AWS evidence remain unfinished. The installer has been tested with stand-in commands, not yet on a clean Windows machine.
+- 2026-11-06 interface pass: one polish system shared by the app, the landing page and the design boards (design/REHEARSAL.md records the review). Context menus and the landing page palette are a filter box driving a list of options, with values drawn inside options rather than nested controls. The window uses the platform title-bar overlay so Windows draws its own caption buttons and Snap layouts work. Text size zoom no longer pushes the window or panels past the screen. The minimum window height is now 480 so a 1080p screen at 200 percent (960 x 540) fits.
+- Before every interface release run the every-surface sweep (`npm run sweep:app`, `npm run sweep:site`; see the readme). It is run locally, not in the release workflow. Extension support (a new shared requirement) is not started; see the feature audit.
 
 
 ### Deployment implementation constraints

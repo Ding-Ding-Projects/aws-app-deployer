@@ -72,7 +72,7 @@
     document.body.style.background = dark ? '#0b0d12' : '#f4f6fa';
     if (P.accent && /^#[0-9a-f]{6}([0-9a-f]{2})?$/.test(P.accent)) app.style.setProperty('--acc', P.accent); else app.style.removeProperty('--acc');
     document.documentElement.style.fontSize = P.textSize + '%';
-    app.style.zoom = P.textSize / 100;
+    app.style.zoom = P.textSize / 100; app.style.setProperty('--zoom', P.textSize / 100);
     const t = document.querySelector('[data-act="theme"]'); if (t) { t.innerHTML = ic(dark ? 'dark_mode' : 'light_mode', 'sm'); t.setAttribute('aria-label', `Theme: ${P.theme}. Activate to change.`); }
     applyLanguage();
   }
@@ -142,10 +142,48 @@
       ${P.schedules.map((r, i) => `<span class="row" style="gap: 8px"><span class="grow small">${esc(Lib.SCHEDULABLE[r.key].label)} → ${esc(String((Lib.SCHEDULABLE[r.key].values || []).find(([v]) => v === r.value)?.[1] ?? r.value))} · ${r.days.length === 7 ? 'every day' : r.days.map(x => DAYS[x]).join(', ')} at ${esc(r.at)}</span><span class="badge ${JSON.stringify(active[r.key]) === JSON.stringify(r.value) ? 'ok' : 'mute'}">${JSON.stringify(active[r.key]) === JSON.stringify(r.value) ? 'Active' : 'Waiting'}</span><button class="chip" data-act="sched-del" data-i="${i}" aria-label="Remove rule">×</button></span>`).join('') || '<span class="small">No rules yet.</span>'}
       <span class="row sched" style="gap: 6px; flex-wrap: wrap"><select data-sched="key" aria-label="Setting">${SITE_SCHED.filter(k => !(P.school.enabled && k === 'language')).map(k => `<option value="${k}" ${F.key === k ? 'selected' : ''}>${esc(Lib.SCHEDULABLE[k].label)}</option>`).join('')}</select>${val}<input type="time" data-sched="at" value="${esc(F.at)}" aria-label="Time"><span class="row" style="gap: 2px">${DAYS.map((n, i) => `<button class="badge ${F.days.includes(i) ? 'ac' : 'mute'}" style="border: 0; cursor: pointer" aria-pressed="${F.days.includes(i)}" data-act="sched-day" data-d="${i}" aria-label="${n}">${n[0]}</button>`).join('')}</span><button class="chip" data-act="sched-add">Add</button></span></div>`;
   }
+  // In the palette a setting is an option: its control is drawn as a picture (no nested buttons) and the option's
+  // name carries the current value. Left and Right change a choice or a level; Space or Enter flips a switch.
+  const PICS = {
+    theme: { type: 'choice', key: 'theme', opts: [['system', 'System'], ['dark', 'Dark'], ['light', 'Light']] },
+    lang: { type: 'choice', key: 'lang', opts: [['en', 'English'], ['yue', '廣東話'], ['both', 'Both']] },
+    school: { type: 'school' }, accent: { type: 'accent' },
+    funnyEn: { type: 'level', key: 'funnyEn', unit: ' of 5', lo: 1, hi: 5, step: 1 },
+    funnyYue: { type: 'level', key: 'funnyYue', unit: ' of 5', lo: 1, hi: 5, step: 1 },
+    textSize: { type: 'level', key: 'textSize', unit: '%', lo: 80, hi: 160, step: 10 },
+  };
+  const kindOf = st => PICS[st.id] || { type: 'toggle', key: st.id };
+  const accentHex = () => E.accent || getComputedStyle(app).getPropertyValue('--acc').trim() || '#6ea8ff';
+  function valueOf(st) {
+    const k = kindOf(st);
+    if (k.type === 'choice') return (k.opts.find(o => o[0] === E[k.key]) || [])[1] || '';
+    if (k.type === 'level') return P[k.key] + k.unit;
+    if (k.type === 'school') return P.school.enabled ? 'on' : 'off';
+    if (k.type === 'accent') return accentHex();
+    return E[k.key] ? 'on' : 'off';
+  }
+  function pic(st) {
+    const k = kindOf(st);
+    if (k.type === 'choice') return `<span class="seg sm" aria-hidden="true">${k.opts.map(([v, l]) => `<span class="opt ${E[k.key] === v ? 'on' : ''}" data-pref="${k.key}" data-v="${v}">${l}</span>`).join('')}</span>`;
+    if (k.type === 'level') return `<span class="stepper" aria-hidden="true"><span class="sb ${P[k.key] <= k.lo ? 'off' : ''}" data-step="${k.key}" data-d="${-k.step}" data-lo="${k.lo}" data-hi="${k.hi}">−</span><span class="v">${P[k.key]}${k.unit}</span><span class="sb ${P[k.key] >= k.hi ? 'off' : ''}" data-step="${k.key}" data-d="${k.step}" data-lo="${k.lo}" data-hi="${k.hi}">+</span></span>`;
+    if (k.type === 'school') return `<span class="toggle sm ${P.school.enabled ? 'on' : ''}" aria-hidden="true" data-act="school"></span>`;
+    if (k.type === 'accent') return `<span class="swatch" aria-hidden="true" style="background: ${esc(accentHex())}"></span>`;
+    return `<span class="toggle sm ${E[k.key] ? 'on' : ''}" aria-hidden="true" data-flip="${k.key}"></span>`;
+  }
+  function nudgeSetting(st, dir) {
+    const k = kindOf(st);
+    if (k.type === 'choice') { const vals = k.opts.map(o => o[0]), at = vals.indexOf(E[k.key]); return setPref(k.key, vals[Math.max(0, Math.min(vals.length - 1, at + dir))]); }
+    if (k.type === 'level') return setPref(k.key, Math.max(k.lo, Math.min(k.hi, P[k.key] + dir * k.step)));
+  }
+  function useSetting(st) {
+    const k = kindOf(st);
+    if (k.type === 'toggle') return setPref(k.key, !P[k.key]);
+    if (k.type === 'school' || k.type === 'accent') { closePalette(); if (!panel) openPanel(); if (k.type === 'school') { panel.schoolForm = {}; drawPanel(); document.getElementById('sc-pin')?.focus(); } else panel.host.querySelector('[data-accent="rgb"]')?.focus(); }
+  }
   function entries() {
     const sections = [...document.querySelectorAll('section[id], [data-teleport]')].map(s => ({ kind: 'Section', icon: 'near_me', label: 'Go to: ' + (s.querySelector('h1, h2, .h3')?.textContent.trim() || s.id), run: () => teleport(s) }));
     const controls = [...document.querySelectorAll('[data-teleport-el]')].filter(el => !el.closest('[hidden]')).map(el => ({ kind: 'Element', icon: 'ads_click', label: el.dataset.teleportEl, run: () => teleport(el) }));
-    const sets = SETTINGS.filter(visibleSetting).map(s => ({ kind: 'Setting', icon: s.icon, label: s.label, ctl: s.ctl }));
+    const sets = SETTINGS.filter(visibleSetting).map(s => ({ kind: 'Setting', icon: s.icon, label: s.label, set: s }));
     const articles = docs.filter(a => !(P.school.enabled && SCHOOL_HIDDEN_DOCS.includes(a.id))).map(a => ({ kind: 'Article', icon: 'menu_book', label: 'Docs: ' + a.title, run: () => openDoc(a.id) }));
     const actions = [
       { kind: 'Action', icon: 'download', label: 'Download the Windows installer', run: () => document.querySelector('[data-download]')?.click() },
@@ -172,7 +210,7 @@
     palette.sel = Math.min(palette.sel, Math.max(0, list.length - 1)); palette.list = list;
     const rb = host.querySelector('[data-act="regex"]'); rb.className = `badge ${palette.regex ? 'ac' : 'mute'} mono`; rb.setAttribute('aria-pressed', palette.regex); rb.textContent = '.* Regex';
     host.querySelector('#pparts').innerHTML = !r.ok ? `<span class="badge err" role="alert">${esc(r.error)}</span>` : palette.regex && palette.q ? `<div class="row small" style="gap: 6px; flex-wrap: wrap">${r.parts.map(p => `<span class="row" style="gap: 4px; white-space: nowrap"><span class="badge mute mono">${esc(p.token)}</span>${esc(p.meaning)}</span>`).join('')}</div>` : '';
-    host.querySelector('#pl').innerHTML = list.map((e, i) => `<div id="pi${i}" role="option" aria-selected="${i === palette.sel}" class="pr ${i === palette.sel ? 'on' : ''}" data-i="${i}">${ic(e.icon, 'sm')}<span class="grow">${esc(e.label)}</span>${e.ctl ? e.ctl() : `<span class="k">${e.kind}</span>`}</div>`).join('') || '<span class="small" style="padding: 10px">Nothing matches</span>';
+    host.querySelector('#pl').innerHTML = list.map((e, i) => `<div id="pi${i}" role="option" aria-selected="${i === palette.sel}" class="pr ${i === palette.sel ? 'on' : ''}" data-i="${i}"${e.set ? ` aria-label="${esc(e.label)}: ${esc(valueOf(e.set))}"` : ''}>${ic(e.icon, 'sm')}<span class="grow">${esc(e.label)}</span>${e.set ? pic(e.set) : `<span class="k" aria-hidden="true">${e.kind}</span>`}</div>`).join('') || '<div id="pi0" role="option" aria-selected="true" aria-disabled="true" class="pr"><span class="grow small">Nothing matches</span></div>';
     host.querySelector('#pq').setAttribute('aria-activedescendant', 'pi' + palette.sel);
     document.getElementById('pi' + palette.sel)?.scrollIntoView({ block: 'nearest' });
   }
@@ -298,7 +336,10 @@
     if (palette) {
       if (e.key === 'Escape') { e.preventDefault(); if (palette.q) { palette.q = ''; document.getElementById('pq').value = ''; drawPalette(); } else closePalette(); }
       if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); palette.sel = Math.max(0, Math.min(palette.list.length - 1, palette.sel + (e.key === 'ArrowDown' ? 1 : -1))); drawPalette(); }
-      if (e.key === 'Enter' && e.target.id === 'pq') { e.preventDefault(); const it = palette.list[palette.sel]; if (it?.run) it.run(); else if (it?.ctl) document.querySelector(`#pi${palette.sel} button`)?.focus(); }
+      const it = palette.list[palette.sel];
+      if ((e.key === 'ArrowLeft' || e.key === 'ArrowRight') && it?.set && ['choice', 'level'].includes(kindOf(it.set).type)) { e.preventDefault(); nudgeSetting(it.set, e.key === 'ArrowRight' ? 1 : -1); drawPalette(); }
+      if (e.key === ' ' && e.target.id === 'pq' && !palette.q && it?.set) { e.preventDefault(); useSetting(it.set); if (palette) drawPalette(); }
+      if (e.key === 'Enter' && e.target.id === 'pq') { e.preventDefault(); if (it?.run) it.run(); else if (it?.set) { useSetting(it.set); if (palette) drawPalette(); } }
       if (e.key === 'Tab') { const f = [...document.querySelectorAll('#palette input, #palette button')]; const i = f.indexOf(document.activeElement); if (e.shiftKey && i <= 0) { e.preventDefault(); f[f.length - 1].focus(); } else if (!e.shiftKey && i === f.length - 1) { e.preventDefault(); f[0].focus(); } }
       return;
     }
@@ -311,13 +352,13 @@
   });
   document.addEventListener('input', e => { if (e.target.id === 'pq') { palette.q = e.target.value; palette.sel = 0; drawPalette(); } });
   document.addEventListener('click', e => {
-    const t = e.target.closest('button, a, [data-i]'); if (!t) { if (e.target.id === 'palette') closePalette(); return; }
+    const t = e.target.closest('button, a, [data-pref], [data-flip], [data-step], [data-act], [data-i]'); if (!t) { if (e.target.id === 'palette') closePalette(); return; }
     if (t.dataset.pref) return setPref(t.dataset.pref, isNaN(+t.dataset.v) ? t.dataset.v : +t.dataset.v);
     if (t.dataset.setLang) return setPref('lang', t.dataset.setLang);
     if (t.dataset.flip) return setPref(t.dataset.flip, !P[t.dataset.flip]);
     if (t.dataset.step) { const k = t.dataset.step; return setPref(k, Math.max(+t.dataset.lo, Math.min(+t.dataset.hi, P[k] + +t.dataset.d))); }
     if (t.dataset.docOpen || t.dataset.doc) { e.preventDefault(); return openDoc(t.dataset.docOpen || t.dataset.doc); }
-    if (t.dataset.i !== undefined && palette && !e.target.closest('button')) { const it = palette.list[+t.dataset.i]; if (it?.run) it.run(); return; }
+    if (t.dataset.i !== undefined && palette && !e.target.closest('button')) { const it = palette.list[+t.dataset.i]; palette.sel = +t.dataset.i; if (it?.run) it.run(); else if (it?.set && !['choice', 'level'].includes(kindOf(it.set).type)) useSetting(it.set); else drawPalette(); document.getElementById('pq')?.focus(); return; }
     switch (t.dataset.act) {
       case 'palette': return openPalette();
       case 'sections': {

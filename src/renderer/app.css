@@ -5,7 +5,8 @@
 
 html, body { margin: 0; height: 100%; background: #0b0d12; }
 body { overflow: hidden; }
-.app { height: 100vh; min-height: 0; }
+/* Text size zooms the page; divide viewport units by the zoom so the window never grows past the screen */
+.app { height: calc(100vh / var(--zoom, 1)); min-height: 0; }
 .app.reduce *, .app.reduce *::before, .app.reduce *::after { animation-duration: 1ms !important; animation-iteration-count: 1 !important; animation-delay: 0ms !important; transition-duration: 1ms !important; }
 .app.calm .step.now .n::after, .app.calm .drop.hot::before { animation: none; display: none; }
 .app.focus .main .li:not(:focus-within):not(:hover), .app.focus .main .card:not(:focus-within):not(:hover), .app.focus .main .set:not(:focus-within):not(:hover) { opacity: .45; filter: saturate(.5); transition: opacity var(--d2) var(--ease), filter var(--d2) var(--ease); }
@@ -15,7 +16,9 @@ body { overflow: hidden; }
 .next-bar input { flex: 1 1 220px; min-width: 0; height: 38px; border-radius: 12px; border: 1px solid var(--line2); background: var(--s1); color: var(--tx); padding: 0 12px; font: inherit; font-weight: 500; }
 .next-bar .chip { height: 30px; cursor: pointer; }
 .titlebar { -webkit-app-region: drag; user-select: none; }
-.titlebar button, .titlebar .proto { -webkit-app-region: no-drag; }
+/* Windows (and Linux) draw the caption buttons over the right end of the bar; keep content out from under them */
+.titlebar.wco { padding-right: calc((100vw - env(titlebar-area-x, 0px) - env(titlebar-area-width, 100vw)) / var(--zoom, 1) + 8px); }
+.titlebar button, .titlebar a, .titlebar input, .titlebar .proto { -webkit-app-region: no-drag; }
 .caption button { width: 46px; height: 38px; border: 0; background: transparent; color: var(--tx2); display: grid; place-items: center; cursor: default; }
 .caption button:hover { background: var(--s3); }
 .caption button.x:hover { background: #c42b1c; color: #fff; }
@@ -27,6 +30,8 @@ button { font: inherit; }
 .list .li { width: 100%; border: 0; background: transparent; text-align: left; font: inherit; color: inherit; cursor: pointer; }
 .list .li.static { cursor: default; }
 .li.sel { background: var(--ac-c); color: var(--on-ac-c); }
+/* Secondary text inside a selected row takes the row's own text colour, not the page's muted grey */
+.li.sel .m, .li.sel .small, .li.sel .why { color: var(--on-ac-c); opacity: .85; }
 .toggle { cursor: pointer; padding: 0; }
 .toggle:focus-visible, .seg button:focus-visible, .chip:focus-visible, .li:focus-visible, .sw:focus-visible { outline: 2px solid var(--ac); outline-offset: 2px; }
 .sw { width: 28px; height: 28px; border-radius: 50%; border: 0; flex: none; cursor: pointer; }
@@ -36,7 +41,7 @@ button { font: inherit; }
 .toasts .toast { position: static; transform: none; pointer-events: auto; animation-delay: 0ms; max-width: 100%; }
 .overlay { position: fixed; inset: 38px 0 0 0; z-index: 20; }
 .overlay .scrim { position: absolute; }
-.drawer { position: fixed; top: 46px; right: 12px; width: min(400px, calc(100% - 24px)); max-height: calc(100vh - 70px); overflow: auto; z-index: 25; background: var(--s2); border-radius: var(--r3); padding: 18px; box-shadow: var(--shadow); display: flex; flex-direction: column; gap: 10px; animation: dialogIn var(--d3) var(--ease) both; }
+.drawer { position: fixed; top: 46px; right: 12px; width: min(400px, calc(100% - 24px)); max-height: calc(100vh / var(--zoom, 1) - 70px); overflow: auto; z-index: 25; background: var(--s2); border-radius: var(--r3); padding: 18px; box-shadow: var(--shadow); display: flex; flex-direction: column; gap: 10px; animation: dialogIn var(--d3) var(--ease) both; }
 .dimsum { position: fixed; right: 20px; bottom: 20px; width: 300px; z-index: 28; background: var(--s3); border: 1px solid var(--line2); border-radius: var(--r3); padding: 14px; display: flex; gap: 12px; align-items: center; box-shadow: var(--shadow); animation: dialogIn var(--d3) var(--ease) both; }
 .dimsum img { width: 64px; height: 64px; border-radius: 12px; object-fit: cover; flex: none; background: var(--s4); }
 .empty { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 12px; padding: 56px 24px; background: var(--s2); border-radius: var(--r3); }
@@ -67,8 +72,8 @@ select { height: 40px; border-radius: var(--r2); border: 1px solid var(--line2);
 .slide-in::-webkit-slider-thumb { -webkit-appearance: none; width: 40px; height: 40px; border-radius: 20px; background: var(--err); cursor: grab; }
 .slide-in:disabled { opacity: .5; }
 .sc-done { animation: pop 600ms var(--ease) both; }
-.panel { position: fixed; z-index: 50; background: var(--s2); border: 1px solid var(--line2); border-radius: var(--r3); box-shadow: var(--shadow); display: flex; flex-direction: column; overflow: auto; resize: both; min-width: 260px; min-height: 160px; max-width: calc(100vw - 16px); max-height: calc(100vh - 54px); animation: dialogIn var(--d3) var(--ease) both; }
-.panel > header { display: flex; align-items: center; gap: 8px; padding: 12px 12px 8px 16px; cursor: move; position: sticky; top: 0; background: var(--s2); z-index: 1; }
+.panel { position: fixed; z-index: 50; background: var(--s2); border: 1px solid var(--line2); border-radius: var(--r3); box-shadow: var(--shadow); display: flex; flex-direction: column; overflow: auto; resize: both; min-width: 260px; min-height: 160px; max-width: calc(100vw / var(--zoom, 1) - 16px); max-height: calc(100vh / var(--zoom, 1) - 54px); animation: dialogIn var(--d3) var(--ease) both; }
+.panel > .ph { display: flex; align-items: center; gap: 8px; padding: 12px 12px 8px 16px; cursor: move; position: sticky; top: 0; background: var(--s2); z-index: 1; }
 .panel > .pb { padding: 0 16px 16px; display: flex; flex-direction: column; gap: 10px; }
 /* Panel actions never scroll out of reach: the footer sticks to the panel's bottom edge while the body scrolls */
 .panel .pfoot { position: sticky; bottom: 0; z-index: 1; margin: 4px -16px -16px; padding: 12px 16px 16px; background: var(--s2); border-top: 1px solid var(--line); }
@@ -83,13 +88,14 @@ select { height: 40px; border-radius: var(--r2); border: 1px solid var(--line2);
 .sc.app { overflow: visible; }
 .ctx.app { width: 300px; }
 .sc.app { width: min(440px, calc(100% - 16px)); }
-.tabs { position: relative; display: flex; align-items: flex-end; gap: 4px; padding: 6px 12px 0; background: var(--bg); border-bottom: 1px solid var(--line); overflow-x: auto; flex: none; }
+.tabbar { display: flex; align-items: flex-end; background: var(--bg); border-bottom: 1px solid var(--line); flex: none; min-width: 0; }
+.tabs { position: relative; display: flex; align-items: flex-end; gap: 4px; padding: 6px 4px 0 12px; overflow-x: auto; flex: 1 1 auto; min-width: 0; }
 .tab { flex: none; display: flex; align-items: center; border-radius: 12px 12px 0 0; color: var(--tx2); }
 .tab.on { background: var(--s1); color: var(--tx); box-shadow: inset 0 2px 0 var(--ac); }
 .tab-b { display: flex; align-items: center; gap: 8px; height: 36px; padding: 0 8px 0 14px; border: 0; background: transparent; color: inherit; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
 .tab-l { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 180px; }
-/* New tab stays reachable at the right end however many tabs are open */
-.tab-new { position: sticky; right: 0; flex: none; display: flex; align-items: flex-end; padding: 0 0 3px 10px; margin-left: 2px; background: linear-gradient(to right, transparent, var(--bg) 10px); }
+/* New tab sits outside the tab list, so it stays reachable however many tabs are open */
+.tab-new { flex: none; display: flex; align-items: flex-end; padding: 0 12px 3px 6px; }
 .tab-x { width: 24px; height: 24px; margin-right: 6px; border-radius: 12px; border: 0; background: transparent; color: var(--tx3); display: grid; place-items: center; cursor: pointer; }
 .tab-x:hover { background: var(--s3); }
 .diff { font-family: "JetBrains Mono", monospace; font-size: 12.5px; border-radius: 10px; padding: 10px 12px; background: var(--bg); display: flex; flex-direction: column; gap: 4px; overflow-wrap: anywhere; }
@@ -121,6 +127,7 @@ select { height: 40px; border-radius: var(--r2); border: 1px solid var(--line2);
 
 /* Per-element appearance editor */
 .prop { display: grid; grid-template-columns: 112px minmax(0, 1fr) auto; gap: 8px; align-items: center; font-size: 13px; }
+.prop > .row { flex-wrap: wrap; min-width: 0; } /* a property's controls wrap instead of sliding under its Reset */
 .prop select { height: 34px; border-radius: 10px; border: 1px solid var(--line2); background-color: var(--s1); color: var(--tx); padding: 0 8px; font: inherit; }
 .app .ap-target { outline: 2px dashed var(--ac); outline-offset: 3px; }
 

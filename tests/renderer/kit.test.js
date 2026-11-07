@@ -49,20 +49,25 @@ test('menu rows for values carry live controls that change the setting and keep 
     { label: 'Copy', run: () => {} },
   ], { x: 10, y: 10 });
   const host = h.hosts[0];
-  assert.match(host.innerHTML, /role="switch" aria-checked="false" aria-label="Action sounds"/);
-  assert.match(host.innerHTML, /role="radiogroup" aria-label="Theme"/);
-  assert.match(host.innerHTML, /role="slider"[^>]*aria-valuenow="100" aria-valuetext="100%"/);
-  assert.match(host.innerHTML, /English only while Study time is on/);
-  const ctl = (kind, rowIdx, extra = {}) => { const row = { dataset: { ctxC: String(rowIdx) } }; const t = { host, dataset: { ctl: kind, ...extra }, closest: sel => (sel === '[data-ctl]' ? t : sel === '[data-ctx-c]' ? row : null) }; return t; };
+  // A filterable menu is a combobox driving a listbox; values are options, never nested controls.
+  assert.match(host.innerHTML, /role="combobox"[^>]*aria-controls="ctx-l-\d+"[^>]*aria-activedescendant="ctx-o-\d+-0"/);
+  assert.match(host.innerHTML, /role="listbox"/);
+  assert.match(host.innerHTML, /role="option"[^>]*aria-checked="false">[\s\S]*?Action sounds/);
+  assert.match(host.innerHTML, /role="option"[^>]*aria-label="Theme: Dark"/);
+  assert.match(host.innerHTML, /role="option"[^>]*aria-label="Text size: 100%"/);
+  assert.match(host.innerHTML, /aria-disabled="true" aria-label="Language: English. English only while Study time is on"/);
+  assert.doesNotMatch(host.innerHTML, /role="(switch|radio|radiogroup|slider|menuitem|menu)"/, 'no nested controls or menu roles');
+  assert.doesNotMatch(host.innerHTML, /<button[^>]*data-ctl/, 'value pictures are not buttons');
+  const ctl = (kind, rowIdx, extra = {}) => { const row = { dataset: { ctxI: String(rowIdx) } }; const t = { host, dataset: { ctl: kind, ...extra }, closest: sel => (sel === '[data-ctl]' ? t : sel === '[data-ctx-i]' ? row : null) }; return t; };
   await h.event('click', { target: ctl('toggle', 0) }); assert.equal(sounds, true);
   await h.event('click', { target: ctl('choice', 1, { v: '"light"' }) }); assert.equal(theme, 'light');
   await h.event('click', { target: ctl('inc', 2) }); assert.equal(size, 110);
   assert.equal(h.kit.menuOpen(), true, 'menu stays open after changing values');
-  await h.event('keydown', { key: 'ArrowDown', target: { id: 'ctxq', closest: () => null } });
-  await h.event('keydown', { key: ' ', target: { closest: () => null } }); assert.equal(sounds, false, 'Space toggles the focused switch');
-  await h.event('keydown', { key: 'ArrowDown', target: { closest: () => null } });
-  await h.event('keydown', { key: 'ArrowLeft', target: { closest: () => null } }); assert.equal(theme, 'system', 'Left changes the focused choice');
-  await h.event('keydown', { key: 'ArrowDown', target: { closest: () => null } });
-  await h.event('keydown', { key: 'ArrowRight', target: { closest: () => null } }); assert.equal(size, 120, 'Right steps the focused level');
+  const key = k => h.event('keydown', { key: k, target: { id: 'ctxq', closest: () => null } });
+  await key('Home'); await key(' '); assert.equal(sounds, false, 'Space on an empty filter flips the active switch');
+  await key('ArrowDown'); await key('ArrowLeft'); assert.equal(theme, 'system', 'Left changes the active choice');
+  await key('ArrowDown'); await key('ArrowRight'); assert.equal(size, 120, 'Right steps the active level');
+  await key('ArrowDown'); await key('ArrowRight'); assert.equal(size, 120, 'a disabled value does not change');
   await h.event('click', { target: ctl('choice', 3, { v: '"en"' }) });
+  assert.equal(h.kit.menuOpen(), true);
 });

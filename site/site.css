@@ -6,7 +6,8 @@
 .seg button { cursor: pointer; }
 .set { display: flex; align-items: center; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
 .grow { flex: 1; }
-.both-yue { display: block; font-size: .62em; opacity: .8; margin-top: .25em; letter-spacing: 0; }
+/* The second language takes its control's own colour (no fading) and never drops below a readable size */
+.both-yue { display: block; font-size: max(.62em, 11.5px); color: inherit; margin-top: .25em; letter-spacing: 0; }
 .pal-back { position: fixed; inset: 0; z-index: 80; background: rgba(0, 0, 0, .45); display: flex; justify-content: center; align-items: flex-start; padding: 10vh 16px 16px; }
 .pal { width: min(680px, 100%); max-height: 76vh; border-radius: 24px; background: var(--s2); border: 1px solid var(--line2); box-shadow: 0 30px 80px rgba(0, 0, 0, .5); padding: 14px; display: flex; flex-direction: column; gap: 8px; animation: rise 280ms var(--ease) both; }
 .pal input { flex: 1; min-width: 0; height: 46px; border-radius: 14px; border: 1px solid var(--line2); background: var(--s1); color: var(--tx); padding: 0 14px; font-size: 15px; }
@@ -16,7 +17,7 @@
 .pr .k { font-size: 12px; color: var(--tx3); }
 .pr.on .k { color: inherit; opacity: .8; }
 .pr .chip { height: 28px; cursor: pointer; }
-.a11y-panel { position: fixed; z-index: 85; top: 76px; right: 16px; width: min(380px, calc(100% - 32px)); max-height: calc(100vh - 96px); overflow: auto; background: var(--s2); border: 1px solid var(--line2); border-radius: 24px; box-shadow: 0 24px 64px rgba(0, 0, 0, .5); padding: 18px; display: flex; flex-direction: column; gap: 10px; animation: rise 280ms var(--ease) both; }
+.a11y-panel { position: fixed; z-index: 85; top: 76px; right: 16px; width: min(380px, calc(100% - 32px)); max-height: calc(100vh / var(--zoom, 1) - 96px); overflow: auto; background: var(--s2); border: 1px solid var(--line2); border-radius: 24px; box-shadow: 0 24px 64px rgba(0, 0, 0, .5); padding: 18px; display: flex; flex-direction: column; gap: 10px; animation: rise 280ms var(--ease) both; }
 .flash { animation: flash 1.2s var(--ease) 1; border-radius: 12px; }
 @keyframes flash { 0%, 40% { box-shadow: 0 0 0 4px var(--ac); } 100% { box-shadow: 0 0 0 0 transparent; } }
 .wiggle { animation: wiggle 500ms var(--ease) 1; }

@@ -65,8 +65,9 @@
     const reduce = s.reduceMotion || matchMedia('(prefers-reduced-motion: reduce)').matches;
     const a = s.a11y || {};
     root.className = ['app', theme === 'light' ? 'light' : '', reduce ? 'reduce' : '', s.calm ? 'calm' : '', s.focus ? 'focus' : '', a.contrast ? 'contrast' : '', a.focus ? 'focusring' : '', a.targets ? 'bigtargets' : ''].join(' ');
-    document.body.style.zoom = (a.textSize || 100) / 100;
+    document.body.style.zoom = (a.textSize || 100) / 100; root.style.setProperty('--zoom', (a.textSize || 100) / 100);
     document.body.style.background = theme === 'light' ? '#f4f6fa' : '#0b0d12';
+    if (!browser && api.titleBar && S.overlayTheme !== theme) { S.overlayTheme = theme; api.titleBar({ dark: theme !== 'light' }); }
     clearInterval(rainbowTimer);
     if (s.rainbow && !reduce) { let h = 210; rainbowTimer = setInterval(() => { h = (h + 2) % 360; root.style.setProperty('--acc', `hsl(${h} 90% 70%)`); }, 120); }
     else root.style.setProperty('--acc', s.rainbow ? 'hsl(210 90% 70%)' : s.accent);
@@ -145,12 +146,12 @@
     const inWs = S.active === 'ws', here = v => inWs && (S.view === v || (v === 'deploys' && ['wizard', 'run', 'result'].includes(S.view)));
     const nav = (v, icon, key) => `<button class="navi ${here(v) ? 'on' : ''}" data-go="${v}" data-menu="nav" ${inWs && S.view === v ? 'aria-current="page"' : ''}><span class="pill">${ic(icon)}</span>${T(key)}</button>`;
     return `
-    <div class="titlebar">${logoHtml(20)}<span class="name">${esc(S.settings?.displayName || 'AWS App Deployer')}</span><span class="small mono" title="Running version and build time">${esc(provLine())}</span>${S.settings?.timeAware ? `<span class="small mono" id="time-aware" aria-live="off">${esc(timeLine())}</span>` : ''}<span class="grow"></span>
+    <header class="titlebar${browser ? '' : ' wco'}">${logoHtml(20)}<span class="name">${esc(S.settings?.displayName || 'AWS App Deployer')}</span><span class="small mono" title="Running version and build time">${esc(provLine())}</span>${S.settings?.timeAware ? `<span class="small mono" id="time-aware" aria-live="off">${esc(timeLine())}</span>` : ''}<span class="grow"></span>
       <button class="chip" style="height: 28px; -webkit-app-region: no-drag" data-act="palette" aria-label="${T('palette')}">${ic('search', 'sm')}<span class="kbd">Ctrl+Shift+F</span></button>
       ${S.settings?.a11y?.hidden ? '' : `<button class="chip" style="height: 28px; -webkit-app-region: no-drag" data-panel-open="a11y" aria-label="Accessibility tools" data-menu="a11y">${ic('accessibility_new', 'sm')}</button>`}
       <button class="chip" style="height: 28px; -webkit-app-region: no-drag" data-panel-open="notes" aria-label="${T('notifications')}">${ic('notifications', 'sm')}${S.notes.length ? `<span class="badge ac" style="height: 18px">${S.notes.length}</span>` : ''}</button>
-      ${browser ? '<span class="badge ac">Browser companion</span><button class="chip" data-act="sign-out">Sign out</button>' : `<div class="caption"><button data-win="minimize" aria-label="Minimize">${ic('remove')}</button><button data-win="maximize" aria-label="${S.maximized ? 'Restore' : 'Maximize'}">${ic(S.maximized ? 'filter_none' : 'crop_square')}</button><button class="x" data-win="close" aria-label="Close">${ic('close')}</button></div>`}</div>
-    ${S.update?.status === 'ready' && !S.updateLater ? `<div class="banner" role="status">${ic('system_update', 'fill')}<span class="stack grow" style="flex: 1 1 320px"><span style="font-weight: 650">Version ${esc(S.update.next)} is ready to install</span><span class="small" style="color: inherit; opacity: .85">Unsigned build: Windows may show an unknown-publisher or SmartScreen warning. Your settings and drafts are kept.</span></span><button class="btn text" style="color: inherit" data-act="open-url" data-url="https://github.com/Ding-Ding-Projects/aws-app-deployer/releases/latest">Release notes</button><button class="btn out" style="color: inherit; border-color: currentColor" data-act="update-later">Later</button><button class="btn fillb" data-act="update-install">${ic('restart_alt')}Restart to install update</button></div>` : ''}
+      ${browser ? '<span class="badge ac">Browser companion</span><button class="chip" data-act="sign-out">Sign out</button>' : ''}</header>
+    ${S.update?.status === 'ready' && !S.updateLater ? `<section class="banner" aria-label="Update ready"><span role="status" class="sr">Version ${esc(S.update.next)} is ready to install</span>${ic('system_update', 'fill')}<span class="stack grow" style="flex: 1 1 320px"><span style="font-weight: 650">Version ${esc(S.update.next)} is ready to install</span><span class="small" style="color: inherit; opacity: .85">Unsigned build: Windows may show an unknown-publisher or SmartScreen warning. Your settings and drafts are kept.</span></span><button class="btn text" style="color: inherit" data-act="open-url" data-url="https://github.com/Ding-Ding-Projects/aws-app-deployer/releases/latest">Release notes</button><button class="btn out" style="color: inherit; border-color: currentColor" data-act="update-later">Later</button><button class="btn fillb" data-act="update-install">${ic('restart_alt')}Restart to install update</button></section>` : ''}
     ${S.view !== 'setup' || S.active !== 'ws' ? tabStrip() : ''}
     <div class="body">
       ${rail ? `<nav class="rail" aria-label="Main">
@@ -202,7 +203,7 @@
       <div class="stack rise" style="--i:1; gap: 10px; max-width: 720px"><h1 class="h1" style="font-size: 38px; letter-spacing: -.035em">Deploy a container to your own AWS account.</h1><p class="sub" style="margin: 0; font-size: 16px">${browser ? 'Upload a Dockerfile project' : 'Pick a Dockerfile or Compose project'}, press Deploy, and get a public link anyone can open. ${browser ? 'Builds and deployments run on the companion server using your AWS session.' : 'Everything runs on this computer with your own AWS credentials.'}</p></div>
       <div class="card rise" style="--i:2; flex-direction: row; gap: 14px; background: var(--warn-c)">${ic('payments', 'fill')}<span class="stack"><span style="font-weight: 650">${T('charges')}</span><span class="sub">${T('charges_sub')}</span></span></div>
       <div class="cols" style="align-items: stretch">
-        <div class="wide"><div class="card rise" style="--i:3"><div class="row"><span class="tile ac">${ic('badge', 'fill')}</span><span class="stack grow"><span class="h2">Use an AWS CLI profile</span><span class="small">${T('profiles')}</span></span><button class="btn text" data-act="reload-profiles">${ic('refresh')}</button></div>${list}
+        <div class="wide"><div class="card rise" style="--i:3"><div class="row"><span class="tile ac">${ic('badge', 'fill')}</span><span class="stack grow"><span class="h2">Use an AWS CLI profile</span><span class="small">${T('profiles')}</span></span><button class="btn text" data-act="reload-profiles" aria-label="Refresh profiles" data-tip="Refresh profiles">${ic('refresh')}</button></div>${list}
           <button class="btn fillb" data-act="go-connect" ${S.selection ? '' : 'disabled'} style="align-self: flex-start">${T('continue')}${ic('arrow_forward')}</button></div>
           ${installPanel()}</div>
         <div class="side">${prereqCard()}</div>
@@ -397,7 +398,7 @@
     return `<div class="overlay"><div class="scrim" data-act="close-palette" style="align-items: start; padding-top: 72px"><div class="dialog" role="dialog" aria-label="${T('palette')}" style="width: min(680px, 100%); padding: 10px; gap: 0" data-stop="1">
       <div class="row" style="padding: 8px 10px; gap: 10px; flex-wrap: wrap">${ic('search')}<label for="pq" class="sr">Command</label><input id="pq" class="mono" data-input="paletteQ" value="${esc(P.q)}" autocomplete="off" style="flex: 1 1 200px; min-width: 0; height: 40px; border: 0; background: transparent; color: var(--tx); font-size: 16px; outline: none"><button class="badge ${P.regex ? 'ac' : 'mute'} mono" style="border: 0; cursor: pointer" aria-pressed="${P.regex}" data-act="regex">.* Regex</button></div>
       ${P.regex && P.q ? `<div class="row small" style="padding: 4px 12px 10px; gap: 8px; flex-wrap: wrap">${r.ok ? (r.parts || []).map(p => `<span class="row" style="gap: 6px; white-space: nowrap"><span class="badge mute mono">${esc(p.token)}</span>${esc(p.meaning)}</span>`).join('') + `<span class="badge ok">${ic('check', 'sm')}valid · ${items.length} matches</span>` : `<span class="badge err">${esc(r.error)}</span>`}</div>` : ''}
-      <div class="divider"></div><div class="list" style="background: transparent" role="listbox">${items.map((c, i) => `<button class="li ${i === P.sel ? 'sel' : ''}" role="option" aria-selected="${i === P.sel}" data-cmd="${c.id}">${esc(c.label)}${isLocked('go:' + c.id) || isLocked('panel:' + c.id) ? ` <span class="badge warn">${ic('lock', 'sm')}Locked</span>` : ''}</button>`).join('') || '<span class="small" style="padding: 12px">No matches</span>'}</div>
+      <div class="divider"></div><div class="list" style="background: transparent" role="listbox" aria-label="Commands">${items.map((c, i) => `<button class="li ${i === P.sel ? 'sel' : ''}" role="option" aria-selected="${i === P.sel}" data-cmd="${c.id}">${esc(c.label)}${isLocked('go:' + c.id) || isLocked('panel:' + c.id) ? ` <span class="badge warn">${ic('lock', 'sm')}Locked</span>` : ''}</button>`).join('') || '<span class="small" style="padding: 12px">No matches</span>'}</div>
       <div class="row small" style="padding: 8px 12px; gap: 14px"><span><span class="kbd">↑↓</span> move</span><span><span class="kbd">Enter</span> run</span><span><span class="kbd">Esc</span> close</span></div></div></div></div>`;
   }
   function drawerHtml() {
@@ -423,11 +424,12 @@
   async function setA11y(patch) { await set('a11y', { ...S.settings.a11y, ...patch }); }
   function panelFrame(id, title, body, anchorStyle) {
     const saved = S.settings.ui?.panels;
-    return `<section class="panel" data-panel="${id}" role="dialog" aria-label="${esc(title)}" style="${Kit.panelStyle(id, saved, anchorStyle)}"><header data-drag="1"><span class="h2" style="flex: 1">${esc(title)}</span><button class="btn text" data-act="panel-reset" data-id="${id}" title="Reset size and position" aria-label="Reset panel size and position">${ic('restart_alt')}</button><button class="btn text" data-act="panel-close" aria-label="Close" data-autofocus="1">${ic('close')}</button></header><div class="pb">${body}</div></section>`;
+    return `<section class="panel" data-panel="${id}" role="dialog" aria-label="${esc(title)}" style="${Kit.panelStyle(id, saved, anchorStyle)}"><div class="ph" data-drag="1"><span class="h2" style="flex: 1">${esc(title)}</span><button class="btn text" data-act="panel-reset" data-id="${id}" title="Reset size and position" aria-label="Reset panel size and position">${ic('restart_alt')}</button><button class="btn text" data-act="panel-close" aria-label="Close" data-autofocus="1">${ic('close')}</button></div><div class="pb">${body}</div></section>`;
   }
   function panelHtml() {
     const P = S.panel; if (!P) return '';
-    const right = 'top: 46px; right: 12px; width: 380px;';
+    // Right-hand panels open below the tab bar so they never cover a tab or New tab.
+    const right = 'top: 88px; right: 12px; width: 380px;';
     if (P.id === 'a11y') {
       const a = S.settings.a11y;
       const sw = (k, label) => `<div class="set"><span class="grow">${label}</span><button class="toggle ${a[k] ? 'on' : ''}" role="switch" aria-checked="${a[k]}" aria-label="${label}" data-a11y="${k}"></button></div>`;
@@ -556,10 +558,21 @@
     { view: 'accounts', label: 'Accounts', icon: 'key' }, { view: 'deploys', label: 'Deployments', icon: 'rocket_launch' },
   ];
   function tabStrip() {
-    return `<div class="tabs" role="tablist" aria-label="Open tabs">${S.tabs.map(t => { const c = t.id === 'ws' ? { label: 'Workspace', icon: 'rocket_launch' } : CATALOG.find(x => x.view === t.view); return `<span class="tab ${S.active === t.id ? 'on' : ''}" data-menu="tab" data-tab="${t.id}"><button class="tab-b" role="tab" aria-selected="${S.active === t.id}" data-tab-go="${t.id}" title="${esc(c.label)}">${ic(c.icon, 'sm')}<span class="tab-l">${esc(c.label)}</span></button>${t.id === 'ws' ? '' : `<button class="tab-x" data-tab-close="${t.id}" aria-label="Close ${esc(c.label)} tab">${ic('close', 'sm')}</button>`}</span>`; }).join('')}<span class="tab-new"><button class="chip" style="height: 30px; flex: none" data-panel-open="newtab">${ic('add', 'sm')}New tab</button></span></div>`;
+    // Tabs and their close marks are siblings; the close mark is for the pointer only (Delete and the tab's menu close a tab
+    // from the keyboard), and New tab sits outside the tab list.
+    return `<nav class="tabbar" aria-label="Tabs"><div class="tabs" role="tablist" aria-label="Open tabs">${S.tabs.map(t => { const c = t.id === 'ws' ? { label: 'Workspace', icon: 'rocket_launch' } : CATALOG.find(x => x.view === t.view), on = S.active === t.id; return `<span class="tab ${on ? 'on' : ''}" data-menu="tab" data-tab="${t.id}"><button class="tab-b" role="tab" id="tab-${t.id}" aria-selected="${on}" tabindex="${on ? 0 : -1}" data-tab-go="${t.id}" title="${esc(c.label)}"${t.id === 'ws' ? '' : ' aria-keyshortcuts="Delete" aria-describedby="tab-hint"'}>${ic(c.icon, 'sm')}<span class="tab-l">${esc(c.label)}</span></button>${t.id === 'ws' ? '' : `<span class="tab-x" aria-hidden="true" data-tab-close="${t.id}" title="Close ${esc(c.label)}">${ic('close', 'sm')}</span>`}</span>`; }).join('')}</div><span class="sr" id="tab-hint">Delete closes this tab. Left and Right move between tabs.</span><span class="tab-new"><button class="chip" style="height: 30px; flex: none" data-panel-open="newtab">${ic('add', 'sm')}New tab</button></span></nav>`;
   }
   // The tab strip hides its scrollbar, so a mouse wheel over it scrolls it sideways; the active tab is kept in view.
   document.addEventListener('wheel', e => { const strip = e.target.closest?.('.tabs'); if (!strip || Math.abs(e.deltaX) > Math.abs(e.deltaY) || strip.scrollWidth <= strip.clientWidth) return; strip.scrollLeft += e.deltaY; e.preventDefault(); }, { passive: false });
+  // Tab keys: Left and Right move between tabs, Home and End jump to the ends, Delete closes a utility tab.
+  function selectTab(id) { withTransition(() => { S.active = id; const tb = S.tabs.find(x => x.id === S.active); if (tb?.view) ensureData(tb.view); render(); document.getElementById('tab-' + S.active)?.focus(); }); }
+  document.addEventListener('keydown', e => {
+    const b = e.target.closest?.('.tab-b'); if (!b || e.ctrlKey || e.altKey || e.metaKey) return;
+    const ids = S.tabs.map(t => t.id), at = ids.indexOf(b.dataset.tabGo); if (at < 0) return;
+    const to = { ArrowRight: ids[(at + 1) % ids.length], ArrowLeft: ids[(at - 1 + ids.length) % ids.length], Home: ids[0], End: ids[ids.length - 1] }[e.key];
+    if (to) { e.preventDefault(); selectTab(to); return; }
+    if (e.key === 'Delete' && ids[at] !== 'ws') { e.preventDefault(); closeTabs([ids[at]]); document.getElementById('tab-' + S.active)?.focus(); }
+  });
   function openTab(view) { const id = 't' + Math.random().toString(36).slice(2, 7); withTransition(() => { S.tabs.push({ id, view }); S.active = id; S.panel = null; render(); }); }
   function closeTabs(ids) { S.tabs = S.tabs.filter(t => t.id === 'ws' || !ids.includes(t.id)); if (!S.tabs.find(t => t.id === S.active)) S.active = 'ws'; render(); }
   function newTabPanel() {
@@ -1312,13 +1325,13 @@
     keepTabInView(tabsLeft);
     if (focusId) { const el = document.getElementById(focusId); if (el) { el.focus(); if (caret != null && el.setSelectionRange) try { el.setSelectionRange(caret, caret); } catch { } } }
   }
-  // A re-render rebuilds the tab strip, so restore where it was scrolled and nudge the active tab into view (clear of the pinned New tab).
+  // A re-render rebuilds the tab strip, so restore where it was scrolled and nudge the active tab into view.
   function keepTabInView(left) {
     const strip = root.querySelector('.tabs'); if (!strip) return;
     strip.scrollLeft = left;
-    const on = strip.querySelector('.tab.on'), pin = strip.querySelector('.tab-new')?.offsetWidth || 0; if (!on) return;
+    const on = strip.querySelector('.tab.on'); if (!on) return;
     if (on.offsetLeft < strip.scrollLeft) strip.scrollLeft = on.offsetLeft - 8;
-    else if (on.offsetLeft + on.offsetWidth > strip.scrollLeft + strip.clientWidth - pin) strip.scrollLeft = on.offsetLeft + on.offsetWidth - strip.clientWidth + pin + 8;
+    else if (on.offsetLeft + on.offsetWidth > strip.scrollLeft + strip.clientWidth) strip.scrollLeft = on.offsetLeft + on.offsetWidth - strip.clientWidth + 8;
   }
   // Navigation crossfades the main area with a View Transition; reduced motion, calm mode and captures switch instantly.
   const motionOk = () => !(window.__capturing || S.settings?.reduceMotion || S.settings?.calm || matchMedia('(prefers-reduced-motion: reduce)').matches);
@@ -1341,7 +1354,7 @@
     if (v === 'sketch') { go('deploys'); skLoad(); S.sk.strokes = [{ tool: 'pen', color: '#6ea8ff', p: Array.from({ length: 60 }, (_, i) => [100 + i * 15, 400 + Math.round(Math.sin(i / 6) * 160), 3 + (i % 10) / 4]) }, { tool: 'highlighter', color: '#f5b451', p: [[200, 200, 18], [700, 200, 18]] }, { tool: 'fountain', color: '#4ade9a', p: Array.from({ length: 40 }, (_, i) => [300 + Math.cos(i / 6) * 200, 380 + Math.sin(i / 6) * 200, 2 + 5 * Math.abs(Math.sin(i / 6 - 0.8))]) }, { tool: 'eraser', color: '#000', p: [[500, 380, 40], [620, 380, 40]] }]; openTab('sketch'); return; }
     if (v === 'tools') { go('deploys'); ensureData('tools'); openTab('tools'); S.tools.b64in = 'hello, har gow'; S.tools.b64out = { ok: true, text: Lib.b64encode('hello, har gow') }; S.tools.conv = { name: 'menu.yaml', text: 'x', note: '' }; render(); return; }
     if (v === 'party') { S.active = 'ws'; go('deploys'); celebrate('42 words applied'); return; }
-    if (v === 'appearance') { go('deploys'); S.capAppearance = apData(); openAppearance({ key: 'go:accounts', label: 'Accounts' }); apSet('weight', 750); apSet('color', '#4ade9a'); apSet('glow', 12); apSet('radius', 18); apSet('underline', true); render(); return; }
+    if (v === 'appearance') { go('deploys'); S.capAppearance = apData(); openAppearance({ key: 'go:accounts', label: 'Accounts' }); apSet('weight', 750); apSet('glow', 12); apSet('radius', 18); apSet('underline', true); render(); return; }
     if (v === 'support') { go('support'); S.ticketDraft = 'I locked Settings with a PIN and forgot it.'; render(); return; }
     const row = () => document.querySelector('[data-menu="deploy"]');
     if (v === 'menu') { go('deploys'); let r = row(); if (!r) { go('settings'); r = document.querySelector('[data-menu="setting"][data-key="theme"]'); } if (r) { const b = r.getBoundingClientRect(); Kit.openMenu(menuFor(r), { x: b.left + Math.min(240, b.width / 2), y: b.top + 20, opener: r }); } return; }
@@ -1358,13 +1371,16 @@
     __goInner(v);
   };
 
+  // The every-surface sweep (scripts/sweep) sets theme and language through the real settings path before each pass.
+  window.__sweepPrep = async ({ theme, language }) => { S.tabs = [{ id: 'ws' }]; S.active = 'ws'; await set('theme', theme); if (!S.settings.school) await set('language', language); window.__capturing = true; };
+
   // ---------- events ----------
   root.addEventListener('click', async e => {
     const t = e.target.closest('[data-go],[data-act],[data-win],[data-toggle],[data-set],[data-cmd],[data-panel-open],[data-info],[data-a11y],[data-tab-go],[data-tab-close],[data-doc-open],[data-doc]');
     if (!t) return;
     if (t.dataset.stop && e.target === t) return;
     if (t.dataset.go) return go(t.dataset.go);
-    if (t.dataset.tabGo) { const id = t.dataset.tabGo; withTransition(() => { S.active = id; const tb = S.tabs.find(x => x.id === S.active); if (tb?.view) ensureData(tb.view); render(); document.querySelector(`[data-tab-go="${S.active}"]`)?.focus(); }); return; }
+    if (t.dataset.tabGo) return selectTab(t.dataset.tabGo);
     if (t.dataset.tabClose) return closeTabs([t.dataset.tabClose]);
     if (t.dataset.docOpen || t.dataset.doc) { e.preventDefault(); S.docF.id = t.dataset.docOpen || t.dataset.doc; render(); return; }
     if (t.dataset.panelOpen) return S.panel?.id === t.dataset.panelOpen ? closePanel() : openPanel(t.dataset.panelOpen, `[data-panel-open="${t.dataset.panelOpen}"]`);

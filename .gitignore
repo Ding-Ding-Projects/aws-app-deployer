@@ -9,3 +9,4 @@ dist/
 local-data/
 src/build-info.json
 src/changelog.json
+sweep-out/

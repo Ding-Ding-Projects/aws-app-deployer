@@ -159,7 +159,8 @@
 }
 :where(.app) :where(textarea) { padding: 10px 12px; line-height: 1.5; resize: vertical; }
 :where(.app) :where(input, select, textarea):hover { border-color: color-mix(in srgb, var(--line2), var(--tx3) 45%); }
-:where(.app) :where(input, select, textarea):focus-visible { outline: none; border-color: var(--ac); box-shadow: var(--focus); }
+/* Fields show the ring on any focus, so date and time fields (whose inner parts take focus) and search boxes always ring the whole box */
+:where(.app) :where(input, select, textarea):is(:focus, :focus-within) { outline: none; border-color: var(--ac); box-shadow: var(--focus); }
 :where(.app) :where(input, textarea)::placeholder { color: var(--tx3); opacity: 1; }
 :where(.app) :where(input, select, textarea, button):disabled { cursor: not-allowed; }
 /* The chevron is the only sign a select opens, so it outranks component rules that reset the background */
@@ -173,6 +174,7 @@
 .app select[size] option:hover, .app select[multiple] option:hover { background: linear-gradient(var(--s3), var(--s3)); }
 .app select[size] option:checked, .app select[multiple] option:checked { background: linear-gradient(var(--ac-c), var(--ac-c)); color: var(--on-ac-c); font-weight: 600; }
 .field input[type=range] { height: 44px; padding: 0; border: 0; background: none; box-shadow: none; }
+.field input[type=range]:focus-visible { outline: 2px solid var(--ac); outline-offset: 2px; border-radius: 8px; }
 :where(.app) :where(input[type=checkbox], input[type=radio]) { width: 18px; height: 18px; margin: 0; flex: none; cursor: pointer; }
 :where(.app) :where(input[type=range]) { cursor: pointer; }
 :where(.app) :where(input[type=number])::-webkit-inner-spin-button { opacity: .6; }
@@ -229,7 +231,7 @@
 .mi.on { background: var(--ac-c); color: var(--on-ac-c); }
 .mi.on .k { color: inherit; opacity: .8; }
 .mi.danger { color: var(--err); }
-.mi[disabled], .mi.dis { opacity: .45; }
+.mi[disabled], .mi.dis, .mi[aria-disabled="true"] { opacity: .45; cursor: not-allowed; }
 .mi:focus-visible { outline: 2px solid var(--ac); outline-offset: -2px; }
 .mi-ctl { cursor: default; }
 .mi-ctl:hover { background: color-mix(in srgb, var(--tx) 6%, transparent); color: var(--tx); }
@@ -242,9 +244,18 @@
 .toggle.sm.on::after, .toggle.sm.on:hover::after { left: 18px; top: 2px; width: 16px; height: 16px; }
 .seg.sm { padding: 2px; flex-wrap: nowrap; }
 .seg.sm button { height: 26px; padding: 0 9px; font-size: 12px; border-radius: 13px; }
+/* Inside a menu option a choice is a picture of the control (.opt), not a nested button */
+.seg > .opt { height: 32px; padding: 0 14px; border-radius: 16px; color: var(--tx2); font-weight: 600; font-size: 13px; display: inline-flex; align-items: center; justify-content: center; white-space: nowrap; cursor: pointer; transition: background var(--d1) var(--ease), color var(--d1) var(--ease); }
+.seg > .opt:hover { background: var(--s3); color: var(--tx); }
+.seg > .opt.on { background: var(--ac-c); color: var(--on-ac-c); box-shadow: 0 1px 2px rgba(0,0,0,.18); }
+.seg.sm > .opt { height: 26px; padding: 0 9px; font-size: 12px; border-radius: 13px; }
 .stepper { display: inline-flex; align-items: center; gap: 4px; flex: none; }
 .stepper button { width: 26px; height: 26px; padding: 0; border-radius: 13px; border: 1px solid var(--line2); background: var(--s1); color: var(--tx); display: grid; place-items: center; cursor: pointer; font: inherit; font-weight: 600; }
 .stepper button:hover { background: var(--s3); }
+.stepper .sb { width: 26px; height: 26px; border-radius: 13px; border: 1px solid var(--line2); background: var(--s1); color: var(--tx); display: grid; place-items: center; cursor: pointer; font-weight: 600; flex: none; }
+.stepper .sb:hover { background: var(--s3); }
+.stepper .sb.off { opacity: .4; pointer-events: none; }
+.ctx-list { display: flex; flex-direction: column; gap: 2px; }
 .stepper .v { min-width: 46px; text-align: center; font-variant-numeric: tabular-nums; font-size: 12.5px; font-weight: 600; }
 
 /* Stepper (wizard + pipeline) */
@@ -256,7 +267,9 @@
 .step.now .n { background: var(--ac); color: var(--on-ac); }
 .step.now .n::after { content: ""; position: absolute; inset: -4px; border-radius: 50%; border: 2px solid var(--ac); animation: ring 1.8s var(--ease) infinite; }
 .step.bad .n { background: var(--err-c); color: var(--err); }
-.step.off { opacity: .5; }
+/* A step not reached yet reads quieter, but its text keeps readable contrast (no fading the whole row) */
+.step.off .t { color: var(--tx2); font-weight: 500; }
+.step.off .n { background: transparent; border: 1px dashed var(--line2); color: var(--tx3); }
 .step .t { font-weight: 600; }
 .step .m { font-size: 12.5px; color: var(--tx3); }
 

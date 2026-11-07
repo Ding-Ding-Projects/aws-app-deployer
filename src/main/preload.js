@@ -60,6 +60,7 @@ contextBridge.exposeInMainWorld('deployer', {
   onUpdate: fn => { const l = (_e, ev) => fn(ev); ipcRenderer.on('update', l); return () => ipcRenderer.removeListener('update', l); },
   openExternal: url => call('open-external', url),
   window: action => call('window', action),
+  titleBar: o => call('title-bar', o),
   onOperation: fn => { const l = (_e, ev) => fn(ev); ipcRenderer.on('op-event', l); return () => ipcRenderer.removeListener('op-event', l); },
   onWindow: fn => { const l = (_e, ev) => fn(ev); ipcRenderer.on('window', l); return () => ipcRenderer.removeListener('window', l); },
 });
